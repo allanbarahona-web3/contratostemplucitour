@@ -1,0 +1,427 @@
+:root {
+  --bg: #f6f0e9;
+  --panel: #fffdf9;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --line: #e5ddd2;
+  --accent: #b45309;
+  --accent-2: #0f766e;
+  --shadow: 0 24px 70px rgba(43, 25, 11, 0.13);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Manrope", sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at 10% 10%, #ffe8cf 0%, transparent 35%),
+    radial-gradient(circle at 85% 20%, #d7f7ef 0%, transparent 30%), var(--bg);
+}
+
+.bg-shape {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(45px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-shape-a {
+  width: 300px;
+  height: 300px;
+  background: rgba(180, 83, 9, 0.18);
+  top: -80px;
+  left: -70px;
+}
+
+.bg-shape-b {
+  width: 340px;
+  height: 340px;
+  background: rgba(15, 118, 110, 0.16);
+  bottom: -90px;
+  right: -100px;
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  width: min(1560px, 98vw);
+  margin: 24px auto;
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 18px;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--panel), white 8%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 20px 22px 0;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+h1,
+h2 {
+  font-family: "Fraunces", serif;
+}
+
+h1 {
+  margin: 8px 0 6px;
+  font-size: 2rem;
+}
+
+h2 {
+  margin: 18px 0 8px;
+  font-size: 1.1rem;
+}
+
+.panel-header p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.form-grid {
+  padding: 4px 22px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid h2,
+.form-grid .actions,
+.full {
+  grid-column: 1 / -1;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #d8cfc1;
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.signature-wrap {
+  border: 1px dashed #cfb79a;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff9f1;
+}
+
+.signature-wrap p {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+#clientSignature {
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #cab9a4;
+  border-radius: 10px;
+  touch-action: none;
+}
+
+#erickSignaturePreview {
+  width: 270px;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #cab9a4;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.file-field {
+  margin-top: 10px;
+}
+
+.file-field input {
+  margin-top: 6px;
+}
+
+.signature-actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dynamic-section {
+  display: grid;
+  gap: 10px;
+}
+
+.section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.section-row p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+}
+
+.dynamic-card {
+  border: 1px solid #d9ccbb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.dynamic-card.compact {
+  padding: 8px;
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-row h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-family: "Fraunces", serif;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.itinerary-grid {
+  grid-template-columns: 180px 1fr auto;
+  align-items: end;
+}
+
+.row-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.locked-hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+  padding: 8px 0;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.check-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid #ccbca9;
+}
+
+.preview-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.contract-paper {
+  margin: 14px auto 24px;
+  width: min(980px, calc(100% - 20px));
+  min-height: 1000px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 38px 42px;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+}
+
+.contract-paper h3 {
+  margin: 0 0 10px;
+  font-family: "Fraunces", serif;
+  font-size: 1.1rem;
+}
+
+.contract-paper p,
+.contract-paper li {
+  margin: 6px 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.contract-paper ul {
+  margin: 8px 0 8px 18px;
+  padding: 0;
+}
+
+.annex-paper {
+  margin-top: 0;
+  margin-bottom: 30px;
+  border: 1px solid #d9dbe0;
+}
+
+.annex-block {
+  border: 1px dashed #c8ced8;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.annex-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.annex-sign-box p {
+  margin: 5px 0;
+}
+
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.signature-box {
+  padding-top: 4px;
+}
+
+.signature-sign-area {
+  height: 112px;
+  border-bottom: 1px solid #c7cdd4;
+  margin-bottom: 10px;
+}
+
+.signature-box--person .signature-sign-area {
+  height: 128px;
+}
+
+.signature-sign-area--erick {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.signature-box img {
+  width: auto;
+  max-width: 345px;
+  max-height: 143px;
+  height: auto;
+  object-fit: contain;
+  transform: translateY(7px);
+}
+
+@media (max-width: 1020px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .contract-paper {
+    min-height: 900px;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-grid,
+  .itinerary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .row-end {
+    justify-content: flex-start;
+  }
+
+  .signatures {
+    grid-template-columns: 1fr;
+  }
+
+  .annex-signatures {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contratos App Temp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <main class="layout">
+      <section class="panel">
+        <header class="panel-header">
+          <p class="kicker">Temporal y separada</p>
+          <h1>Contratos App Temp</h1>
+          <p>
+            Mini app manual para completar datos, generar PDF y descargar para envio por correo o WhatsApp.
+          </p>
+        </header>
+
+        <form id="contractForm" class="form-grid">
+          <h2>Datos del contrato</h2>
+
+          <label>
+            Numero de contrato
+            <input name="contractNumber" required readonly />
+          </label>
+
+          <label>
+            Fecha de emision
+            <input name="issuedAt" type="date" required />
+          </label>
+
+          <label>
+            Destino
+            <input name="destination" placeholder="Colombia" required />
+          </label>
+
+          <label>
+            Fecha inicio tour
+            <input name="startDate" type="date" required />
+          </label>
+
+          <label>
+            Fecha fin tour
+            <input name="endDate" type="date" required />
+          </label>
+
+          <label>
+            Acomodacion
+            <select name="accommodationType" required>
+              <option value="Twin">Twin</option>
+              <option value="Individual">Individual</option>
+              <option value="Doble">Doble</option>
+              <option value="Triple">Triple</option>
+            </select>
+          </label>
+
+          <label>
+            Tipo de hospedaje
+            <select name="lodgingType" required>
+              <option value="Hotel">Hotel</option>
+              <option value="Hostel">Hostel</option>
+              <option value="Airbnb">Airbnb</option>
+            </select>
+          </label>
+
+          <label>
+            Monto total USD
+            <input name="totalAmount" type="number" min="0" step="0.01" placeholder="1450" required />
+          </label>
+
+          <label>
+            Reserva USD
+            <input name="reservationAmount" type="number" min="0" step="0.01" placeholder="300" required />
+          </label>
+
+          <label>
+            Saldo pendiente USD
+            <input name="balanceAmount" type="number" readonly />
+          </label>
+
+          <label>
+            Fecha limite de pago total
+            <input name="paymentDueDate" type="date" required readonly />
+          </label>
+
+          <label>
+            Cantidad de cuotas
+            <input name="installmentCount" type="number" min="1" step="1" value="1" required />
+          </label>
+
+          <label>
+            Monto por cuota USD
+            <input name="monthlyInstallmentAmount" type="number" readonly />
+          </label>
+
+          <h2>Datos del cliente</h2>
+
+          <label>
+            Nombre completo
+            <input name="clientFullName" required />
+          </label>
+
+          <label>
+            Tipo ID
+            <select name="clientIdType" required>
+              <option value="Cedula">Cedula</option>
+              <option value="Pasaporte">Pasaporte</option>
+              <option value="DIMEX">DIMEX</option>
+            </select>
+          </label>
+
+          <label>
+            Numero ID
+            <input name="clientIdNumber" required />
+          </label>
+
+          <label>
+            Correo
+            <input name="clientEmail" type="email" required />
+          </label>
+
+          <label>
+            Telefono
+            <input name="clientPhone" required />
+          </label>
+
+          <label class="full">
+            Direccion
+            <input name="clientAddress" required />
+          </label>
+
+          <label>
+            Estado civil
+            <input name="civilStatus" placeholder="Soltero" required />
+          </label>
+
+          <label>
+            Profesion
+            <input name="profession" placeholder="Administrador" required />
+          </label>
+
+          <label>
+            Nacionalidad
+            <select name="clientNationality" id="clientNationality" required>
+              <option value="Costa Rica">Costa Rica</option>
+              <option value="Guatemala">Guatemala</option>
+              <option value="El Salvador">El Salvador</option>
+              <option value="Honduras">Honduras</option>
+              <option value="Nicaragua">Nicaragua</option>
+              <option value="Panama">Panama</option>
+              <option value="Mexico">Mexico</option>
+              <option value="Colombia">Colombia</option>
+              <option value="Otra opcion">Otra opcion</option>
+            </select>
+          </label>
+
+          <label id="clientNationalityOtherWrap" class="hidden">
+            Otra nacionalidad
+            <input name="clientNationalityOther" placeholder="Especificar nacionalidad" />
+          </label>
+
+          <h2>Acompanantes y menores</h2>
+
+          <div class="full dynamic-section">
+            <div class="section-row">
+              <p>Acompanantes (mismas calidades del titular)</p>
+              <button type="button" id="addCompanionButton" class="ghost">+ Agregar acompanante</button>
+            </div>
+            <div id="companionsContainer" class="stack"></div>
+          </div>
+
+          <div class="full dynamic-section">
+            <label class="check-row">
+              <input id="hasMinorCompanion" type="checkbox" />
+              <span>Viaja con menor de edad</span>
+            </label>
+
+            <div id="minorSection" class="stack hidden">
+              <div class="section-row">
+                <p>Datos de menor y tutor</p>
+                <button type="button" id="addMinorButton" class="ghost">+ Agregar menor</button>
+              </div>
+              <div id="minorsContainer" class="stack"></div>
+            </div>
+          </div>
+
+          <h2>Itinerario</h2>
+
+          <div class="full dynamic-section">
+            <div class="section-row">
+              <p>Itinerario del tour</p>
+              <button type="button" id="addItineraryButton" class="ghost">+ Agregar actividad</button>
+            </div>
+            <div id="itineraryContainer" class="stack"></div>
+          </div>
+
+          <h2>Equipaje</h2>
+
+          <label class="full">
+            Clausula de equipaje
+            <input
+              name="luggageClause"
+              value="Equipaje de mano de 10 kg por persona."
+              required
+            />
+          </label>
+
+          <h2>Firmas</h2>
+
+          <div class="full signature-wrap">
+            <p>Firma Erick (imagen)</p>
+            <img id="erickSignaturePreview" src="../public/firmaerick.png" alt="Firma Erick" />
+            <p>Firma institucional fija de Lucitours.</p>
+          </div>
+
+          <h2>Acciones</h2>
+
+          <div class="full actions">
+            <button type="button" id="previewButton">Vista previa</button>
+            <button type="button" id="downloadButton">Generar y descargar PDF</button>
+            <button type="button" id="emailButton" class="ghost">Preparar correo</button>
+            <button type="button" id="waButton" class="ghost">Preparar WhatsApp</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel preview-panel">
+        <header class="panel-header">
+          <p class="kicker">Vista previa</p>
+          <h2>Contrato listo para PDF</h2>
+          <p id="statusText">Completa campos y toca Vista previa.</p>
+        </header>
+        <article id="contractPreview" class="contract-paper"></article>
+        <article id="minorAnnexPreview" class="contract-paper annex-paper hidden"></article>
+      </section>
+    </main>
+  </body>
+</html>
