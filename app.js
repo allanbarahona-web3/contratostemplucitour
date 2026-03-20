@@ -18,7 +18,7 @@ const clientNationalitySelect = document.getElementById("clientNationality");
 const clientNationalityOtherWrap = document.getElementById("clientNationalityOtherWrap");
 
 const erickSignaturePreview = document.getElementById("erickSignaturePreview");
-const lucitoursLogoPath = "../public/logo/logo-lucitour.png";
+const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
 
 const erickSignatureDataUrl = erickSignaturePreview.src;
