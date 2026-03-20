@@ -20,6 +20,15 @@ const clientNationalityOtherWrap = document.getElementById("clientNationalityOth
 const erickSignaturePreview = document.getElementById("erickSignaturePreview");
 const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
+const API_BASE = window.localStorage.getItem("contractsApiBase") || "http://localhost:3001";
+const AUTH_TOKEN_KEY = "contractsTempAuthToken";
+
+const loginGate = document.getElementById("loginGate");
+const loginForm = document.getElementById("loginForm");
+const loginButton = document.getElementById("loginButton");
+const loginStatus = document.getElementById("loginStatus");
+const layoutEl = document.querySelector("main.layout");
+const leftPanelHeader = document.querySelector(".panel .panel-header");
 
 const erickSignatureDataUrl = erickSignaturePreview.src;
 
@@ -52,6 +61,78 @@ const debugLog = (...args) => {
 
 const debugError = (...args) => {
   console.error(DEBUG_TAG, ...args);
+};
+
+const setLoginStatus = (message, isError = false) => {
+  loginStatus.textContent = message;
+  loginStatus.classList.toggle("error", isError);
+};
+
+const setAuthenticatedUi = (user) => {
+  loginGate.style.display = "none";
+  layoutEl.style.display = "grid";
+
+  let badge = document.getElementById("agentBadge");
+  if (!badge) {
+    badge = document.createElement("p");
+    badge.id = "agentBadge";
+    badge.className = "agent-badge";
+    leftPanelHeader.prepend(badge);
+  }
+
+  badge.textContent = `Agente activo: ${user.fullName} (${user.email})`;
+};
+
+const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
+  loginGate.style.display = "grid";
+  layoutEl.style.display = "none";
+  setLoginStatus(message);
+};
+
+const apiFetch = async (path, options = {}) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = payload.message || "No se pudo completar la solicitud.";
+    throw new Error(Array.isArray(msg) ? msg.join(", ") : String(msg));
+  }
+
+  return payload;
+};
+
+const validateSession = async (token) =>
+  apiFetch("/auth/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+const setupAuth = async () => {
+  setUnauthenticatedUi("Verificando sesion...");
+
+  const existingToken = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!existingToken) {
+    setUnauthenticatedUi("Ingresa tus credenciales.");
+    return;
+  }
+
+  try {
+    const user = await validateSession(existingToken);
+    setAuthenticatedUi(user);
+    setLoginStatus("Sesion activa.");
+  } catch (error) {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    setUnauthenticatedUi("Tu sesion expiro. Inicia sesion nuevamente.");
+    debugError("Sesion invalida", error);
+  }
 };
 
 const loadImage = (src) =>
@@ -999,6 +1080,7 @@ form.elements.installmentCount.addEventListener("input", () => {
 });
 
 const bootstrap = () => {
+  setUnauthenticatedUi("Ingresa tus credenciales.");
   downloadButton.removeAttribute("disabled");
   downloadButton.disabled = false;
   ensureContractNumber();
@@ -1019,6 +1101,38 @@ const bootstrap = () => {
   debugLog("Bootstrap completado");
 };
 
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(loginForm);
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "");
+
+  if (!email || !password) {
+    setLoginStatus("Completa correo y contrasena.", true);
+    return;
+  }
+
+  loginButton.disabled = true;
+  setLoginStatus("Iniciando sesion...");
+
+  try {
+    const result = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+
+    window.localStorage.setItem(AUTH_TOKEN_KEY, result.accessToken);
+    setAuthenticatedUi(result.user);
+    setLoginStatus("Sesion iniciada.");
+    statusText.textContent = "Sesion iniciada correctamente.";
+  } catch (error) {
+    setLoginStatus(error.message || "No se pudo iniciar sesion.", true);
+    debugError("Login fallido", error);
+  } finally {
+    loginButton.disabled = false;
+  }
+});
+
 window.addEventListener("error", (event) => {
   debugError("window.error", event.error || event.message || event);
 });
@@ -1028,3 +1142,4 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 bootstrap();
+setupAuth();
