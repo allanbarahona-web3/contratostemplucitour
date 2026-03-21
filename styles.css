@@ -220,20 +220,28 @@ h2 {
 }
 
 .sign-link-actions {
+  margin: 8px 16px 16px;
+  border: 1px solid rgba(18, 63, 147, 0.22);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(246, 251, 255, 0.92);
+}
+
+.sign-link-actions input {
+  font-size: 0.84rem;
+  font-family: "Manrope", sans-serif;
+}
+
+.sign-link-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
 }
 
-.sign-link-actions .agent-nav-link {
+.sign-link-buttons .agent-nav-link,
+.sign-link-buttons .ghost {
   font-size: 0.8rem;
   padding: 7px 11px;
-}
-
-.sign-link-actions .ghost {
-  padding: 7px 11px;
-  font-size: 0.8rem;
 }
 
 .session-controls {

@@ -2,6 +2,11 @@ const statusEl = document.getElementById("publicSignStatus");
 const contractNumberEl = document.getElementById("publicContractNumber");
 const clientNameEl = document.getElementById("publicClientName");
 const contractStateEl = document.getElementById("publicContractState");
+const readStep = document.getElementById("publicReadStep");
+const signStep = document.getElementById("publicSignStep");
+const viewContractButton = document.getElementById("publicViewContractButton");
+const goToSignButton = document.getElementById("publicGoToSignButton");
+const backToReadButton = document.getElementById("publicBackToReadButton");
 const contractFrame = document.getElementById("publicContractFrame");
 const signedByNameInput = document.getElementById("publicSignedByName");
 const signatureCanvas = document.getElementById("publicSignatureCanvas");
@@ -21,6 +26,16 @@ let lastPoint = null;
 
 const setStatus = (message) => {
   statusEl.textContent = String(message || "");
+};
+
+const showReadStep = () => {
+  readStep?.classList.remove("hidden");
+  signStep?.classList.add("hidden");
+};
+
+const showSignStep = () => {
+  readStep?.classList.add("hidden");
+  signStep?.classList.remove("hidden");
 };
 
 const getTokenFromUrl = () => {
@@ -78,9 +93,8 @@ const clearCanvas = () => {
 
 const getCanvasPoint = (event) => {
   const rect = signatureCanvas.getBoundingClientRect();
-  const touch = event.touches?.[0] || event.changedTouches?.[0] || null;
-  const clientX = touch ? touch.clientX : event.clientX;
-  const clientY = touch ? touch.clientY : event.clientY;
+  const clientX = event.clientX;
+  const clientY = event.clientY;
 
   return {
     x: ((clientX - rect.left) / rect.width) * signatureCanvas.width,
@@ -103,6 +117,12 @@ const drawSegment = (from, to) => {
 };
 
 const beginDraw = (event) => {
+  if (signStep?.classList.contains("hidden")) {
+    return;
+  }
+
+  event.preventDefault();
+  signatureCanvas.setPointerCapture?.(event.pointerId);
   isDrawing = true;
   lastPoint = getCanvasPoint(event);
   signatureDirty = true;
@@ -199,17 +219,22 @@ const loadSigningSession = async () => {
   contractStateEl.textContent = data.status || "-";
   signedByNameInput.value = data.clientName || "";
 
-  if (contractFrame && data.pdfUrl) {
-    contractFrame.src = data.pdfUrl;
+  if (contractFrame) {
+    contractFrame.src = "";
+    contractFrame.style.display = "none";
   }
 
+  showReadStep();
+
   if (String(data.status || "").toUpperCase() === "SIGNED") {
-    submitButton.setAttribute("disabled", "true");
+    submitButton?.setAttribute("disabled", "true");
+    goToSignButton?.setAttribute("disabled", "true");
+    viewContractButton?.setAttribute("disabled", "true");
     setStatus("Este contrato ya fue firmado y registrado.");
     return;
   }
 
-  setStatus("Revisa el contrato, firma y presiona Enviar contrato firmado.");
+  setStatus("Paso 1: presiona Ver contrato. Al terminar, presiona Firmar.");
 };
 
 const submitSignedContract = async () => {
@@ -232,18 +257,49 @@ const submitSignedContract = async () => {
   payload.append("signedPdfFile", signedPdfBlob, `${sessionData.contractNumber || "contrato"}-signed.pdf`);
 
   await apiFetchMultipart("/contracts/public/finalize-signature", payload);
-  setStatus("Contrato firmado enviado correctamente. Ya puedes cerrar esta pagina.");
+  setStatus("Contrato firmado enviado correctamente. Proceso finalizado.");
   submitButton.setAttribute("disabled", "true");
+  clearButton?.setAttribute("disabled", "true");
+  backToReadButton?.setAttribute("disabled", "true");
 };
 
 if (signatureCanvas instanceof HTMLCanvasElement) {
-  signatureCanvas.addEventListener("mousedown", beginDraw);
-  signatureCanvas.addEventListener("mousemove", moveDraw);
-  signatureCanvas.addEventListener("mouseup", endDraw);
-  signatureCanvas.addEventListener("mouseleave", endDraw);
-  signatureCanvas.addEventListener("touchstart", beginDraw, { passive: false });
-  signatureCanvas.addEventListener("touchmove", moveDraw, { passive: false });
-  signatureCanvas.addEventListener("touchend", endDraw);
+  signatureCanvas.addEventListener("pointerdown", beginDraw);
+  signatureCanvas.addEventListener("pointermove", moveDraw);
+  signatureCanvas.addEventListener("pointerup", endDraw);
+  signatureCanvas.addEventListener("pointerleave", endDraw);
+  signatureCanvas.addEventListener("pointercancel", endDraw);
+}
+
+if (viewContractButton) {
+  viewContractButton.addEventListener("click", () => {
+    const sourcePdfUrl = sessionData?.signedPdfUrl || sessionData?.pdfUrl;
+    if (!sourcePdfUrl) {
+      setStatus("No se encontro el contrato para visualizacion.");
+      return;
+    }
+
+    contractFrame.style.display = "block";
+    contractFrame.src = sourcePdfUrl;
+    goToSignButton?.removeAttribute("disabled");
+    setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
+  });
+}
+
+if (goToSignButton) {
+  goToSignButton.addEventListener("click", () => {
+    signatureDirty = false;
+    clearCanvas();
+    showSignStep();
+    setStatus("Paso 2: firma en el recuadro y presiona Enviar contrato firmado.");
+  });
+}
+
+if (backToReadButton) {
+  backToReadButton.addEventListener("click", () => {
+    showReadStep();
+    setStatus("Regresaste a lectura del contrato.");
+  });
 }
 
 if (clearButton) {

@@ -26,6 +26,7 @@ const historySearchInput = document.getElementById("historySearch");
 const historySearchButton = document.getElementById("historySearchButton");
 const historyList = document.getElementById("historyList");
 const signingLinkActions = document.getElementById("signingLinkActions");
+const signingLinkInput = document.getElementById("signingLinkInput");
 const openSigningLinkButton = document.getElementById("openSigningLinkButton");
 const copySigningLinkButton = document.getElementById("copySigningLinkButton");
 const shareSigningLinkButton = document.getElementById("shareSigningLinkButton");
@@ -94,6 +95,9 @@ const hideSigningLinkActions = () => {
   if (openSigningLinkButton) {
     openSigningLinkButton.setAttribute("href", "#");
   }
+  if (signingLinkInput) {
+    signingLinkInput.value = "";
+  }
   if (shareSigningLinkButton) {
     shareSigningLinkButton.setAttribute("href", "#");
   }
@@ -107,6 +111,9 @@ const showSigningLinkActions = (signingUrl) => {
   }
 
   latestSigningLinkUrl = normalized;
+  if (signingLinkInput) {
+    signingLinkInput.value = normalized;
+  }
   if (openSigningLinkButton) {
     openSigningLinkButton.setAttribute("href", normalized);
   }

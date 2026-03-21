@@ -203,13 +203,18 @@ export class ContractsService {
     }
 
     const allowedOrigin = this.configService.get<string>("ALLOWED_ORIGIN", "").trim();
-    const firstOrigin = allowedOrigin
+    const origins = allowedOrigin
       .split(",")
       .map((item) => item.trim())
-      .find((item) => item.startsWith("http://") || item.startsWith("https://"));
+      .filter((item) => item.startsWith("http://") || item.startsWith("https://"));
 
-    if (firstOrigin) {
-      return firstOrigin.replace(/\/+$/, "");
+    const preferredOrigin =
+      origins.find((item) => item.startsWith("https://") && !/localhost|127\.0\.0\.1/i.test(item)) ||
+      origins.find((item) => !/localhost|127\.0\.0\.1/i.test(item)) ||
+      origins[0];
+
+    if (preferredOrigin) {
+      return preferredOrigin.replace(/\/+$/, "");
     }
 
     throw new InternalServerErrorException("No se pudo resolver PUBLIC_APP_BASE_URL para generar links de firma.");
@@ -353,9 +358,9 @@ export class ContractsService {
     dto: SendSigningEmailDto,
   ) {
     const apiKey = this.configService.get<string>("RESEND_API_KEY", "").trim();
-    const fromEmail = this.configService
-      .get<string>("CONTRACTS_FROM_EMAIL", "")
-      .trim();
+    const fromEmail =
+      this.configService.get<string>("CONTRACTS_FROM_EMAIL", "").trim() ||
+      this.configService.get<string>("AUTH_FROM_EMAIL", "").trim();
 
     if (!apiKey || !fromEmail) {
       throw new InternalServerErrorException(

@@ -28,21 +28,26 @@
         </section>
 
         <section class="history-standalone-list">
-          <div class="history-table-wrap" style="padding: 8px;">
-            <iframe id="publicContractFrame" title="Contrato" style="width:100%;height:58vh;border:0;border-radius:10px;background:#f4f8ff;"></iframe>
+          <div id="publicReadStep" class="history-table-wrap" style="padding: 10px;">
+            <div class="signature-actions" style="justify-content:flex-start;margin-bottom:8px;">
+              <button id="publicViewContractButton" type="button" class="ghost">Ver contrato</button>
+              <button id="publicGoToSignButton" type="button" disabled>Firmar</button>
+            </div>
+            <iframe id="publicContractFrame" title="Contrato" style="width:100%;height:58vh;border:0;border-radius:10px;background:#f4f8ff;display:none;"></iframe>
           </div>
 
-          <div class="signature-panel" style="margin-top:12px;">
+          <div id="publicSignStep" class="signature-panel hidden" style="margin-top:12px;">
             <div class="viewer-body signature-body">
+              <p class="signature-help"><strong>Paso 2:</strong> Firma en el recuadro y luego presiona Enviar contrato firmado.</p>
               <label>Nombre de quien firma
                 <input id="publicSignedByName" type="text" placeholder="Nombre completo" maxlength="120" />
               </label>
-              <p class="signature-help">Dibuja tu firma dentro del recuadro y presiona Enviar contrato firmado.</p>
               <div class="signature-canvas-wrap">
                 <canvas id="publicSignatureCanvas" width="900" height="260"></canvas>
               </div>
               <div class="signature-actions">
-                <button id="publicSignatureClear" type="button" class="ghost">Limpiar</button>
+                <button id="publicBackToReadButton" type="button" class="ghost">Volver a ver contrato</button>
+                <button id="publicSignatureClear" type="button" class="ghost">Borrar firma</button>
                 <button id="publicSignatureSubmit" type="button">Enviar contrato firmado</button>
               </div>
             </div>

@@ -336,14 +336,19 @@
           <p class="kicker">Vista previa</p>
           <h2>Contrato listo para PDF</h2>
           <p id="statusText">Completa campos y toca Vista previa.</p>
-          <div id="signingLinkActions" class="sign-link-actions hidden">
-            <a id="openSigningLinkButton" class="agent-nav-link" href="#" target="_blank" rel="noopener noreferrer">Abrir link de firma</a>
-            <button id="copySigningLinkButton" type="button" class="ghost">Copiar link</button>
-            <a id="shareSigningLinkButton" class="agent-nav-link" href="#" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>
-          </div>
         </header>
         <article id="contractPreview" class="contract-paper"></article>
         <article id="minorAnnexPreview" class="contract-paper annex-paper hidden"></article>
+        <section id="signingLinkActions" class="sign-link-actions hidden">
+          <label class="full">Link de firma para cliente
+            <input id="signingLinkInput" type="text" readonly />
+          </label>
+          <div class="sign-link-buttons">
+            <a id="openSigningLinkButton" class="agent-nav-link" href="#" target="_blank" rel="noopener noreferrer">Ver contrato</a>
+            <button id="copySigningLinkButton" type="button" class="ghost">Copiar link</button>
+            <a id="shareSigningLinkButton" class="agent-nav-link" href="#" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>
+          </div>
+        </section>
       </section>
     </main>
   </body>
