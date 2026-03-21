@@ -631,7 +631,7 @@ button.ghost:hover {
 .history-shell {
   position: relative;
   z-index: 1;
-  width: min(1280px, 96vw);
+  width: min(1480px, 98vw);
   margin: 22px auto;
 }
 
@@ -674,6 +674,11 @@ button.ghost:hover {
   table-layout: fixed;
 }
 
+.history-table th:nth-child(6),
+.history-table td:nth-child(6) {
+  width: 260px;
+}
+
 .history-table th,
 .history-table td {
   text-align: left;
@@ -698,11 +703,13 @@ button.ghost:hover {
 
 .history-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .history-actions button {
+  flex: 0 0 auto;
   padding: 7px 10px;
   font-size: 0.76rem;
 }
@@ -1136,5 +1143,10 @@ button.ghost:hover {
 
   .history-table {
     min-width: 920px;
+  }
+
+  .history-table th:nth-child(6),
+  .history-table td:nth-child(6) {
+    width: 220px;
   }
 }
