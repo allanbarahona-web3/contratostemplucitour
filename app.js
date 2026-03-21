@@ -26,8 +26,11 @@ const storedApiBase = normalizeBaseUrl(window.localStorage.getItem("contractsApi
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const hasLocalStoredApiBase = /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(storedApiBase);
+if (!isLocalHost && hasLocalStoredApiBase) {
+  window.localStorage.removeItem("contractsApiBase");
+}
 const runtimeStoredApiBase = !isLocalHost && hasLocalStoredApiBase ? "" : storedApiBase;
-const API_BASE = runtimeStoredApiBase || configuredApiBase || (isLocalHost ? "http://localhost:3001" : DEFAULT_PRODUCTION_API_BASE);
+const API_BASE = runtimeStoredApiBase || configuredApiBase || DEFAULT_PRODUCTION_API_BASE;
 const AUTH_TOKEN_KEY = "contractsTempAuthToken";
 
 const loginGate = document.getElementById("loginGate");
