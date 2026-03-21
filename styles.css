@@ -69,6 +69,39 @@ body {
   overflow: hidden;
 }
 
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap input {
+  padding-right: 46px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d8cfc1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  padding: 6px;
+}
+
+.password-toggle:hover {
+  transform: translateY(-50%);
+  background: #f8fafc;
+}
+
+.password-toggle svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .login-status {
   font-size: 0.9rem;
   text-align: center;

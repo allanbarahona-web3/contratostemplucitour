@@ -27,11 +27,27 @@ const loginGate = document.getElementById("loginGate");
 const loginForm = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
+const loginPasswordInput = document.getElementById("loginPassword");
+const toggleLoginPasswordButton = document.getElementById("toggleLoginPassword");
 const layoutEl = document.querySelector("main.layout");
 const sessionControlsEl = document.getElementById("sessionControls");
 const badgeEl = document.getElementById("agentBadge");
 const logoutButton = document.getElementById("logoutButton");
 let currentAuthenticatedUser = null;
+
+const setupPasswordToggle = () => {
+  if (!loginPasswordInput || !toggleLoginPasswordButton) {
+    return;
+  }
+
+  toggleLoginPasswordButton.addEventListener("click", () => {
+    const isVisible = loginPasswordInput.type === "text";
+    loginPasswordInput.type = isVisible ? "password" : "text";
+    toggleLoginPasswordButton.setAttribute("aria-pressed", String(!isVisible));
+    toggleLoginPasswordButton.setAttribute("aria-label", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
+    toggleLoginPasswordButton.setAttribute("title", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
+  });
+};
 
 const handleLogout = () => {
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -1334,6 +1350,8 @@ loginForm.addEventListener("submit", async (event) => {
 if (logoutButton) {
   logoutButton.addEventListener("click", handleLogout);
 }
+
+setupPasswordToggle();
 
 window.addEventListener("error", (event) => {
   debugError("window.error", event.error || event.message || event);
