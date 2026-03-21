@@ -7,6 +7,7 @@ const signStep = document.getElementById("publicSignStep");
 const viewContractButton = document.getElementById("publicViewContractButton");
 const goToSignButton = document.getElementById("publicGoToSignButton");
 const backToReadButton = document.getElementById("publicBackToReadButton");
+const contractViewer = document.getElementById("publicContractViewer");
 const contractFrame = document.getElementById("publicContractFrame");
 const signedByNameLabel = document.getElementById("publicSignedByNameLabel");
 const signatureCanvas = document.getElementById("publicSignatureCanvas");
@@ -17,8 +18,6 @@ const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3001" : "");
-const isSmallScreen = () => window.matchMedia("(max-width: 900px)").matches;
-const isInAppBrowser = /WhatsApp|FBAN|FBAV|Instagram|Line/i.test(navigator.userAgent || "");
 
 let sessionToken = "";
 let sessionData = null;
@@ -26,6 +25,7 @@ let signatureDirty = false;
 let isDrawing = false;
 let lastPoint = null;
 let contractPdfObjectUrl = "";
+let sourcePdfBytesCache = null;
 
 const toStatusClass = (kind) => {
   if (kind === "success") return "status-ok";
@@ -47,6 +47,68 @@ const revokeContractPdfObjectUrl = () => {
     URL.revokeObjectURL(contractPdfObjectUrl);
     contractPdfObjectUrl = "";
   }
+};
+
+const getPdfJs = async () => {
+  if (window.pdfjsLib) {
+    return window.pdfjsLib;
+  }
+
+  const moduleNs = await import("https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs");
+  const pdfjs = moduleNs?.default || moduleNs;
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
+  window.pdfjsLib = pdfjs;
+  return pdfjs;
+};
+
+const renderPdfInViewer = async (pdfBytes) => {
+  if (!contractViewer) {
+    throw new Error("No se pudo inicializar el visor de contrato.");
+  }
+
+  const pdfjs = await getPdfJs();
+  const doc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+  contractViewer.innerHTML = "";
+
+  const containerWidth = Math.max(280, contractViewer.clientWidth - 16);
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const page = await doc.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = containerWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const context = canvas.getContext("2d");
+    if (!context) {
+      continue;
+    }
+    await page.render({ canvasContext: context, viewport }).promise;
+
+    const pageWrap = document.createElement("div");
+    pageWrap.className = "public-pdf-page";
+    pageWrap.appendChild(canvas);
+    contractViewer.appendChild(pageWrap);
+  }
+};
+
+const getSourcePdfBytes = async () => {
+  if (sourcePdfBytesCache) {
+    return sourcePdfBytesCache;
+  }
+
+  const sourcePdfUrl = getSigningPdfUrl();
+  if (!sourcePdfUrl) {
+    throw new Error("No se encontro el PDF para firmar.");
+  }
+
+  const sourceResponse = await fetch(sourcePdfUrl);
+  if (!sourceResponse.ok) {
+    throw new Error("No se pudo cargar el PDF original.");
+  }
+
+  sourcePdfBytesCache = new Uint8Array(await sourceResponse.arrayBuffer());
+  return sourcePdfBytesCache;
 };
 
 const resizeSignatureCanvas = () => {
@@ -215,30 +277,21 @@ const buildSignedPdfBlob = async () => {
     throw new Error("No se pudo cargar la libreria de firma.");
   }
 
-  const sourcePdfUrl = getSigningPdfUrl();
-  if (!sourcePdfUrl) {
-    throw new Error("No se encontro el PDF para firmar.");
-  }
-
-  const sourceResponse = await fetch(sourcePdfUrl);
-  if (!sourceResponse.ok) {
-    throw new Error("No se pudo cargar el PDF original.");
-  }
-
-  const pdfBytes = new Uint8Array(await sourceResponse.arrayBuffer());
+  const pdfBytes = await getSourcePdfBytes();
   const { PDFDocument, rgb } = window.PDFLib;
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const signaturePng = await canvasToPngBytes();
   const signatureImage = await pdfDoc.embedPng(signaturePng);
 
-  const page = pdfDoc.getPages()[0];
+  const pages = pdfDoc.getPages();
+  const page = pages[pages.length - 1];
   const pageWidth = page.getWidth();
   const pageHeight = page.getHeight();
 
-  const signWidth = Math.min(180, pageWidth * 0.28);
+  const signWidth = Math.min(180, pageWidth * 0.26);
   const signHeight = (signatureImage.height / signatureImage.width) * signWidth;
-  const signX = Math.max(40, pageWidth * 0.08);
-  const signY = Math.max(70, pageHeight * 0.12);
+  const signX = Math.max(42, pageWidth * 0.1);
+  const signY = Math.max(84, pageHeight * 0.085);
 
   page.drawImage(signatureImage, {
     x: signX,
@@ -281,6 +334,13 @@ const loadSigningSession = async () => {
     contractFrame.src = "";
     contractFrame.style.display = "none";
   }
+
+  if (contractViewer) {
+    contractViewer.innerHTML = "";
+    contractViewer.classList.add("hidden");
+  }
+
+  sourcePdfBytesCache = null;
 
   showReadStep();
 
@@ -335,40 +395,19 @@ if (signatureCanvas instanceof HTMLCanvasElement) {
 
 if (viewContractButton) {
   viewContractButton.addEventListener("click", () => {
-    const sourcePdfUrl = getSigningPdfUrl();
-    if (!sourcePdfUrl) {
-      setStatus("No se encontro el contrato para visualizacion.", "error");
-      return;
-    }
-
     setStatus("Cargando contrato...");
     viewContractButton.setAttribute("disabled", "true");
 
-    void fetch(sourcePdfUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("No se pudo cargar el contrato para visualizacion.");
+    void getSourcePdfBytes()
+      .then((bytes) => renderPdfInViewer(bytes))
+      .then(() => {
+        if (contractViewer) {
+          contractViewer.classList.remove("hidden");
         }
-        return response.blob();
-      })
-      .then((blob) => {
-        revokeContractPdfObjectUrl();
-        contractPdfObjectUrl = URL.createObjectURL(blob);
-        if (isSmallScreen() || isInAppBrowser) {
-          const opened = window.open(contractPdfObjectUrl, "_blank", "noopener,noreferrer");
-          if (!opened) {
-            window.location.href = contractPdfObjectUrl;
-            return;
-          }
-          contractFrame.style.display = "none";
-          contractFrame.src = "";
-          setStatus("Contrato abierto en otra pestaña. Regresa aqui para firmar.");
-        } else {
-          contractFrame.style.display = "block";
-          contractFrame.src = contractPdfObjectUrl;
-          setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
-        }
+        contractFrame.style.display = "none";
+        contractFrame.src = "";
         goToSignButton?.removeAttribute("disabled");
+        setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
       })
       .catch((error) => {
         setStatus(error.message || "No se pudo abrir el contrato.", "error");
