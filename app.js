@@ -1227,8 +1227,19 @@ downloadButton.addEventListener("click", () => {
 
       statusText.textContent = "Descargando PDF...";
       downloadBlob(blob, fileName);
+
+      // Always clear current contract data after a successful download.
+      resetContractWorkspace();
+
       const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
-      await prepareNextContract(token);
+      if (token) {
+        try {
+          await reserveContractNumber(token);
+        } catch (reserveError) {
+          debugError("No se pudo reservar el siguiente numero", reserveError);
+        }
+      }
+
       statusText.textContent = "PDF generado y descargado. Formulario limpio para un nuevo contrato.";
       debugLog("Descarga completada");
     } catch (error) {
