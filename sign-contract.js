@@ -17,6 +17,8 @@ const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3001" : "");
+const isSmallScreen = () => window.matchMedia("(max-width: 900px)").matches;
+const isInAppBrowser = /WhatsApp|FBAN|FBAV|Instagram|Line/i.test(navigator.userAgent || "");
 
 let sessionToken = "";
 let sessionData = null;
@@ -352,10 +354,21 @@ if (viewContractButton) {
       .then((blob) => {
         revokeContractPdfObjectUrl();
         contractPdfObjectUrl = URL.createObjectURL(blob);
-        contractFrame.style.display = "block";
-        contractFrame.src = contractPdfObjectUrl;
+        if (isSmallScreen() || isInAppBrowser) {
+          const opened = window.open(contractPdfObjectUrl, "_blank", "noopener,noreferrer");
+          if (!opened) {
+            window.location.href = contractPdfObjectUrl;
+            return;
+          }
+          contractFrame.style.display = "none";
+          contractFrame.src = "";
+          setStatus("Contrato abierto en otra pestaña. Regresa aqui para firmar.");
+        } else {
+          contractFrame.style.display = "block";
+          contractFrame.src = contractPdfObjectUrl;
+          setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
+        }
         goToSignButton?.removeAttribute("disabled");
-        setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
       })
       .catch((error) => {
         setStatus(error.message || "No se pudo abrir el contrato.", "error");

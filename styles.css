@@ -921,6 +921,49 @@ button.ghost:hover {
   gap: 8px;
 }
 
+.public-sign-page {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.public-sign-page .history-shell {
+  width: min(980px, 100vw);
+  height: 100dvh;
+  margin: 0 auto;
+  padding: 10px 8px;
+}
+
+.public-sign-page .history-main-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-sign-page .history-standalone-list {
+  flex: 1;
+  margin: 10px 12px 12px;
+  max-height: none;
+  overflow: hidden;
+}
+
+.public-sign-page #publicReadStep,
+.public-sign-page #publicSignStep {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0 !important;
+}
+
+.public-sign-page #publicSignStep .signature-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.public-sign-page #publicSignStep .signature-canvas-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
 #publicReadStep,
 #publicSignStep {
   overflow-x: hidden;
@@ -1188,5 +1231,37 @@ button.ghost:hover {
 
   #publicSignStep .signature-actions button {
     width: 100%;
+  }
+
+  .public-sign-page .bg-shape {
+    display: none;
+  }
+
+  .public-sign-page .history-shell {
+    padding: 0;
+  }
+
+  .public-sign-page .panel {
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .public-sign-page .panel-header {
+    padding: 12px 14px 0;
+  }
+
+  .public-sign-page .history-standalone-toolbar {
+    margin: 8px 12px 0;
+    padding: 10px;
+  }
+
+  .public-sign-page .history-standalone-list {
+    margin: 8px 12px 12px;
+    padding-right: 0;
+  }
+
+  .public-sign-page #publicReadStep iframe {
+    height: 52dvh !important;
   }
 }

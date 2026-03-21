@@ -139,7 +139,7 @@ export class ContractsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(":contractId/finalize-signature")
+  @Post("internal/:contractId/finalize-signature")
   @UseInterceptors(FileInterceptor("signedPdfFile"))
   finalizeContractSignature(
     @Req()
