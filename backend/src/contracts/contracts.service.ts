@@ -302,6 +302,35 @@ export class ContractsService {
     }
 
     const contractNumber = dto.contractNumber.trim();
+    const payloadRecord =
+      payload && typeof payload === "object" && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : {};
+    const clientPhone = String(payloadRecord.clientPhone || "").trim() || null;
+    const emergencyContactName =
+      String(payloadRecord.emergencyContactName || "").trim() || null;
+    const emergencyContactPhone =
+      String(payloadRecord.emergencyContactPhone || "").trim() || null;
+
+    const client = await (this.prisma as any).client.upsert({
+      where: { idNumber: dto.clientIdNumber.trim() },
+      update: {
+        fullName: dto.clientFullName.trim(),
+        email: dto.clientEmail.trim().toLowerCase(),
+        phone: clientPhone,
+        emergencyContactName,
+        emergencyContactPhone,
+      },
+      create: {
+        fullName: dto.clientFullName.trim(),
+        idNumber: dto.clientIdNumber.trim(),
+        email: dto.clientEmail.trim().toLowerCase(),
+        phone: clientPhone,
+        emergencyContactName,
+        emergencyContactPhone,
+      },
+    });
+
     const now = new Date();
     const y = now.getFullYear();
     const m = this.pad(now.getMonth() + 1);
@@ -348,9 +377,7 @@ export class ContractsService {
     const archived = await (this.prisma as any).contract.create({
       data: {
         contractNumber,
-        clientFullName: dto.clientFullName.trim(),
-        clientIdNumber: dto.clientIdNumber.trim(),
-        clientEmail: dto.clientEmail.trim().toLowerCase(),
+        clientId: client.id,
         destination: dto.destination.trim(),
         generatedByUserId: user.id,
         generatedByEmail: user.email,
@@ -394,9 +421,9 @@ export class ContractsService {
       ? {
           OR: [
             { contractNumber: { contains: q, mode: "insensitive" as const } },
-            { clientFullName: { contains: q, mode: "insensitive" as const } },
-            { clientIdNumber: { contains: q, mode: "insensitive" as const } },
-            { clientEmail: { contains: q, mode: "insensitive" as const } },
+            { client: { is: { fullName: { contains: q, mode: "insensitive" as const } } } },
+            { client: { is: { idNumber: { contains: q, mode: "insensitive" as const } } } },
+            { client: { is: { email: { contains: q, mode: "insensitive" as const } } } },
           ],
         }
       : {};
@@ -406,6 +433,7 @@ export class ContractsService {
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
+        client: true,
         documents: {
           select: {
             id: true,
@@ -418,9 +446,9 @@ export class ContractsService {
       items: items.map((item: any) => ({
         id: item.id,
         contractNumber: item.contractNumber,
-        clientFullName: item.clientFullName,
-        clientIdNumber: item.clientIdNumber,
-        clientEmail: item.clientEmail,
+        clientFullName: item.client?.fullName || "-",
+        clientIdNumber: item.client?.idNumber || "-",
+        clientEmail: item.client?.email || "-",
         destination: item.destination,
         generatedByName: item.generatedByName,
         createdAt: item.createdAt,

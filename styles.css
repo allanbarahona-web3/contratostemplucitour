@@ -314,6 +314,24 @@ h2 {
   border-radius: 999px;
 }
 
+.agent-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: #fff;
+  color: #1f3f74;
+  border: 1px solid rgba(31, 63, 116, 0.3);
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 720;
+}
+
+.agent-nav-link:hover {
+  background: #f4f8ff;
+}
+
 .agent-logout:hover {
   background: #f9fafb;
 }
@@ -567,6 +585,41 @@ button.ghost:hover {
   padding: 12px;
 }
 
+.history-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1280px, 96vw);
+  margin: 22px auto;
+}
+
+.history-main-panel {
+  padding-bottom: 12px;
+}
+
+.history-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-standalone-toolbar {
+  margin: 12px 16px 0;
+  border: 1px solid rgba(18, 63, 147, 0.22);
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(245, 250, 255, 0.95), rgba(235, 244, 255, 0.9));
+}
+
+.history-standalone-list {
+  margin: 12px 16px 16px;
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 255px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .history-toolbar label {
   display: block;
   margin-bottom: 8px;
@@ -815,6 +868,10 @@ button.ghost:hover {
 
   .history-search-row {
     grid-template-columns: 1fr;
+  }
+
+  .history-top-row {
+    flex-wrap: wrap;
   }
 
   .history-item-meta {

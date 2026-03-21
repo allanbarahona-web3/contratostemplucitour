@@ -18,6 +18,9 @@ const minorAnnexPreview = document.getElementById("minorAnnexPreview");
 const clientNationalitySelect = document.getElementById("clientNationality");
 const clientNationalityOtherWrap = document.getElementById("clientNationalityOtherWrap");
 const reservationAmountError = document.getElementById("reservationAmountError");
+const idFrontDocumentInput = document.getElementById("idFrontDocument");
+const idBackDocumentInput = document.getElementById("idBackDocument");
+const passportDocumentInput = document.getElementById("passportDocument");
 const contractDocumentsInput = document.getElementById("contractDocuments");
 const historySearchInput = document.getElementById("historySearch");
 const historySearchButton = document.getElementById("historySearchButton");
@@ -271,6 +274,12 @@ const blobToFile = (blob, fileName, mimeType) =>
     lastModified: Date.now(),
   });
 
+const withFilePrefix = (file, prefix) =>
+  new File([file], `${prefix}-${file.name}`, {
+    type: file.type,
+    lastModified: file.lastModified || Date.now(),
+  });
+
 const toWebpFile = async (file) => {
   const imageBitmap = await createImageBitmap(file);
   const maxEdge = 2000;
@@ -316,12 +325,8 @@ const toWebpFile = async (file) => {
 
 const prepareDocumentAttachments = async (fileList) => {
   const files = Array.from(fileList || []);
-  if (files.length > MAX_DOCUMENT_COUNT) {
-    throw new Error(`Solo puedes adjuntar hasta ${MAX_DOCUMENT_COUNT} archivos.`);
-  }
 
   const prepared = [];
-  let totalBytes = 0;
 
   for (const originalFile of files) {
     const mimeType = String(originalFile.type || "").toLowerCase();
@@ -338,15 +343,53 @@ const prepareDocumentAttachments = async (fileList) => {
       throw new Error(`El archivo ${fileToUpload.name} supera 5 MB.`);
     }
 
-    totalBytes += fileToUpload.size;
-    if (totalBytes > MAX_DOCUMENT_TOTAL_BYTES) {
-      throw new Error("El total de adjuntos supera 25 MB.");
-    }
-
     prepared.push(fileToUpload);
   }
 
   return prepared;
+};
+
+const collectAllContractDocuments = async () => {
+  const groups = [
+    {
+      prefix: "cedula-frente",
+      files: idFrontDocumentInput?.files ? [idFrontDocumentInput.files[0]].filter(Boolean) : [],
+    },
+    {
+      prefix: "cedula-reverso",
+      files: idBackDocumentInput?.files ? [idBackDocumentInput.files[0]].filter(Boolean) : [],
+    },
+    {
+      prefix: "pasaporte",
+      files: passportDocumentInput?.files ? [passportDocumentInput.files[0]].filter(Boolean) : [],
+    },
+    {
+      prefix: "soporte",
+      files: Array.from(contractDocumentsInput?.files || []),
+    },
+  ];
+
+  const allPrepared = [];
+  for (const group of groups) {
+    if (!group.files.length) {
+      continue;
+    }
+    const prepared = await prepareDocumentAttachments(group.files);
+    prepared.forEach((file) => {
+      allPrepared.push(withFilePrefix(file, group.prefix));
+    });
+  }
+
+  if (allPrepared.length > MAX_DOCUMENT_COUNT) {
+    throw new Error(`Solo puedes adjuntar hasta ${MAX_DOCUMENT_COUNT} archivos.`);
+  }
+
+  const totalSize = allPrepared.reduce((sum, file) => sum + file.size, 0);
+  if (totalSize > MAX_DOCUMENT_TOTAL_BYTES) {
+    throw new Error("El total de adjuntos supera 25 MB.");
+  }
+
+  return allPrepared;
 };
 
 const handleLogout = () => {
@@ -1760,7 +1803,7 @@ if (sendAndDownloadButton) {
           archivePayload.append("payloadJson", JSON.stringify(data));
           archivePayload.append("pdfFile", blob, fileName);
 
-          const extraDocs = await prepareDocumentAttachments(contractDocumentsInput?.files);
+          const extraDocs = await collectAllContractDocuments();
           extraDocs.forEach((docFile) => {
             archivePayload.append("documents", docFile, docFile.name);
           });
