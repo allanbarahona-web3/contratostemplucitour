@@ -109,6 +109,7 @@ const closeViewer = () => {
   viewerModal.classList.add("hidden");
   viewerModal.setAttribute("aria-hidden", "true");
   viewerBody.innerHTML = "";
+  document.body.classList.remove("viewer-open");
 };
 
 const openViewer = (title, docs = []) => {
@@ -142,6 +143,7 @@ const openViewer = (title, docs = []) => {
 
   viewerModal.classList.remove("hidden");
   viewerModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("viewer-open");
 };
 
 const loadContractHistory = async (query = "") => {
@@ -267,6 +269,7 @@ historyTableBody.addEventListener("click", (event) => {
         viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudieron abrir los archivos.")}</p>`;
         viewerModal.classList.remove("hidden");
         viewerModal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("viewer-open");
       })
       .finally(() => {
         target.removeAttribute("disabled");
@@ -278,6 +281,11 @@ historyTableBody.addEventListener("click", (event) => {
 viewerCloseButton.addEventListener("click", closeViewer);
 viewerModal.addEventListener("click", (event) => {
   if (event.target === viewerModal) {
+    closeViewer();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !viewerModal.classList.contains("hidden")) {
     closeViewer();
   }
 });
