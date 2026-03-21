@@ -658,6 +658,12 @@ const addCompanionRow = (initial = {}) => {
       <label>Numero ID<input data-field="idNumber" value="${escapeHtml(initial.idNumber || "")}" required /></label>
       <label>Correo<input data-field="email" type="email" value="${escapeHtml(initial.email || "")}" required /></label>
       <label>Telefono<input data-field="phone" value="${escapeHtml(initial.phone || "")}" required /></label>
+      <label>Contacto emergencia<input data-field="emergencyContactName" value="${escapeHtml(
+        initial.emergencyContactName || "",
+      )}" required /></label>
+      <label>Telefono emergencia<input data-field="emergencyContactPhone" value="${escapeHtml(
+        initial.emergencyContactPhone || "",
+      )}" required /></label>
       <label>Direccion<input data-field="address" value="${escapeHtml(initial.address || "")}" required /></label>
       <label>Estado civil
         <select data-field="civilStatus" required>
@@ -894,6 +900,8 @@ const collectCompanions = () =>
     idNumber: card.querySelector('[data-field="idNumber"]').value.trim(),
     email: card.querySelector('[data-field="email"]').value.trim(),
     phone: card.querySelector('[data-field="phone"]').value.trim(),
+    emergencyContactName: card.querySelector('[data-field="emergencyContactName"]').value.trim(),
+    emergencyContactPhone: card.querySelector('[data-field="emergencyContactPhone"]').value.trim(),
     address: card.querySelector('[data-field="address"]').value.trim(),
     civilStatus: normalizeCivilStatusLabel(card.querySelector('[data-field="civilStatus"]').value),
     profession: card.querySelector('[data-field="profession"]').value.trim(),
@@ -999,6 +1007,8 @@ const getFormData = () => {
     clientIdNumber: formData.get("clientIdNumber"),
     clientEmail: formData.get("clientEmail"),
     clientPhone: formData.get("clientPhone"),
+    emergencyContactName: formData.get("emergencyContactName"),
+    emergencyContactPhone: formData.get("emergencyContactPhone"),
     clientAddress: formData.get("clientAddress"),
     civilStatus: normalizeCivilStatusLabel(formData.get("civilStatus")),
     profession: formData.get("profession"),
@@ -1116,7 +1126,9 @@ const buildContractHtml = (data) => {
               person.idNumber,
               )}, vecino de ${contractVar(person.address)}, correo electrónico ${contractVar(
               person.email,
-              )}, teléfono ${contractVar(person.phone)}.</li>`,
+                )}, teléfono ${contractVar(person.phone)}, contacto de emergencia ${contractVar(
+                person.emergencyContactName,
+                )}, teléfono de emergencia ${contractVar(person.emergencyContactPhone)}.</li>`,
         )
         .join("")}</ul>
     `
@@ -1198,7 +1210,9 @@ const buildContractHtml = (data) => {
     data.clientIdNumber,
     )}, vecino de ${contractVar(data.clientAddress)}, correo electrónico ${contractVar(
     data.clientEmail,
-    )}, teléfono ${contractVar(data.clientPhone)}, en adelante denominado como el "Cliente".
+    )}, teléfono ${contractVar(data.clientPhone)}, contacto de emergencia ${contractVar(
+    data.emergencyContactName,
+    )}, teléfono de emergencia ${contractVar(data.emergencyContactPhone)}, en adelante denominado como el "Cliente".
     </p>
 
     ${companionsIntro}
