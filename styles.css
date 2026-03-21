@@ -92,10 +92,12 @@ body {
   line-height: 1;
   color: #64748b;
   cursor: pointer;
+  transform: none;
 }
 
 .password-toggle:hover {
   color: #334155;
+  transform: none;
 }
 
 .password-toggle.active {
@@ -245,6 +247,13 @@ label {
   font-weight: 600;
 }
 
+.field-error {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
 input,
 select,
 textarea,
@@ -279,15 +288,6 @@ textarea {
   font-weight: 700;
 }
 
-#clientSignature {
-  width: 100%;
-  max-width: 100%;
-  background: #fff;
-  border: 1px solid #cab9a4;
-  border-radius: 10px;
-  touch-action: none;
-}
-
 #erickSignaturePreview {
   width: 270px;
   max-width: 100%;
@@ -297,15 +297,6 @@ textarea {
   padding: 8px;
 }
 
-.file-field {
-  margin-top: 10px;
-}
-
-.file-field input {
-  margin-top: 6px;
-}
-
-.signature-actions,
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -422,39 +413,6 @@ button.ghost {
   background: #fff;
   color: var(--ink);
   border: 1px solid #ccbca9;
-}
-
-.password-input-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.password-input-wrap > .password-toggle {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  padding: 0 6px;
-  margin: 0;
-  color: #64748b;
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  align-self: center;
-  justify-self: end;
-  transform: none;
-}
-
-.password-input-wrap > .password-toggle:hover {
-  color: #334155;
-  background: transparent;
-  transform: none;
-}
-
-.password-input-wrap > .password-toggle.active {
-  color: #0f766e;
 }
 
 .preview-panel {

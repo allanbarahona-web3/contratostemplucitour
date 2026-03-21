@@ -16,21 +16,16 @@ const minorsContainer = document.getElementById("minorsContainer");
 const minorAnnexPreview = document.getElementById("minorAnnexPreview");
 const clientNationalitySelect = document.getElementById("clientNationality");
 const clientNationalityOtherWrap = document.getElementById("clientNationalityOtherWrap");
+const reservationAmountError = document.getElementById("reservationAmountError");
 
-const erickSignaturePreview = document.getElementById("erickSignaturePreview");
 const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
-const DEFAULT_PRODUCTION_API_BASE = "https://contratostempapi-h5ppc.ondigitalocean.app";
-const storedApiBase = normalizeBaseUrl(window.localStorage.getItem("contractsApiBase"));
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const hasLocalStoredApiBase = /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(storedApiBase);
-if (!isLocalHost && hasLocalStoredApiBase) {
-  window.localStorage.removeItem("contractsApiBase");
-}
-const runtimeStoredApiBase = !isLocalHost && hasLocalStoredApiBase ? "" : storedApiBase;
-const API_BASE = runtimeStoredApiBase || configuredApiBase || DEFAULT_PRODUCTION_API_BASE;
+const LOCAL_DEVELOPMENT_API_BASE = "http://localhost:3001";
+const API_BASE = configuredApiBase || (isLocalHost ? LOCAL_DEVELOPMENT_API_BASE : "");
+const DEBUG_ENABLED = Boolean(window.APP_CONFIG?.DEBUG);
 const AUTH_TOKEN_KEY = "contractsTempAuthToken";
 
 const loginGate = document.getElementById("loginGate");
@@ -80,11 +75,25 @@ const resetContractWorkspace = () => {
   form.elements.installmentCount.value = "1";
 
   clientNationalityOtherWrap.classList.add("hidden");
+  if (reservationAmountError) {
+    reservationAmountError.textContent = "";
+    reservationAmountError.classList.add("hidden");
+  }
   recalcPaymentDueDate();
   recalcBalance();
   resetDefaultItinerary();
   syncMinorSectionVisibility();
   refreshTutorOptions();
+};
+
+const setReservationInlineMessage = (message = "") => {
+  if (!reservationAmountError) {
+    return;
+  }
+
+  const normalized = String(message || "").trim();
+  reservationAmountError.textContent = normalized;
+  reservationAmountError.classList.toggle("hidden", !normalized);
 };
 
 const prepareNextContract = async (token) => {
@@ -134,10 +143,12 @@ const toMoney = (value) => {
 const formatMoney = (value) => toMoney(value).toFixed(2);
 
 const debugLog = (...args) => {
+  if (!DEBUG_ENABLED) return;
   console.log(DEBUG_TAG, ...args);
 };
 
 const debugError = (...args) => {
+  if (!DEBUG_ENABLED) return;
   console.error(DEBUG_TAG, ...args);
 };
 
@@ -170,6 +181,10 @@ const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
 };
 
 const apiFetch = async (path, options = {}) => {
+  if (!API_BASE) {
+    throw new Error("No hay API configurada. Define APP_CONFIG.API_BASE en config.js.");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -467,14 +482,18 @@ const enforceReservationLimit = (autocorrect = false) => {
   const reservation = toMoney(reservationInput.value);
   if (autocorrect && reservation > total) {
     reservationInput.value = formatMoney(total);
-    statusText.textContent = "La reserva no puede superar el monto total. Se ajusto automaticamente.";
+    setReservationInlineMessage("La reserva no puede superar el monto total. Se ajusto automaticamente.");
   }
 
   const normalizedReservation = toMoney(reservationInput.value);
   if (normalizedReservation > total) {
     reservationInput.setCustomValidity("La reserva no puede ser mayor al monto total.");
+    reservationInput.setAttribute("aria-invalid", "true");
+    setReservationInlineMessage("La reserva no puede ser mayor al monto total.");
   } else {
     reservationInput.setCustomValidity("");
+    reservationInput.removeAttribute("aria-invalid");
+    setReservationInlineMessage("");
   }
 };
 
@@ -1490,13 +1509,15 @@ if (logoutButton) {
 
 setupPasswordToggle();
 
-window.addEventListener("error", (event) => {
-  debugError("window.error", event.error || event.message || event);
-});
+if (DEBUG_ENABLED) {
+  window.addEventListener("error", (event) => {
+    debugError("window.error", event.error || event.message || event);
+  });
 
-window.addEventListener("unhandledrejection", (event) => {
-  debugError("unhandledrejection", event.reason || event);
-});
+  window.addEventListener("unhandledrejection", (event) => {
+    debugError("unhandledrejection", event.reason || event);
+  });
+}
 
 bootstrap();
 setupAuth();
