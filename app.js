@@ -36,7 +36,6 @@ const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const loginPasswordInput = document.getElementById("loginPassword");
 const toggleLoginPasswordButton = document.getElementById("toggleLoginPassword");
-const toggleLoginPasswordLabel = document.getElementById("toggleLoginPasswordLabel");
 const layoutEl = document.querySelector("main.layout");
 const sessionControlsEl = document.getElementById("sessionControls");
 const badgeEl = document.getElementById("agentBadge");
@@ -51,9 +50,7 @@ const setupPasswordToggle = () => {
   toggleLoginPasswordButton.addEventListener("click", () => {
     const isVisible = loginPasswordInput.type === "text";
     loginPasswordInput.type = isVisible ? "password" : "text";
-    if (toggleLoginPasswordLabel) {
-      toggleLoginPasswordLabel.textContent = isVisible ? "Ver" : "Ocultar";
-    }
+    toggleLoginPasswordButton.classList.toggle("active", !isVisible);
     toggleLoginPasswordButton.setAttribute("aria-pressed", String(!isVisible));
     toggleLoginPasswordButton.setAttribute("aria-label", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
     toggleLoginPasswordButton.setAttribute("title", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
