@@ -411,6 +411,8 @@ const addItineraryRow = (initial = {}) => {
 };
 
 const recalcBalance = () => {
+  enforceReservationLimit(true);
+
   const total = toMoney(form.elements.totalAmount.value);
   const reservation = toMoney(form.elements.reservationAmount.value);
   const balance = Math.max(total - reservation, 0);
@@ -420,6 +422,25 @@ const recalcBalance = () => {
   const safeCount = Number.isFinite(installmentCount) && installmentCount > 0 ? installmentCount : 1;
   const monthlyAmount = balance / safeCount;
   form.elements.monthlyInstallmentAmount.value = formatMoney(monthlyAmount);
+};
+
+const enforceReservationLimit = (autocorrect = false) => {
+  const total = toMoney(form.elements.totalAmount.value);
+  const reservationInput = form.elements.reservationAmount;
+  reservationInput.max = String(total);
+
+  const reservation = toMoney(reservationInput.value);
+  if (autocorrect && reservation > total) {
+    reservationInput.value = formatMoney(total);
+    statusText.textContent = "La reserva no puede superar el monto total. Se ajusto automaticamente.";
+  }
+
+  const normalizedReservation = toMoney(reservationInput.value);
+  if (normalizedReservation > total) {
+    reservationInput.setCustomValidity("La reserva no puede ser mayor al monto total.");
+  } else {
+    reservationInput.setCustomValidity("");
+  }
 };
 
 const recalcPaymentDueDate = () => {
@@ -1333,10 +1354,12 @@ form.elements.endDate.addEventListener("change", () => {
 });
 
 form.elements.totalAmount.addEventListener("input", () => {
+  enforceReservationLimit(true);
   recalcBalance();
 });
 
 form.elements.reservationAmount.addEventListener("input", () => {
+  enforceReservationLimit(true);
   recalcBalance();
 });
 
