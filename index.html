@@ -22,6 +22,10 @@
         <h2>Ingreso de Agente</h2>
         <p>Inicia sesion para usar el generador de contratos.</p>
         <form id="loginForm" class="login-form">
+          <label class="hp-field" aria-hidden="true">
+            Sitio web
+            <input name="website" type="text" autocomplete="off" tabindex="-1" />
+          </label>
           <label>
             Correo
             <input name="email" type="email" autocomplete="username" required />
@@ -42,6 +46,10 @@
     <main class="layout">
       <section class="panel">
         <header class="panel-header">
+          <div id="sessionControls" class="session-controls hidden">
+            <p id="agentBadge" class="agent-badge"></p>
+            <button id="logoutButton" type="button" class="agent-logout">Cerrar sesion</button>
+          </div>
           <p class="kicker">Temporal y separada</p>
           <h1>Contratos App Temp</h1>
           <p>
@@ -64,7 +72,7 @@
 
           <label>
             Destino
-            <input name="destination" placeholder="Colombia" required />
+            <input name="destination" required />
           </label>
 
           <label>
@@ -98,12 +106,12 @@
 
           <label>
             Monto total USD
-            <input name="totalAmount" type="number" min="0" step="0.01" placeholder="1450" required />
+            <input name="totalAmount" type="number" min="0" step="0.01" required />
           </label>
 
           <label>
             Reserva USD
-            <input name="reservationAmount" type="number" min="0" step="0.01" placeholder="300" required />
+            <input name="reservationAmount" type="number" min="0" step="0.01" required />
           </label>
 
           <label>
@@ -118,7 +126,7 @@
 
           <label>
             Cantidad de cuotas
-            <input name="installmentCount" type="number" min="1" step="1" value="1" required />
+            <input name="installmentCount" type="number" min="1" step="1" required />
           </label>
 
           <label>
@@ -164,12 +172,12 @@
 
           <label>
             Estado civil
-            <input name="civilStatus" placeholder="Soltero" required />
+            <input name="civilStatus" required />
           </label>
 
           <label>
             Profesion
-            <input name="profession" placeholder="Administrador" required />
+            <input name="profession" required />
           </label>
 
           <label>
@@ -189,7 +197,7 @@
 
           <label id="clientNationalityOtherWrap" class="hidden">
             Otra nacionalidad
-            <input name="clientNationalityOther" placeholder="Especificar nacionalidad" />
+            <input name="clientNationalityOther" />
           </label>
 
           <h2>Acompanantes y menores</h2>
@@ -231,11 +239,7 @@
 
           <label class="full">
             Clausula de equipaje
-            <input
-              name="luggageClause"
-              value="Equipaje de mano de 10 kg por persona."
-              required
-            />
+            <input name="luggageClause" required />
           </label>
 
           <h2>Firmas</h2>

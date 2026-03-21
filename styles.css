@@ -31,7 +31,7 @@ body {
 
 .login-card {
   width: min(460px, 92vw);
-  background: color-mix(in srgb, var(--panel), white 8%);
+  background: #fffefb;
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 24px;
@@ -61,6 +61,14 @@ body {
   gap: 10px;
 }
 
+.hp-field {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .login-status {
   font-size: 0.9rem;
   text-align: center;
@@ -82,6 +90,31 @@ body {
   border-radius: 999px;
   padding: 4px 10px;
   margin-bottom: 8px;
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.session-controls .agent-badge {
+  margin-bottom: 0;
+}
+
+.agent-logout {
+  background: #fff;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+  padding: 7px 12px;
+  border-radius: 999px;
+}
+
+.agent-logout:hover {
+  background: #fff7ed;
 }
 
 .bg-shape {
@@ -119,7 +152,7 @@ body {
 }
 
 .panel {
-  background: color-mix(in srgb, var(--panel), white 8%);
+  background: #fffefb;
   border: 1px solid var(--line);
   border-radius: 20px;
   box-shadow: var(--shadow);
@@ -389,6 +422,16 @@ button.ghost {
   word-break: break-word;
 }
 
+.contract-paper p > strong:first-child {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.contract-paper .contract-var {
+  font-weight: 700;
+  color: #0f172a;
+}
+
 .contract-paper ul {
   margin: 8px 0 8px 18px;
   padding: 0;
@@ -422,6 +465,7 @@ button.ghost {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: start;
   margin-top: 32px;
 }
 
@@ -430,13 +474,13 @@ button.ghost {
 }
 
 .signature-sign-area {
-  height: 112px;
+  height: 102px;
   border-bottom: 1px solid #c7cdd4;
   margin-bottom: 10px;
 }
 
 .signature-box--person .signature-sign-area {
-  height: 128px;
+  height: 102px;
 }
 
 .signature-sign-area--erick {

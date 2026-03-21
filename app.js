@@ -28,9 +28,24 @@ const loginForm = document.getElementById("loginForm");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const layoutEl = document.querySelector("main.layout");
-const leftPanelHeader = document.querySelector(".panel .panel-header");
+const sessionControlsEl = document.getElementById("sessionControls");
+const badgeEl = document.getElementById("agentBadge");
+const logoutButton = document.getElementById("logoutButton");
+let currentAuthenticatedUser = null;
 
-const erickSignatureDataUrl = erickSignaturePreview.src;
+const handleLogout = () => {
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  currentAuthenticatedUser = null;
+  loginForm.reset();
+  form.elements.contractNumber.value = "Generando...";
+  setUnauthenticatedUi("Sesion cerrada. Ingresa tus credenciales.");
+  statusText.textContent = "Sesion cerrada correctamente.";
+
+  const emailInput = loginForm.querySelector('input[name="email"]');
+  if (emailInput) {
+    emailInput.focus();
+  }
+};
 
 const escapeHtml = (value) =>
   String(value || "")
@@ -39,6 +54,8 @@ const escapeHtml = (value) =>
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
+
+const contractVar = (value) => `<span class="contract-var">${escapeHtml(value)}</span>`;
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -71,21 +88,23 @@ const setLoginStatus = (message, isError = false) => {
 const setAuthenticatedUi = (user) => {
   loginGate.style.display = "none";
   layoutEl.style.display = "grid";
-
-  let badge = document.getElementById("agentBadge");
-  if (!badge) {
-    badge = document.createElement("p");
-    badge.id = "agentBadge";
-    badge.className = "agent-badge";
-    leftPanelHeader.prepend(badge);
+  if (sessionControlsEl) {
+    sessionControlsEl.classList.remove("hidden");
   }
-
-  badge.textContent = `Agente activo: ${user.fullName} (${user.email})`;
+  if (badgeEl) {
+    badgeEl.textContent = `Agente activo: ${user.fullName} (${user.email})`;
+  }
 };
 
 const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
   loginGate.style.display = "grid";
   layoutEl.style.display = "none";
+  if (sessionControlsEl) {
+    sessionControlsEl.classList.add("hidden");
+  }
+  if (badgeEl) {
+    badgeEl.textContent = "";
+  }
   setLoginStatus(message);
 };
 
@@ -115,6 +134,18 @@ const validateSession = async (token) =>
     },
   });
 
+const reserveContractNumber = async (token) => {
+  const payload = await apiFetch("/contracts/next-number", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  form.elements.contractNumber.value = payload.contractNumber;
+  return payload;
+};
+
 const setupAuth = async () => {
   setUnauthenticatedUi("Verificando sesion...");
 
@@ -126,10 +157,13 @@ const setupAuth = async () => {
 
   try {
     const user = await validateSession(existingToken);
+    currentAuthenticatedUser = user;
     setAuthenticatedUi(user);
+    await reserveContractNumber(existingToken);
     setLoginStatus("Sesion activa.");
   } catch (error) {
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    currentAuthenticatedUser = null;
     setUnauthenticatedUi("Tu sesion expiro. Inicia sesion nuevamente.");
     debugError("Sesion invalida", error);
   }
@@ -161,39 +195,6 @@ const nationalityOptionsHtml = (selectedValue = "") =>
     (option) =>
       `<option value="${escapeHtml(option)}" ${selectedValue === option ? "selected" : ""}>${escapeHtml(option)}</option>`,
   ).join("");
-
-const pad = (value, size = 2) => String(value).padStart(size, "0");
-
-const randomHex = (bytes = 2) => {
-  const buffer = new Uint8Array(bytes);
-  window.crypto.getRandomValues(buffer);
-  return Array.from(buffer)
-    .map((n) => n.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
-};
-
-const buildContractNumber = () => {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = pad(now.getMonth() + 1);
-  const dd = pad(now.getDate());
-  const hh = pad(now.getHours());
-  const min = pad(now.getMinutes());
-  const ss = pad(now.getSeconds());
-  const ms = pad(now.getMilliseconds(), 3);
-  const unique = randomHex(2);
-
-  return `LUC-${yyyy}${mm}${dd}-${hh}${min}${ss}${ms}-${unique}`;
-};
-
-const ensureContractNumber = () => {
-  form.elements.contractNumber.value = buildContractNumber();
-};
-
-const advanceContractNumber = () => {
-  form.elements.contractNumber.value = buildContractNumber();
-};
 
 const buildTutorOptions = (selectedValue = "") => {
   const titularName = form.elements.clientFullName.value.trim() || "Titular (sin nombre)";
@@ -456,13 +457,13 @@ const resetDefaultItinerary = () => {
     kind: "opening",
     removable: false,
     date: startDate,
-    detail: "Vuelo internacional de salida e inicio del tour",
+    detail: "",
   });
   addItineraryRow({
     kind: "closing",
     removable: false,
     date: endDate,
-    detail: "Vuelo internacional de regreso y cierre del tour",
+    detail: "",
   });
 };
 
@@ -518,6 +519,8 @@ const getFormData = () => {
     minors: collectMinors(),
     itineraryItems: collectItinerary(),
     luggageClause: formData.get("luggageClause"),
+      generatedByAgentName: currentAuthenticatedUser?.fullName || "-",
+      generatedByAgentEmail: currentAuthenticatedUser?.email || "-",
   };
 };
 
@@ -608,13 +611,13 @@ const buildContractHtml = (data) => {
       <ul>${data.companions
         .map(
           (person) =>
-            `<li>${escapeHtml(person.fullName)}, mayor de edad, ${escapeHtml(person.civilStatus)}, ${escapeHtml(
+              `<li>${contractVar(person.fullName)}, mayor de edad, ${contractVar(person.civilStatus)}, ${contractVar(
               person.profession,
-            )}, portador de ${escapeHtml(person.idType)} número ${escapeHtml(
+              )}, portador de ${contractVar(person.idType)} número ${contractVar(
               person.idNumber,
-            )}, vecino de ${escapeHtml(person.address)}, correo electrónico ${escapeHtml(
+              )}, vecino de ${contractVar(person.address)}, correo electrónico ${contractVar(
               person.email,
-            )}, teléfono ${escapeHtml(person.phone)}.</li>`,
+              )}, teléfono ${contractVar(person.phone)}.</li>`,
         )
         .join("")}</ul>
     `
@@ -626,9 +629,9 @@ const buildContractHtml = (data) => {
       <ul>${data.minors
         .map(
           (minor) =>
-            `<li>${escapeHtml(minor.name)}, documento de menor número ${escapeHtml(
+              `<li>${contractVar(minor.name)}, documento de menor número ${contractVar(
               minor.idNumber,
-            )}, en calidad de representado por ${escapeHtml(minor.tutorName)}.</li>`,
+              )}, en calidad de representado por ${contractVar(minor.tutorName)}.</li>`,
         )
         .join("")}</ul>
       <p>La autorización y consentimiento de representación de menor de edad se incorpora como anexo obligatorio de este Contrato.</p>
@@ -637,7 +640,7 @@ const buildContractHtml = (data) => {
 
   const itineraryHtml = data.itineraryItems.length
     ? `<ul>${data.itineraryItems
-        .map((item) => `<li>Fecha: ${formatDate(item.date)} | Actividad: ${escapeHtml(item.detail)}</li>`)
+          .map((item) => `<li>Fecha: ${contractVar(formatDate(item.date))} | Actividad: ${contractVar(item.detail)}</li>`)
         .join("")}</ul>`
     : "<p>Sin actividades registradas.</p>";
 
@@ -659,10 +662,10 @@ const buildContractHtml = (data) => {
       (person) => `
       <div class="signature-box signature-box--person">
         <div class="signature-sign-area" aria-hidden="true"></div>
-        <p><strong>${escapeHtml(person.name)}</strong></p>
-        <p>${escapeHtml(person.idType)}: ${escapeHtml(person.idNumber)}</p>
-        <p>Rol: ${escapeHtml(person.role)}</p>
-        <p>Fecha: ${signatureDate}</p>
+          <p><strong>${contractVar(person.name)}</strong></p>
+          <p>${contractVar(person.idType)}: ${contractVar(person.idNumber)}</p>
+          <p>Rol: ${contractVar(person.role)}</p>
+          <p>Fecha: ${contractVar(signatureDate)}</p>
       </div>
     `,
     )
@@ -670,19 +673,18 @@ const buildContractHtml = (data) => {
 
   const erickSignatureBlock = `
     <div class="signature-box signature-box--erick">
-      <div class="signature-sign-area signature-sign-area--erick" aria-hidden="true">
-        <img src="${escapeHtml(erickSignatureDataUrl)}" alt="Firma Erick" />
-      </div>
+        <div class="signature-sign-area" aria-hidden="true"></div>
       <p><strong>ERICK JOSUE BONILLA PEREIRA</strong></p>
       <p>Cédula de identidad: 1-1597-0559</p>
       <p>Representante legal de Lucitours</p>
-      <p>Fecha: ${signatureDate}</p>
+        <p>Fecha: ${contractVar(signatureDate)}</p>
     </div>
   `;
 
   return `
-    <h3>CONTRATO GENERAL DE VIAJE TURÍSTICO A ${escapeHtml(data.destination)}</h3>
-    <p><strong>Contrato Número:</strong> ${escapeHtml(data.contractNumber)}</p>
+      <h3>CONTRATO GENERAL DE VIAJE TURÍSTICO A ${contractVar(data.destination)}</h3>
+      <p><strong>Contrato Número:</strong> ${contractVar(data.contractNumber)}</p>
+      <p><strong>Agente Responsable:</strong> ${contractVar(data.generatedByAgentName)} (${contractVar(data.generatedByAgentEmail)})</p>
 
     <p><strong>Entre nosotros:</strong></p>
     <p>
@@ -691,13 +693,13 @@ const buildContractHtml = (data) => {
       VIAJES LUCITOURS TURISMO INTERNACIONAL SOCIEDAD ANONIMA, cédula jurídica número 3-101-874546, en adelante denominada "Lucitours"; y
     </p>
     <p>
-      (b) ${escapeHtml(data.clientFullName)}, mayor de edad, ${escapeHtml(data.civilStatus)}, ${escapeHtml(
+        (b) ${contractVar(data.clientFullName)}, mayor de edad, ${contractVar(data.civilStatus)}, ${contractVar(
     data.profession,
-  )}, portador de ${escapeHtml(data.clientIdType)} número ${escapeHtml(
+    )}, portador de ${contractVar(data.clientIdType)} número ${contractVar(
     data.clientIdNumber,
-  )}, vecino de ${escapeHtml(data.clientAddress)}, correo electrónico ${escapeHtml(
+    )}, vecino de ${contractVar(data.clientAddress)}, correo electrónico ${contractVar(
     data.clientEmail,
-  )}, teléfono ${escapeHtml(data.clientPhone)}, en adelante denominado como el "Cliente".
+    )}, teléfono ${contractVar(data.clientPhone)}, en adelante denominado como el "Cliente".
     </p>
 
     ${companionsIntro}
@@ -707,37 +709,42 @@ const buildContractHtml = (data) => {
 
     <h3>CLÁUSULAS</h3>
     <p><strong>PRIMERO: OBJETO.</strong> El presente Contrato será el documento base para regular las cláusulas y condiciones referentes a la contratación del paquete turístico internacional acordado entre las Partes.</p>
-    <p><strong>SEGUNDO: DESTINO.</strong> El país a visitar por parte del Cliente es ${escapeHtml(data.destination)}, y manifiesta expresamente que dicho destino fue elegido y reservado de forma voluntaria para la realización del Tour.</p>
-    <p><strong>TERCERO: FECHAS DEL TOUR Y PLAZO.</strong> Las fechas de ejecución del Tour serán del ${formatDate(
+      <p><strong>SEGUNDO: DESTINO.</strong> El país a visitar por parte del Cliente es ${contractVar(data.destination)}, y manifiesta expresamente que dicho destino fue elegido y reservado de forma voluntaria para la realización del Tour.</p>
+      <p><strong>TERCERO: FECHAS DEL TOUR Y PLAZO.</strong> Las fechas de ejecución del Tour serán del ${contractVar(formatDate(
       data.startDate,
-    )} al ${formatDate(data.endDate)}, mismas que se entenderán como plazo del presente Contrato.</p>
+      ))} al ${contractVar(formatDate(data.endDate))}, mismas que se entenderán como plazo del presente Contrato.</p>
 
     <p><strong>CUARTO: PRECIO, FORMA DE PAGO Y MEDIOS DE PAGO.</strong></p>
     <ul>
-      <li>Precio total del Tour: USD ${formatMoney(data.totalAmount)}</li>
-      <li>Pago inicial (reserva): USD ${formatMoney(data.reservationAmount)}</li>
-      <li>Saldo pendiente: USD ${formatMoney(data.balanceAmount)}</li>
-      <li>Saldo dividido en ${escapeHtml(data.installmentCount)} cuota(s) mensual(es) de USD ${formatMoney(
+        <li>Precio total del Tour: USD ${contractVar(formatMoney(data.totalAmount))}</li>
+        <li>Pago inicial (reserva): USD ${contractVar(formatMoney(data.reservationAmount))}</li>
+        <li>Saldo pendiente: USD ${contractVar(formatMoney(data.balanceAmount))}</li>
+        <li>Saldo dividido en ${contractVar(data.installmentCount)} cuota(s) mensual(es) de USD ${contractVar(formatMoney(
       data.monthlyInstallmentAmount,
-    )}</li>
-      <li>Fecha límite de pago total: ${formatDate(data.paymentDueDate)}</li>
+      ))}</li>
+        <li>Fecha límite de pago total: ${contractVar(formatDate(data.paymentDueDate))}</li>
     </ul>
-    <p>Los medios de pago para realizar los pagos son los siguientes: Cuenta Bancaria (IBAN): CR25011610400074756807, Banco Promerica; Sinpe Móvil: 7296-9551; pagos en efectivo o tarjeta en oficinas de Lucitours.</p>
+      <p>Los medios de pago para realizar los pagos son los siguientes:</p>
+      <ul>
+        <li>Cuenta bancaria (IBAN): CR25011610400074756807, Banco Promerica.</li>
+        <li>Sinpe Móvil: 7296-9551.</li>
+        <li>Pagos en efectivo o tarjeta en oficinas de Lucitours.</li>
+      </ul>
 
     <p><strong>QUINTO: DEPÓSITO DE RESERVA.</strong> La cuota de reserva inicial se utiliza como depósito mínimo para reservar y garantizar el espacio del Cliente en el Tour y los operadores turísticos, por lo que dicho depósito no será transferible, reutilizable ni reembolsable.</p>
     <p>En caso de incumplimiento en pagos, Lucitours podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Lucitours podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>
 
-    <p><strong>SEXTO: ALOJAMIENTOS Y HOSPEDAJES.</strong> Como parte del Tour, el Cliente podrá hospedarse en ${escapeHtml(
-      data.lodgingType,
-    )} y la acomodación prevista será ${escapeHtml(data.accommodationType)}.</p>
-    <ul>
-      <li>Día de entrada: ${formatDate(data.startDate)}</li>
-      <li>Día de salida: ${formatDate(data.endDate)}</li>
-    </ul>
-    <p>Todo sujeto a disponibilidad del hospedaje y necesidades operativas del Tour, caso fortuito o de fuerza mayor.</p>
+      <p><strong>SEXTO: ALOJAMIENTOS Y HOSPEDAJES.</strong> Como parte del Tour, el Cliente será alojado en establecimientos tipo hostel, hotel u otros similares, conforme a la logística del viaje, disponibilidad y condiciones operativas del proveedor.</p>
+        <p>Como referencia de preferencia del Cliente, se registra tipo de hospedaje ${contractVar(
+        data.lodgingType,
+        )} y acomodación solicitada ${contractVar(data.accommodationType)}. Esta preferencia no constituye garantía absoluta y estará sujeta a disponibilidad y criterios operativos del Tour.</p>
+      <p>La asignación final de habitaciones y tipo de acomodación será determinada por Lucitours según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
+      <p>El Cliente reconoce y acepta expresamente que la acomodación podrá implicar el uso de habitaciones compartidas con otros participantes del Tour, ya sean conocidos o no, así como el uso de baños privados o compartidos, según disponibilidad del hospedaje.</p>
+      <p>Lucitours podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
+      <p>Todo lo anterior estará sujeto a disponibilidad, necesidades operativas del Tour, así como a casos fortuitos o de fuerza mayor.</p>
 
     <p><strong>SÉPTIMO: CHECK IN Y ASIGNACIÓN DE ASIENTOS.</strong> Lucitours realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
-    <p>Equipaje permitido: ${escapeHtml(data.luggageClause)}</p>
+    <p>Equipaje permitido: ${contractVar(data.luggageClause)}</p>
 
     <p><strong>OCTAVO: SEGURO DE VIAJE.</strong> Lucitours podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
     <p>El Cliente acepta que, en caso de no contratar seguro con Lucitours o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Lucitours de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
@@ -770,9 +777,11 @@ const buildContractHtml = (data) => {
     <p><strong>DÉCIMO SÉPTIMO: MODIFICACIONES AL CONTRATO.</strong> Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>
     <p><strong>DÉCIMO OCTAVO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.</strong> Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>
     <p><strong>DÉCIMO NOVENO: CONFIDENCIALIDAD.</strong> Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>
-    <p><strong>VIGÉSIMO: NOTIFICACIONES Y COMUNICACIONES.</strong> Lucitours: contratos@lucitour.com y WhatsApp 6015-9906. Cliente: ${escapeHtml(
-      data.clientAddress,
-    )}, ${escapeHtml(data.clientEmail)}, ${escapeHtml(data.clientPhone)}.</p>
+      <p><strong>VIGÉSIMO: NOTIFICACIONES Y COMUNICACIONES.</strong></p>
+      <ul>
+        <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
+        <li><strong>Cliente:</strong> Dirección ${contractVar(data.clientAddress)}, correo ${contractVar(data.clientEmail)} y teléfono ${contractVar(data.clientPhone)}.</li>
+      </ul>
     <p><strong>VIGÉSIMO PRIMERO: INTEGRIDAD CONTRACTUAL.</strong> Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>
 
     <p>En fe de lo anterior, las Partes declaran haber leído y comprendido integralmente el presente Contrato, aceptándolo en todas sus cláusulas.</p>
@@ -838,6 +847,77 @@ const renderPreview = () => {
   return data;
 };
 
+const buildPdfCaptureNode = () => {
+  const captureRoot = document.createElement("section");
+  const sourceWidth = Math.ceil(previewEl.getBoundingClientRect().width || previewEl.offsetWidth || 980);
+
+  captureRoot.style.position = "fixed";
+  captureRoot.style.left = "-10000px";
+  captureRoot.style.top = "0";
+  captureRoot.style.width = `${sourceWidth}px`;
+  captureRoot.style.padding = "0";
+  captureRoot.style.margin = "0";
+  captureRoot.style.background = "#ffffff";
+  captureRoot.style.zIndex = "-1";
+
+  const addPaperClone = (paperEl) => {
+    if (!paperEl || paperEl.classList.contains("hidden")) return;
+    const clone = paperEl.cloneNode(true);
+    clone.style.width = "100%";
+    clone.style.margin = "0 0 16px 0";
+    clone.style.minHeight = "0";
+    clone.style.border = "0";
+    clone.style.borderRadius = "0";
+    clone.style.boxShadow = "none";
+    captureRoot.appendChild(clone);
+  };
+
+  addPaperClone(previewEl);
+  addPaperClone(minorAnnexPreview);
+  document.body.appendChild(captureRoot);
+
+  return captureRoot;
+};
+
+const collectClauseBlockRanges = (captureRoot) => {
+  const ranges = [];
+  const papers = captureRoot.querySelectorAll(".contract-paper");
+
+  papers.forEach((paper) => {
+    const headings = Array.from(paper.querySelectorAll("h3"));
+    const clausesTitle = headings.find((h3) => /cl[aá]usulas/i.test(h3.textContent || ""));
+    if (!clausesTitle) return;
+
+    const clausesTitleIndex = headings.indexOf(clausesTitle);
+    const endTitle = headings.slice(clausesTitleIndex + 1).find((h3) => /firmas/i.test(h3.textContent || ""));
+
+    const clauseStarts = [];
+    let current = clausesTitle.nextElementSibling;
+    while (current && current !== endTitle) {
+      if (
+        current.tagName === "P" &&
+        current.firstElementChild &&
+        current.firstElementChild.tagName === "STRONG" &&
+        /:\s*/.test(current.firstElementChild.textContent || "")
+      ) {
+        clauseStarts.push(current);
+      }
+      current = current.nextElementSibling;
+    }
+
+    clauseStarts.forEach((startEl, index) => {
+      const nextStart = clauseStarts[index + 1] || endTitle || null;
+      const start = Math.max(0, startEl.offsetTop - 10);
+      const end = nextStart
+        ? Math.max(start + 1, nextStart.offsetTop - 10)
+        : Math.max(start + 1, paper.offsetTop + paper.offsetHeight - 10);
+      ranges.push({ start, end });
+    });
+  });
+
+  return ranges;
+};
+
 const generatePdfBlob = async (onProgress = () => {}) => {
   debugLog("Inicio de generatePdfBlob");
   onProgress("Validando datos del contrato...");
@@ -847,13 +927,26 @@ const generatePdfBlob = async (onProgress = () => {}) => {
 
   await new Promise((resolve) => setTimeout(resolve, 40));
   onProgress("Renderizando paginas...");
-  debugLog("Renderizando html2canvas de preview-panel");
+  debugLog("Renderizando html2canvas del contenido de contrato");
 
-  const canvas = await window.html2canvas(document.querySelector(".preview-panel"), {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: "#ffffff",
+  const captureNode = buildPdfCaptureNode();
+  const captureHeightCssPx = Math.max(captureNode.scrollHeight, 1);
+  const clauseBlockRangesCssPx = collectClauseBlockRanges(captureNode);
+  const protectedRangesCssPx = Array.from(captureNode.querySelectorAll(".signature-box--erick")).map((el) => {
+    const start = Math.max(0, el.offsetTop - 18);
+    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 18);
+    return { start, end };
   });
+
+  const canvas = await window
+    .html2canvas(captureNode, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    })
+    .finally(() => {
+      captureNode.remove();
+    });
   debugLog("Canvas renderizado", { width: canvas.width, height: canvas.height });
 
   const { jsPDF } = window.jspdf;
@@ -861,13 +954,16 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 26;
-  const headerHeight = 40;
-  const footerHeight = 22;
+  const headerHeight = 18;
+  const firstPageHeaderHeight = 64;
+  const footerHeight = 24;
+  const contentTopInset = 6;
+  const contentBottomInset = 12;
   const printableWidth = pageWidth - margin * 2;
-  const printableHeight = pageHeight - margin * 2 - headerHeight - footerHeight;
-
-  const imgData = canvas.toDataURL("image/png");
-  const imgHeight = (canvas.height * printableWidth) / canvas.width;
+  const contentHeight = Math.max(
+    1,
+    pageHeight - margin * 2 - headerHeight - footerHeight - contentTopInset - contentBottomInset,
+  );
 
   onProgress("Aplicando encabezado y paginacion...");
   const logoImage = await loadImage(lucitoursLogoPath).catch(() => null);
@@ -875,28 +971,124 @@ const generatePdfBlob = async (onProgress = () => {}) => {
     debugLog("No se pudo cargar logo para header; se continua sin logo");
   }
 
-  let heightLeft = imgHeight;
-  let position = margin + headerHeight;
+  const scaleToCanvas = canvas.height / captureHeightCssPx;
+  const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, .signature-box")).map((el) => {
+    const start = Math.max(0, el.offsetTop - 6);
+    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 6);
+    return { start, end };
+  });
 
-  pdf.addImage(imgData, "PNG", margin, position, printableWidth, imgHeight);
-  heightLeft -= printableHeight;
+  const allProtectedRangesCssPx = [...protectedRangesCssPx, ...clauseBlockRangesCssPx, ...textBlockRangesCssPx].sort(
+    (a, b) => a.start - b.start,
+  );
 
-  while (heightLeft > 0) {
-    position = margin + headerHeight - (imgHeight - heightLeft);
-    pdf.addPage();
-    pdf.addImage(imgData, "PNG", margin, position, printableWidth, imgHeight);
-    heightLeft -= printableHeight;
+  const mergedProtectedRangesCssPx = allProtectedRangesCssPx.reduce((acc, range) => {
+    const last = acc[acc.length - 1];
+    if (!last || range.start > last.end) {
+      acc.push({ ...range });
+      return acc;
+    }
+    last.end = Math.max(last.end, range.end);
+    return acc;
+  }, []);
+
+  const protectedRangesPx = mergedProtectedRangesCssPx.map((range) => ({
+    start: Math.floor(range.start * scaleToCanvas),
+    end: Math.ceil(range.end * scaleToCanvas),
+  }));
+
+  const pxPerPt = canvas.width / printableWidth;
+  const pageSliceHeightPx = Math.max(1, Math.floor(contentHeight * pxPerPt));
+  const minSliceHeightPx = Math.max(1, Math.floor(pageSliceHeightPx * 0.55));
+  const maxSliceHeightPx = Math.max(1, Math.floor(pageSliceHeightPx * 1.45));
+  let renderedPx = 0;
+  let renderedPages = 0;
+
+  while (renderedPx < canvas.height) {
+    let sliceEndPx = Math.min(renderedPx + pageSliceHeightPx, canvas.height);
+
+    for (const range of protectedRangesPx) {
+        const rangeHeight = range.end - range.start;
+        if (rangeHeight > maxSliceHeightPx) {
+          continue;
+        }
+
+      const cutsProtectedBlock = range.start < sliceEndPx && range.end > sliceEndPx;
+      if (!cutsProtectedBlock) continue;
+
+      const moveUpHeight = range.start - renderedPx;
+      if (moveUpHeight >= minSliceHeightPx) {
+        sliceEndPx = range.start;
+        break;
+      }
+
+      const moveDownEnd = Math.min(canvas.height, range.end);
+      const moveDownHeight = moveDownEnd - renderedPx;
+      if (moveDownHeight <= maxSliceHeightPx || canvas.height - moveDownEnd < minSliceHeightPx) {
+        sliceEndPx = moveDownEnd;
+      }
+      break;
+    }
+
+    const sliceHeightPx = Math.max(1, sliceEndPx - renderedPx);
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = sliceHeightPx;
+
+    const ctx = pageCanvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("No se pudo preparar la pagina PDF.");
+    }
+
+    ctx.drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+
+    if (renderedPages > 0) {
+      pdf.addPage();
+    }
+
+    const sliceHeightPt = sliceHeightPx / pxPerPt;
+    const isFirstPage = renderedPages === 0;
+    const pageHeaderHeight = isFirstPage ? firstPageHeaderHeight : headerHeight;
+    pdf.addImage(
+      pageCanvas.toDataURL("image/png"),
+      "PNG",
+      margin,
+      margin + pageHeaderHeight + contentTopInset,
+      printableWidth,
+      sliceHeightPt,
+      undefined,
+      "FAST",
+    );
+
+    renderedPx += sliceHeightPx;
+    renderedPages += 1;
   }
 
   const totalPages = pdf.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {
     pdf.setPage(page);
 
-    if (logoImage) {
-      pdf.addImage(logoImage, "PNG", margin, margin - 4, 98, 28);
+    if (page === 1) {
+      const logoX = margin;
+      const logoY = margin - 1;
+      const logoSize = 36;
+      if (logoImage) {
+        pdf.addImage(logoImage, "PNG", logoX, logoY, logoSize, logoSize);
+      }
+
+      const headerRightX = pageWidth - margin;
+      pdf.setTextColor(49, 73, 106);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text("VIAJES LUCITOURS TURISMO INTERNACIONAL", headerRightX, margin + 13, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text("3-101-874546", headerRightX, margin + 29, { align: "right" });
+      pdf.text("+506 6015-9906", headerRightX, margin + 44, { align: "right" });
+      pdf.text("contratos@lucitour.com", headerRightX, margin + 59, { align: "right" });
     }
 
-    const lineY = margin + 30;
+    const lineY = margin + (page === 1 ? firstPageHeaderHeight : headerHeight) - 5;
     pdf.setDrawColor(210, 214, 220);
     pdf.line(margin, lineY, pageWidth - margin, lineY);
 
@@ -975,7 +1167,10 @@ downloadButton.addEventListener("click", () => {
 
       statusText.textContent = "Descargando PDF...";
       downloadBlob(blob, fileName);
-      advanceContractNumber();
+        const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+        if (token) {
+          await reserveContractNumber(token);
+        }
       statusText.textContent = "PDF generado y descargado.";
       debugLog("Descarga completada");
     } catch (error) {
@@ -1083,7 +1278,7 @@ const bootstrap = () => {
   setUnauthenticatedUi("Ingresa tus credenciales.");
   downloadButton.removeAttribute("disabled");
   downloadButton.disabled = false;
-  ensureContractNumber();
+    form.elements.contractNumber.value = "Generando...";
 
   const today = new Date().toISOString().slice(0, 10);
   form.elements.issuedAt.value = today;
@@ -1097,7 +1292,7 @@ const bootstrap = () => {
   syncMinorSectionVisibility();
   clientNationalityOtherWrap.classList.add("hidden");
   statusText.textContent =
-    "Lista para uso temporal. Número de contrato automático con fecha, hora y sufijo único.";
+      "Lista para uso temporal. El número de contrato se genera desde el backend al iniciar sesión.";
   debugLog("Bootstrap completado");
 };
 
@@ -1106,6 +1301,7 @@ loginForm.addEventListener("submit", async (event) => {
   const formData = new FormData(loginForm);
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
+  const website = String(formData.get("website") || "");
 
   if (!email || !password) {
     setLoginStatus("Completa correo y contrasena.", true);
@@ -1118,11 +1314,13 @@ loginForm.addEventListener("submit", async (event) => {
   try {
     const result = await apiFetch("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, website }),
     });
 
     window.localStorage.setItem(AUTH_TOKEN_KEY, result.accessToken);
+    currentAuthenticatedUser = result.user;
     setAuthenticatedUi(result.user);
+    await reserveContractNumber(result.accessToken);
     setLoginStatus("Sesion iniciada.");
     statusText.textContent = "Sesion iniciada correctamente.";
   } catch (error) {
@@ -1132,6 +1330,10 @@ loginForm.addEventListener("submit", async (event) => {
     loginButton.disabled = false;
   }
 });
+
+if (logoutButton) {
+  logoutButton.addEventListener("click", handleLogout);
+}
 
 window.addEventListener("error", (event) => {
   debugError("window.error", event.error || event.message || event);
