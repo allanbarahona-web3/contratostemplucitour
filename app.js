@@ -19,6 +19,19 @@ const clientNationalitySelect = document.getElementById("clientNationality");
 const clientNationalityOtherWrap = document.getElementById("clientNationalityOtherWrap");
 const reservationAmountError = document.getElementById("reservationAmountError");
 const contractDocumentsInput = document.getElementById("contractDocuments");
+const historySearchInput = document.getElementById("historySearch");
+const historySearchButton = document.getElementById("historySearchButton");
+const historyList = document.getElementById("historyList");
+
+const MAX_DOCUMENT_COUNT = 20;
+const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_DOCUMENT_TOTAL_BYTES = 25 * 1024 * 1024;
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
@@ -43,6 +56,7 @@ const sessionLiveBadgeEl = document.getElementById("sessionLiveBadge");
 const logoutButton = document.getElementById("logoutButton");
 let currentAuthenticatedUser = null;
 let sessionEventSource = null;
+let historySearchDebounce = null;
 
 const setSessionLiveBadge = (state = "off") => {
   if (!sessionLiveBadgeEl) {
@@ -145,6 +159,196 @@ const prepareNextContract = async (token) => {
   }
 };
 
+const escapeAttr = (value) => String(value || "").replace(/"/g, "&quot;");
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("es-CR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const renderHistory = (items = []) => {
+  if (!historyList) {
+    return;
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    historyList.innerHTML = '<p class="history-empty">No se encontraron contratos.</p>';
+    return;
+  }
+
+  historyList.innerHTML = items
+    .map(
+      (item) => `
+        <article class="history-item">
+          <div class="history-item-head">
+            <p class="history-item-title">${escapeHtml(item.contractNumber)}</p>
+            <p class="history-item-sub">${escapeHtml(formatDateTime(item.createdAt))}</p>
+          </div>
+          <p class="history-item-sub">Cliente: ${escapeHtml(item.clientFullName)}</p>
+          <div class="history-item-meta">
+            <span>ID: ${escapeHtml(item.clientIdNumber)}</span>
+            <span>Correo: ${escapeHtml(item.clientEmail)}</span>
+            <span>Destino: ${escapeHtml(item.destination || "-")}</span>
+            <span>Adjuntos: ${escapeHtml(String(item.documentCount || 0))}</span>
+          </div>
+          <div class="history-item-actions">
+            <button type="button" class="ghost" data-action="files" data-contract-id="${escapeAttr(item.id)}">Ver archivos</button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+};
+
+const loadContractHistory = async (query = "") => {
+  if (!historyList) {
+    return;
+  }
+
+  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    historyList.innerHTML = '<p class="history-empty">Inicia sesion para ver historial.</p>';
+    return;
+  }
+
+  historyList.innerHTML = '<p class="history-empty">Cargando historial...</p>';
+  try {
+    const params = new URLSearchParams();
+    const q = String(query || "").trim();
+    if (q) params.set("q", q);
+    params.set("limit", "40");
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    const result = await apiFetch(`/contracts${suffix}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    renderHistory(result.items || []);
+  } catch (error) {
+    debugError("No se pudo cargar historial", error);
+    historyList.innerHTML = '<p class="history-empty">No se pudo cargar el historial.</p>';
+  }
+};
+
+const openContractFiles = async (contractId) => {
+  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    throw new Error("Sesion no activa.");
+  }
+
+  const files = await apiFetch(`/contracts/${contractId}/files`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (files?.pdf?.url) {
+    window.open(files.pdf.url, "_blank", "noopener,noreferrer");
+  }
+
+  if (Array.isArray(files?.documents)) {
+    files.documents.forEach((doc) => {
+      if (doc?.url) {
+        window.open(doc.url, "_blank", "noopener,noreferrer");
+      }
+    });
+  }
+};
+
+const blobToFile = (blob, fileName, mimeType) =>
+  new File([blob], fileName, {
+    type: mimeType,
+    lastModified: Date.now(),
+  });
+
+const toWebpFile = async (file) => {
+  const imageBitmap = await createImageBitmap(file);
+  const maxEdge = 2000;
+  const width = imageBitmap.width;
+  const height = imageBitmap.height;
+  const scale = Math.min(1, maxEdge / Math.max(width, height));
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    imageBitmap.close();
+    throw new Error("No se pudo preparar la compresion de imagen.");
+  }
+
+  ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
+  imageBitmap.close();
+
+  const webpBlob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("No se pudo convertir la imagen a WEBP."));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/webp",
+      0.82,
+    );
+  });
+
+  const baseName = String(file.name || "imagen")
+    .replace(/\.[^.]+$/u, "")
+    .trim();
+  const safeBase = baseName || "imagen";
+  return blobToFile(webpBlob, `${safeBase}.webp`, "image/webp");
+};
+
+const prepareDocumentAttachments = async (fileList) => {
+  const files = Array.from(fileList || []);
+  if (files.length > MAX_DOCUMENT_COUNT) {
+    throw new Error(`Solo puedes adjuntar hasta ${MAX_DOCUMENT_COUNT} archivos.`);
+  }
+
+  const prepared = [];
+  let totalBytes = 0;
+
+  for (const originalFile of files) {
+    const mimeType = String(originalFile.type || "").toLowerCase();
+    if (!ALLOWED_DOCUMENT_MIME_TYPES.has(mimeType)) {
+      throw new Error("Solo se permiten PDF, JPG, PNG o WEBP en adjuntos.");
+    }
+
+    let fileToUpload = originalFile;
+    if (mimeType === "image/jpeg" || mimeType === "image/png") {
+      fileToUpload = await toWebpFile(originalFile);
+    }
+
+    if (fileToUpload.size > MAX_DOCUMENT_SIZE_BYTES) {
+      throw new Error(`El archivo ${fileToUpload.name} supera 5 MB.`);
+    }
+
+    totalBytes += fileToUpload.size;
+    if (totalBytes > MAX_DOCUMENT_TOTAL_BYTES) {
+      throw new Error("El total de adjuntos supera 25 MB.");
+    }
+
+    prepared.push(fileToUpload);
+  }
+
+  return prepared;
+};
+
 const handleLogout = () => {
   stopSessionStream();
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -157,6 +361,10 @@ const handleLogout = () => {
   const emailInput = loginForm.querySelector('input[name="email"]');
   if (emailInput) {
     emailInput.focus();
+  }
+
+  if (historyList) {
+    historyList.innerHTML = '<p class="history-empty">Inicia sesion para ver historial.</p>';
   }
 };
 
@@ -347,6 +555,7 @@ const setupAuth = async () => {
     setAuthenticatedUi(user);
     startSessionStream(existingToken);
     await prepareNextContract(existingToken);
+    await loadContractHistory(historySearchInput?.value || "");
     setLoginStatus("Sesion activa.");
   } catch (error) {
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -1537,7 +1746,7 @@ if (sendAndDownloadButton) {
           archivePayload.append("payloadJson", JSON.stringify(data));
           archivePayload.append("pdfFile", blob, fileName);
 
-          const extraDocs = Array.from(contractDocumentsInput?.files || []);
+          const extraDocs = await prepareDocumentAttachments(contractDocumentsInput?.files);
           extraDocs.forEach((docFile) => {
             archivePayload.append("documents", docFile, docFile.name);
           });
@@ -1563,6 +1772,7 @@ if (sendAndDownloadButton) {
           : archived
             ? "PDF descargado y contrato guardado. No se pudo enviar el correo (archivo demasiado grande o error de servidor)."
             : "PDF descargado. No se pudo enviar el correo ni guardar el contrato archivado.";
+        await loadContractHistory(historySearchInput?.value || "");
         debugLog("Flujo combinado completado");
       } catch (error) {
         debugError("Error en flujo combinado", error);
@@ -1703,6 +1913,9 @@ const bootstrap = () => {
   resetContractWorkspace();
   statusText.textContent =
       "Lista para uso temporal. El número de contrato se genera desde el backend al iniciar sesión.";
+  if (historyList) {
+    historyList.innerHTML = '<p class="history-empty">Inicia sesion para ver historial.</p>';
+  }
   debugLog("Bootstrap completado");
 };
 
@@ -1732,6 +1945,7 @@ loginForm.addEventListener("submit", async (event) => {
     setAuthenticatedUi(result.user);
     startSessionStream(result.accessToken);
     await prepareNextContract(result.accessToken);
+    await loadContractHistory(historySearchInput?.value || "");
     setLoginStatus("Sesion iniciada.");
     statusText.textContent = "Sesion iniciada correctamente.";
   } catch (error) {
@@ -1744,6 +1958,53 @@ loginForm.addEventListener("submit", async (event) => {
 
 if (logoutButton) {
   logoutButton.addEventListener("click", handleLogout);
+}
+
+if (historySearchButton) {
+  historySearchButton.addEventListener("click", () => {
+    void loadContractHistory(historySearchInput?.value || "");
+  });
+}
+
+if (historySearchInput) {
+  historySearchInput.addEventListener("input", () => {
+    if (historySearchDebounce) {
+      clearTimeout(historySearchDebounce);
+    }
+    historySearchDebounce = setTimeout(() => {
+      void loadContractHistory(historySearchInput.value || "");
+    }, 280);
+  });
+}
+
+if (historyList) {
+  historyList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.matches('button[data-action="files"]')) {
+      const contractId = target.getAttribute("data-contract-id");
+      if (!contractId) {
+        return;
+      }
+
+      target.setAttribute("disabled", "true");
+      const oldText = target.textContent;
+      target.textContent = "Abriendo...";
+
+      void openContractFiles(contractId)
+        .catch((error) => {
+          debugError("No se pudo abrir archivos del contrato", error);
+          statusText.textContent = "No se pudieron abrir los archivos del contrato.";
+        })
+        .finally(() => {
+          target.removeAttribute("disabled");
+          target.textContent = oldText;
+        });
+    }
+  });
 }
 
 setupPasswordToggle();

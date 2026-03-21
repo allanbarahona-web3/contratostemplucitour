@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -16,6 +17,15 @@ import { SearchContractsDto } from "./dto/search-contracts.dto";
 @Injectable()
 export class ContractsService {
   private s3Client: S3Client | null = null;
+  private readonly maxDocumentCount = 20;
+  private readonly maxDocumentSizeBytes = 5 * 1024 * 1024;
+  private readonly maxDocumentTotalBytes = 25 * 1024 * 1024;
+  private readonly allowedDocumentMimeTypes = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ]);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -263,6 +273,32 @@ export class ContractsService {
 
     if (!pdfFile?.buffer?.length || pdfFile.mimetype !== "application/pdf") {
       throw new InternalServerErrorException("Debes adjuntar un PDF valido para archivar el contrato.");
+    }
+
+    if (documents.length > this.maxDocumentCount) {
+      throw new BadRequestException(`Solo se permiten ${this.maxDocumentCount} adjuntos por contrato.`);
+    }
+
+    let documentTotalBytes = 0;
+    for (const doc of documents) {
+      if (!doc?.buffer?.length) {
+        continue;
+      }
+
+      const mime = String(doc.mimetype || "").toLowerCase();
+      if (!this.allowedDocumentMimeTypes.has(mime)) {
+        throw new BadRequestException("Adjunto invalido. Solo se permiten PDF, JPG, PNG o WEBP.");
+      }
+
+      const size = doc.size || doc.buffer.length;
+      if (size > this.maxDocumentSizeBytes) {
+        throw new BadRequestException("Un adjunto supera el limite de 5 MB por archivo.");
+      }
+
+      documentTotalBytes += size;
+      if (documentTotalBytes > this.maxDocumentTotalBytes) {
+        throw new BadRequestException("El total de adjuntos supera el limite de 25 MB.");
+      }
     }
 
     const contractNumber = dto.contractNumber.trim();
