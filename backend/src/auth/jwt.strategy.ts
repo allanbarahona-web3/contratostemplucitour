@@ -25,11 +25,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         fullName: true,
         isActive: true,
+        activeJti: true,
       },
     });
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Usuario no autorizado");
+    }
+
+    if (!payload.jti || !user.activeJti || payload.jti !== user.activeJti) {
+      throw new UnauthorizedException("Sesion invalida o reemplazada por otro inicio de sesion");
     }
 
     return user;

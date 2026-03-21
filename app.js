@@ -180,6 +180,20 @@ const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
   setLoginStatus(message);
 };
 
+const invalidateSessionFromServer = (message = "Tu sesion expiro. Inicia sesion nuevamente.") => {
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  currentAuthenticatedUser = null;
+  loginForm.reset();
+  resetContractWorkspace();
+  setUnauthenticatedUi(message);
+  statusText.textContent = message;
+
+  const emailInput = loginForm.querySelector('input[name="email"]');
+  if (emailInput) {
+    emailInput.focus();
+  }
+};
+
 const apiFetch = async (path, options = {}) => {
   if (!API_BASE) {
     throw new Error("No hay API configurada. Define APP_CONFIG.API_BASE en config.js.");
@@ -195,6 +209,9 @@ const apiFetch = async (path, options = {}) => {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 && path !== "/auth/login") {
+      invalidateSessionFromServer("Tu sesion fue cerrada porque se inicio en otra maquina.");
+    }
     const msg = payload.message || "No se pudo completar la solicitud.";
     throw new Error(Array.isArray(msg) ? msg.join(", ") : String(msg));
   }

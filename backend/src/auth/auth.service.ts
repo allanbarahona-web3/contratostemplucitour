@@ -31,6 +31,15 @@ export class AuthService {
     }
 
     const tokenId = randomUUID();
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        activeJti: tokenId,
+        activeAt: new Date(),
+      },
+    });
+
     const token = await this.jwtService.signAsync(
       {
       sub: user.id,
