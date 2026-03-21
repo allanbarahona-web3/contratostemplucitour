@@ -60,11 +60,44 @@ const setupPasswordToggle = () => {
   });
 };
 
+const resetContractWorkspace = () => {
+  form.reset();
+  companionsContainer.innerHTML = "";
+  itineraryContainer.innerHTML = "";
+  minorsContainer.innerHTML = "";
+  hasMinorCompanionInput.checked = false;
+
+  previewEl.innerHTML = "";
+  minorAnnexPreview.innerHTML = "";
+  minorAnnexPreview.classList.add("hidden");
+
+  const today = new Date().toISOString().slice(0, 10);
+  form.elements.contractNumber.value = "Generando...";
+  form.elements.issuedAt.value = today;
+  form.elements.startDate.value = today;
+  form.elements.endDate.value = today;
+  form.elements.installmentCount.value = "1";
+
+  clientNationalityOtherWrap.classList.add("hidden");
+  recalcPaymentDueDate();
+  recalcBalance();
+  resetDefaultItinerary();
+  syncMinorSectionVisibility();
+  refreshTutorOptions();
+};
+
+const prepareNextContract = async (token) => {
+  resetContractWorkspace();
+  if (token) {
+    await reserveContractNumber(token);
+  }
+};
+
 const handleLogout = () => {
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
   currentAuthenticatedUser = null;
   loginForm.reset();
-  form.elements.contractNumber.value = "Generando...";
+  resetContractWorkspace();
   setUnauthenticatedUi("Sesion cerrada. Ingresa tus credenciales.");
   statusText.textContent = "Sesion cerrada correctamente.";
 
@@ -186,7 +219,7 @@ const setupAuth = async () => {
     const user = await validateSession(existingToken);
     currentAuthenticatedUser = user;
     setAuthenticatedUi(user);
-    await reserveContractNumber(existingToken);
+    await prepareNextContract(existingToken);
     setLoginStatus("Sesion activa.");
   } catch (error) {
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -1194,11 +1227,9 @@ downloadButton.addEventListener("click", () => {
 
       statusText.textContent = "Descargando PDF...";
       downloadBlob(blob, fileName);
-        const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
-        if (token) {
-          await reserveContractNumber(token);
-        }
-      statusText.textContent = "PDF generado y descargado.";
+      const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+      await prepareNextContract(token);
+      statusText.textContent = "PDF generado y descargado. Formulario limpio para un nuevo contrato.";
       debugLog("Descarga completada");
     } catch (error) {
       debugError("Error al generar PDF", error);
@@ -1305,19 +1336,7 @@ const bootstrap = () => {
   setUnauthenticatedUi("Ingresa tus credenciales.");
   downloadButton.removeAttribute("disabled");
   downloadButton.disabled = false;
-    form.elements.contractNumber.value = "Generando...";
-
-  const today = new Date().toISOString().slice(0, 10);
-  form.elements.issuedAt.value = today;
-  form.elements.startDate.value = today;
-  form.elements.endDate.value = today;
-  recalcPaymentDueDate();
-  recalcBalance();
-  form.elements.installmentCount.value = "1";
-  recalcBalance();
-  resetDefaultItinerary();
-  syncMinorSectionVisibility();
-  clientNationalityOtherWrap.classList.add("hidden");
+  resetContractWorkspace();
   statusText.textContent =
       "Lista para uso temporal. El número de contrato se genera desde el backend al iniciar sesión.";
   debugLog("Bootstrap completado");
@@ -1347,7 +1366,7 @@ loginForm.addEventListener("submit", async (event) => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, result.accessToken);
     currentAuthenticatedUser = result.user;
     setAuthenticatedUi(result.user);
-    await reserveContractNumber(result.accessToken);
+    await prepareNextContract(result.accessToken);
     setLoginStatus("Sesion iniciada.");
     statusText.textContent = "Sesion iniciada correctamente.";
   } catch (error) {
