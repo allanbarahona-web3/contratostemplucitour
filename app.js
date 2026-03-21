@@ -18,6 +18,7 @@ const minorAnnexPreview = document.getElementById("minorAnnexPreview");
 const clientNationalitySelect = document.getElementById("clientNationality");
 const clientNationalityOtherWrap = document.getElementById("clientNationalityOtherWrap");
 const reservationAmountError = document.getElementById("reservationAmountError");
+const contractDocumentsInput = document.getElementById("contractDocuments");
 
 const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
@@ -1502,6 +1503,7 @@ if (sendAndDownloadButton) {
         const data = getFormData();
 
         let emailSent = false;
+        let archived = false;
 
         statusText.textContent = "Enviando correo con adjunto...";
         try {
@@ -1521,6 +1523,31 @@ if (sendAndDownloadButton) {
         statusText.textContent = "Descargando PDF...";
         downloadBlob(blob, fileName);
 
+        statusText.textContent = "Guardando contrato en base de datos...";
+        try {
+          const archivePayload = new FormData();
+          archivePayload.append("contractNumber", String(contractNumber));
+          archivePayload.append("clientFullName", String(data.clientFullName || ""));
+          archivePayload.append("clientIdNumber", String(data.clientIdNumber || ""));
+          archivePayload.append("clientEmail", String(data.clientEmail || ""));
+          archivePayload.append("destination", String(data.destination || ""));
+          archivePayload.append("issuedAt", String(data.issuedAt || ""));
+          archivePayload.append("startDate", String(data.startDate || ""));
+          archivePayload.append("endDate", String(data.endDate || ""));
+          archivePayload.append("payloadJson", JSON.stringify(data));
+          archivePayload.append("pdfFile", blob, fileName);
+
+          const extraDocs = Array.from(contractDocumentsInput?.files || []);
+          extraDocs.forEach((docFile) => {
+            archivePayload.append("documents", docFile, docFile.name);
+          });
+
+          await apiFetchMultipart("/contracts/archive", archivePayload, token);
+          archived = true;
+        } catch (archiveError) {
+          debugError("Error guardando contrato archivado", archiveError);
+        }
+
         resetContractWorkspace();
 
         try {
@@ -1530,8 +1557,12 @@ if (sendAndDownloadButton) {
         }
 
         statusText.textContent = emailSent
-          ? "Correo enviado y PDF descargado. Formulario limpio para un nuevo contrato."
-          : "PDF descargado. No se pudo enviar el correo (archivo demasiado grande o error de servidor).";
+          ? archived
+            ? "Correo enviado, PDF descargado y contrato guardado. Formulario limpio para un nuevo contrato."
+            : "Correo enviado y PDF descargado. No se pudo guardar el contrato archivado."
+          : archived
+            ? "PDF descargado y contrato guardado. No se pudo enviar el correo (archivo demasiado grande o error de servidor)."
+            : "PDF descargado. No se pudo enviar el correo ni guardar el contrato archivado.";
         debugLog("Flujo combinado completado");
       } catch (error) {
         debugError("Error en flujo combinado", error);

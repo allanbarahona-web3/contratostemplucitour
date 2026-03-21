@@ -29,3 +29,46 @@ model ContractNumber {
 
   @@index([createdAt])
 }
+
+model Contract {
+  id                 String             @id @default(cuid())
+  contractNumber     String             @unique
+  clientFullName     String
+  clientIdNumber     String
+  clientEmail        String
+  destination        String
+  generatedByUserId  String
+  generatedByEmail   String
+  generatedByName    String
+  issuedAt           DateTime?
+  startDate          DateTime?
+  endDate            DateTime?
+  payload            Json
+  pdfObjectKey       String
+  pdfFileName        String
+  pdfMimeType        String
+  pdfSize            Int
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  documents          ContractDocument[]
+
+  @@index([clientFullName])
+  @@index([clientIdNumber])
+  @@index([clientEmail])
+  @@index([createdAt])
+}
+
+model ContractDocument {
+  id               String   @id @default(cuid())
+  contractId       String
+  kind             String?
+  originalFileName String
+  objectKey        String   @unique
+  mimeType         String
+  size             Int
+  createdAt        DateTime @default(now())
+  contract         Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([createdAt])
+}
