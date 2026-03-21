@@ -55,17 +55,15 @@ const resizeSignatureCanvas = () => {
   const wrap = signatureCanvas.parentElement;
   const visualWidth = Math.max(220, Math.floor((wrap?.clientWidth || signatureCanvas.clientWidth || 300) - 2));
   const visualHeight = 220;
-  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
 
   signatureCanvas.style.width = `${visualWidth}px`;
   signatureCanvas.style.height = `${visualHeight}px`;
-  signatureCanvas.width = Math.floor(visualWidth * dpr);
-  signatureCanvas.height = Math.floor(visualHeight * dpr);
+  signatureCanvas.width = visualWidth;
+  signatureCanvas.height = visualHeight;
 
   const ctx = signatureCanvas.getContext("2d");
   if (ctx) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.lineWidth = 3;
@@ -152,8 +150,8 @@ const getCanvasPoint = (event) => {
   const clientY = event.clientY;
 
   return {
-    x: ((clientX - rect.left) / rect.width) * signatureCanvas.width,
-    y: ((clientY - rect.top) / rect.height) * signatureCanvas.height,
+    x: Math.max(0, Math.min(rect.width, clientX - rect.left)),
+    y: Math.max(0, Math.min(rect.height, clientY - rect.top)),
   };
 };
 
@@ -317,6 +315,7 @@ const submitSignedContract = async () => {
   await apiFetchMultipart("/contracts/public/finalize-signature", payload);
   contractStateEl.textContent = "SIGNED";
   setStatus("Contrato firmado enviado correctamente. Proceso finalizado.", "success");
+  window.alert("Contrato firmado enviado correctamente.");
   submitButton.setAttribute("disabled", "true");
   clearButton?.setAttribute("disabled", "true");
   backToReadButton?.setAttribute("disabled", "true");
@@ -401,6 +400,7 @@ if (submitButton) {
     void submitSignedContract()
       .catch((error) => {
         setStatus(error.message || "No se pudo enviar el contrato firmado.", "error");
+        window.alert(error.message || "No se pudo enviar el contrato firmado.");
       })
       .finally(() => {
         if (oldLabel) {

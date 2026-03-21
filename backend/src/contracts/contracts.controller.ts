@@ -212,12 +212,13 @@ export class ContractsController {
   @Get("public/signing-pdf")
   async getPublicSigningPdf(
     @Query() query: PublicSigningSessionDto,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const file = await this.contractsService.getPublicSigningPdf(query.token);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    return file.buffer;
+    res.setHeader("Content-Length", String(file.buffer.length));
+    res.status(200).send(file.buffer);
   }
 
   @Post("public/finalize-signature")
