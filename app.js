@@ -2,8 +2,10 @@ const form = document.getElementById("contractForm");
 const previewEl = document.getElementById("contractPreview");
 const statusText = document.getElementById("statusText");
 const previewButton = document.getElementById("previewButton");
-const downloadButton = document.getElementById("downloadButton");
-const emailButton = document.getElementById("emailButton");
+const sendAndDownloadButton =
+  document.getElementById("sendAndDownloadButton") ||
+  document.getElementById("downloadButton") ||
+  document.getElementById("emailButton");
 const addCompanionButton = document.getElementById("addCompanionButton");
 const companionsContainer = document.getElementById("companionsContainer");
 const addItineraryButton = document.getElementById("addItineraryButton");
@@ -1335,79 +1337,61 @@ previewButton.addEventListener("click", () => {
   }
 });
 
-downloadButton.addEventListener("click", () => {
-  withBusyButton(downloadButton, async () => {
-    try {
-      debugLog("Click en Generar y descargar PDF");
-      statusText.textContent = "Generando PDF...";
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+if (sendAndDownloadButton) {
+  sendAndDownloadButton.addEventListener("click", () => {
+    withBusyButton(sendAndDownloadButton, async () => {
+      try {
+        ensureValidForm();
+        const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+        if (!token) {
+          throw new Error("Tu sesion no esta activa. Inicia sesion nuevamente.");
+        }
 
-      const { blob, fileName } = await generatePdfBlob((message) => {
-        statusText.textContent = message;
-      });
+        statusText.textContent = "Generando PDF para correo y descarga...";
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      statusText.textContent = "Descargando PDF...";
-      downloadBlob(blob, fileName);
+        const { blob, fileName, contractNumber } = await generatePdfBlob((message) => {
+          statusText.textContent = message;
+        });
 
-      // Always clear current contract data after a successful download.
-      resetContractWorkspace();
+        const data = getFormData();
+        const pdfBase64 = await blobToBase64(blob);
 
-      const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
+        statusText.textContent = "Enviando correo con adjunto...";
+        await apiFetch("/contracts/send-email", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            toEmail: data.clientEmail,
+            clientName: data.clientFullName,
+            contractNumber,
+            fileName,
+            pdfBase64,
+          }),
+        });
+
+        statusText.textContent = "Correo enviado. Descargando PDF...";
+        downloadBlob(blob, fileName);
+
+        resetContractWorkspace();
+
         try {
           await reserveContractNumber(token);
         } catch (reserveError) {
           debugError("No se pudo reservar el siguiente numero", reserveError);
         }
+
+        statusText.textContent = "Correo enviado y PDF descargado. Formulario limpio para un nuevo contrato.";
+        debugLog("Flujo combinado completado");
+      } catch (error) {
+        debugError("Error en flujo combinado", error);
+        statusText.textContent = error.message || "No se pudo completar el envio y descarga.";
       }
-
-      statusText.textContent = "PDF generado y descargado. Formulario limpio para un nuevo contrato.";
-      debugLog("Descarga completada");
-    } catch (error) {
-      debugError("Error al generar PDF", error);
-      statusText.textContent = error.message || "Error al generar PDF.";
-    }
+    });
   });
-});
-
-emailButton.addEventListener("click", () => {
-  withBusyButton(emailButton, async () => {
-    try {
-      ensureValidForm();
-      const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token) {
-        throw new Error("Tu sesion no esta activa. Inicia sesion nuevamente.");
-      }
-
-      statusText.textContent = "Generando PDF para correo...";
-      const { blob, fileName, contractNumber } = await generatePdfBlob((message) => {
-        statusText.textContent = message;
-      });
-
-      const data = getFormData();
-      const pdfBase64 = await blobToBase64(blob);
-
-      statusText.textContent = "Enviando correo con adjunto...";
-      await apiFetch("/contracts/send-email", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          toEmail: data.clientEmail,
-          clientName: data.clientFullName,
-          contractNumber,
-          fileName,
-          pdfBase64,
-        }),
-      });
-
-      statusText.textContent = "Correo enviado con contrato adjunto correctamente.";
-    } catch (error) {
-      statusText.textContent = error.message || "No se pudo enviar el correo.";
-    }
-  });
-});
+}
 
 addCompanionButton.addEventListener("click", () => {
   addCompanionRow();
@@ -1499,8 +1483,10 @@ form.elements.installmentCount.addEventListener("input", () => {
 
 const bootstrap = () => {
   setUnauthenticatedUi("Ingresa tus credenciales.");
-  downloadButton.removeAttribute("disabled");
-  downloadButton.disabled = false;
+  if (sendAndDownloadButton) {
+    sendAndDownloadButton.removeAttribute("disabled");
+    sendAndDownloadButton.disabled = false;
+  }
   resetContractWorkspace();
   statusText.textContent =
       "Lista para uso temporal. El número de contrato se genera desde el backend al iniciar sesión.";
