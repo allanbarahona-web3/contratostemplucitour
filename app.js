@@ -1127,23 +1127,23 @@ const generatePdfBlob = async (onProgress = () => {}) => {
     });
   }
 
-  const safeName = String(data.clientFullName || "cliente")
+  const safeName = String(data.clientFullName || "CLIENTE")
     .trim()
-    .toLowerCase()
+    .toUpperCase()
     .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-  const safeContract = String(data.contractNumber || "contrato")
+    .replace(/[^A-Z0-9-]/g, "");
+  const safeContract = String(data.contractNumber || "CONTRATO")
     .trim()
-    .toLowerCase()
+    .toUpperCase()
     .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+    .replace(/[^A-Z0-9-]/g, "");
 
   onProgress("PDF listo para descarga.");
   debugLog("PDF generado", { contractNumber: data.contractNumber });
 
   return {
     blob: pdf.output("blob"),
-    fileName: `contrato-${safeContract}-${safeName}.pdf`,
+    fileName: `CONTRATO-${safeContract}-${safeName}.PDF`,
     contractNumber: data.contractNumber,
   };
 };
