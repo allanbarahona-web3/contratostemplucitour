@@ -8,7 +8,7 @@ const viewContractButton = document.getElementById("publicViewContractButton");
 const goToSignButton = document.getElementById("publicGoToSignButton");
 const backToReadButton = document.getElementById("publicBackToReadButton");
 const contractFrame = document.getElementById("publicContractFrame");
-const signedByNameInput = document.getElementById("publicSignedByName");
+const signedByNameLabel = document.getElementById("publicSignedByNameLabel");
 const signatureCanvas = document.getElementById("publicSignatureCanvas");
 const clearButton = document.getElementById("publicSignatureClear");
 const submitButton = document.getElementById("publicSignatureSubmit");
@@ -23,9 +23,56 @@ let sessionData = null;
 let signatureDirty = false;
 let isDrawing = false;
 let lastPoint = null;
+let contractPdfObjectUrl = "";
 
-const setStatus = (message) => {
+const toStatusClass = (kind) => {
+  if (kind === "success") return "status-ok";
+  if (kind === "error") return "status-error";
+  return "";
+};
+
+const setStatus = (message, kind = "info") => {
   statusEl.textContent = String(message || "");
+  statusEl.classList.remove("status-ok", "status-error");
+  const className = toStatusClass(kind);
+  if (className) {
+    statusEl.classList.add(className);
+  }
+};
+
+const revokeContractPdfObjectUrl = () => {
+  if (contractPdfObjectUrl) {
+    URL.revokeObjectURL(contractPdfObjectUrl);
+    contractPdfObjectUrl = "";
+  }
+};
+
+const resizeSignatureCanvas = () => {
+  if (!(signatureCanvas instanceof HTMLCanvasElement)) {
+    return;
+  }
+
+  const wrap = signatureCanvas.parentElement;
+  const visualWidth = Math.max(220, Math.floor((wrap?.clientWidth || signatureCanvas.clientWidth || 300) - 2));
+  const visualHeight = 220;
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+
+  signatureCanvas.style.width = `${visualWidth}px`;
+  signatureCanvas.style.height = `${visualHeight}px`;
+  signatureCanvas.width = Math.floor(visualWidth * dpr);
+  signatureCanvas.height = Math.floor(visualHeight * dpr);
+
+  const ctx = signatureCanvas.getContext("2d");
+  if (ctx) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#123f79";
+  }
+
+  signatureDirty = false;
 };
 
 const showReadStep = () => {
@@ -225,9 +272,12 @@ const loadSigningSession = async () => {
   contractNumberEl.textContent = data.contractNumber || "-";
   clientNameEl.textContent = data.clientName || "-";
   contractStateEl.textContent = data.status || "-";
-  signedByNameInput.value = data.clientName || "";
+  if (signedByNameLabel) {
+    signedByNameLabel.textContent = data.clientName || "-";
+  }
 
   if (contractFrame) {
+    revokeContractPdfObjectUrl();
     contractFrame.src = "";
     contractFrame.style.display = "none";
   }
@@ -246,9 +296,9 @@ const loadSigningSession = async () => {
 };
 
 const submitSignedContract = async () => {
-  const signer = String(signedByNameInput.value || "").trim();
+  const signer = String(sessionData?.clientName || "").trim();
   if (!signer) {
-    throw new Error("Ingresa tu nombre completo.");
+    throw new Error("No se pudo resolver el nombre del firmante desde el contrato.");
   }
 
   if (!signatureDirty) {
@@ -265,10 +315,13 @@ const submitSignedContract = async () => {
   payload.append("signedPdfFile", signedPdfBlob, `${sessionData.contractNumber || "contrato"}-signed.pdf`);
 
   await apiFetchMultipart("/contracts/public/finalize-signature", payload);
-  setStatus("Contrato firmado enviado correctamente. Proceso finalizado.");
+  contractStateEl.textContent = "SIGNED";
+  setStatus("Contrato firmado enviado correctamente. Proceso finalizado.", "success");
   submitButton.setAttribute("disabled", "true");
   clearButton?.setAttribute("disabled", "true");
   backToReadButton?.setAttribute("disabled", "true");
+  goToSignButton?.setAttribute("disabled", "true");
+  viewContractButton?.setAttribute("disabled", "true");
 };
 
 if (signatureCanvas instanceof HTMLCanvasElement) {
@@ -283,20 +336,42 @@ if (viewContractButton) {
   viewContractButton.addEventListener("click", () => {
     const sourcePdfUrl = getSigningPdfUrl();
     if (!sourcePdfUrl) {
-      setStatus("No se encontro el contrato para visualizacion.");
+      setStatus("No se encontro el contrato para visualizacion.", "error");
       return;
     }
 
-    contractFrame.style.display = "block";
-    contractFrame.src = sourcePdfUrl;
-    goToSignButton?.removeAttribute("disabled");
-    setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
+    setStatus("Cargando contrato...");
+    viewContractButton.setAttribute("disabled", "true");
+
+    void fetch(sourcePdfUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("No se pudo cargar el contrato para visualizacion.");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        revokeContractPdfObjectUrl();
+        contractPdfObjectUrl = URL.createObjectURL(blob);
+        contractFrame.style.display = "block";
+        contractFrame.src = contractPdfObjectUrl;
+        goToSignButton?.removeAttribute("disabled");
+        setStatus("Contrato abierto. Cuando termines de leer, presiona Firmar.");
+      })
+      .catch((error) => {
+        setStatus(error.message || "No se pudo abrir el contrato.", "error");
+      })
+      .finally(() => {
+        if (String(contractStateEl.textContent || "").toUpperCase() !== "SIGNED") {
+          viewContractButton.removeAttribute("disabled");
+        }
+      });
   });
 }
 
 if (goToSignButton) {
   goToSignButton.addEventListener("click", () => {
-    signatureDirty = false;
+    resizeSignatureCanvas();
     clearCanvas();
     showSignStep();
     setStatus("Paso 2: firma en el recuadro y presiona Enviar contrato firmado.");
@@ -325,7 +400,7 @@ if (submitButton) {
 
     void submitSignedContract()
       .catch((error) => {
-        setStatus(error.message || "No se pudo enviar el contrato firmado.");
+        setStatus(error.message || "No se pudo enviar el contrato firmado.", "error");
       })
       .finally(() => {
         if (oldLabel) {
@@ -338,7 +413,18 @@ if (submitButton) {
   });
 }
 
+window.addEventListener("resize", () => {
+  if (!signStep?.classList.contains("hidden")) {
+    resizeSignatureCanvas();
+    clearCanvas();
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  revokeContractPdfObjectUrl();
+});
+
 void loadSigningSession().catch((error) => {
-  setStatus(error.message || "No se pudo cargar la sesion de firma.");
+  setStatus(error.message || "No se pudo cargar la sesion de firma.", "error");
   submitButton?.setAttribute("disabled", "true");
 });

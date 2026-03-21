@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Firma de contrato</title>
-    <link rel="stylesheet" href="./styles.css?v=20260321s" />
-    <script src="./config.js?v=20260321s"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260321u" />
+    <script src="./config.js?v=20260321u"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="./sign-contract.js?v=20260321s" defer></script>
+    <script src="./sign-contract.js?v=20260321u" defer></script>
   </head>
   <body>
     <div class="bg-shape bg-shape-a"></div>
@@ -39,9 +39,7 @@
           <div id="publicSignStep" class="signature-panel hidden" style="margin-top:12px;">
             <div class="viewer-body signature-body">
               <p class="signature-help"><strong>Paso 2:</strong> Firma en el recuadro y luego presiona Enviar contrato firmado.</p>
-              <label>Nombre de quien firma
-                <input id="publicSignedByName" type="text" placeholder="Nombre completo" maxlength="120" />
-              </label>
+              <p class="signature-help"><strong>Firmante:</strong> <span id="publicSignedByNameLabel">-</span></p>
               <div class="signature-canvas-wrap">
                 <canvas id="publicSignatureCanvas" width="900" height="260"></canvas>
               </div>
