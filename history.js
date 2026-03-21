@@ -1,6 +1,10 @@
 const historySearchInput = document.getElementById("historySearch");
 const historySearchButton = document.getElementById("historySearchButton");
-const historyList = document.getElementById("historyList");
+const historyTableBody = document.getElementById("historyTableBody");
+const viewerModal = document.getElementById("viewerModal");
+const viewerTitle = document.getElementById("viewerTitle");
+const viewerBody = document.getElementById("viewerBody");
+const viewerCloseButton = document.getElementById("viewerCloseButton");
 
 const AUTH_TOKEN_KEY = "contractsTempAuthToken";
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
@@ -10,6 +14,7 @@ const LOCAL_DEVELOPMENT_API_BASE = "http://localhost:3001";
 const API_BASE = configuredApiBase || (isLocalHost ? LOCAL_DEVELOPMENT_API_BASE : "");
 
 let searchDebounce = null;
+const filesCache = new Map();
 
 const escapeHtml = (value) =>
   String(value || "")
@@ -56,35 +61,87 @@ const apiFetch = async (path, options = {}) => {
   return payload;
 };
 
+const getDocKind = (doc) => {
+  const name = String(doc?.originalFileName || "").toLowerCase();
+  if (name.includes("cedula-frente") || name.includes("cedula_front")) return "cedula-front";
+  if (name.includes("cedula-reverso") || name.includes("cedula_back") || name.includes("cedula-reverso")) {
+    return "cedula-back";
+  }
+  if (name.includes("pasaporte") || name.includes("passport")) return "passport";
+  return "other";
+};
+
 const renderHistory = (items = []) => {
   if (!Array.isArray(items) || items.length === 0) {
-    historyList.innerHTML = '<p class="history-empty">No se encontraron contratos.</p>';
+    historyTableBody.innerHTML = `
+      <tr>
+        <td colspan="5"><p class="history-empty">No se encontraron contratos.</p></td>
+      </tr>
+    `;
     return;
   }
 
-  historyList.innerHTML = items
+  historyTableBody.innerHTML = items
     .map(
       (item) => `
-        <article class="history-item">
-          <div class="history-item-head">
-            <p class="history-item-title">${escapeHtml(item.contractNumber)}</p>
-            <p class="history-item-sub">${escapeHtml(formatDateTime(item.createdAt))}</p>
-          </div>
-          <p class="history-item-sub">Cliente: ${escapeHtml(item.clientFullName)}</p>
-          <div class="history-item-meta">
-            <span>ID: ${escapeHtml(item.clientIdNumber)}</span>
-            <span>Correo: ${escapeHtml(item.clientEmail)}</span>
-            <span>Destino: ${escapeHtml(item.destination || "-")}</span>
-            <span>Agente: ${escapeHtml(item.generatedByName || "-")}</span>
-            <span>Adjuntos: ${escapeHtml(String(item.documentCount || 0))}</span>
-          </div>
-          <div class="history-item-actions">
-            <button type="button" class="ghost" data-action="files" data-contract-id="${escapeAttr(item.id)}">Ver archivos</button>
-          </div>
-        </article>
+        <tr>
+          <td>
+            <div class="history-col-name">${escapeHtml(item.clientFullName)}</div>
+            <div class="history-col-muted">${escapeHtml(formatDateTime(item.createdAt))}</div>
+          </td>
+          <td>${escapeHtml(item.clientIdNumber)}</td>
+          <td>${escapeHtml(item.clientEmail)}</td>
+          <td>${escapeHtml(item.contractNumber)}</td>
+          <td>
+            <div class="history-actions">
+              <button type="button" class="ghost" data-action="contract" data-contract-id="${escapeAttr(item.id)}">Contrato</button>
+              <button type="button" class="ghost" data-action="cedula" data-contract-id="${escapeAttr(item.id)}">Cedula</button>
+              <button type="button" class="ghost" data-action="passport" data-contract-id="${escapeAttr(item.id)}">Pasaporte</button>
+            </div>
+          </td>
+        </tr>
       `,
     )
     .join("");
+};
+
+const closeViewer = () => {
+  viewerModal.classList.add("hidden");
+  viewerModal.setAttribute("aria-hidden", "true");
+  viewerBody.innerHTML = "";
+};
+
+const openViewer = (title, docs = []) => {
+  viewerTitle.textContent = title;
+
+  if (!docs.length) {
+    viewerBody.innerHTML = '<p class="history-empty">No hay documentos disponibles para esta opcion.</p>';
+  } else {
+    viewerBody.innerHTML = docs
+      .map((doc) => {
+        const mime = String(doc.mimeType || "").toLowerCase();
+        const label = escapeHtml(doc.originalFileName || "Documento");
+        if (mime.startsWith("image/")) {
+          return `
+            <article class="viewer-doc">
+              <p class="viewer-doc-title">${label}</p>
+              <img src="${escapeAttr(doc.url)}" alt="${label}" loading="lazy" />
+            </article>
+          `;
+        }
+
+        return `
+          <article class="viewer-doc">
+            <p class="viewer-doc-title">${label}</p>
+            <iframe src="${escapeAttr(doc.url)}" title="${label}"></iframe>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  viewerModal.classList.remove("hidden");
+  viewerModal.setAttribute("aria-hidden", "false");
 };
 
 const loadContractHistory = async (query = "") => {
@@ -94,7 +151,11 @@ const loadContractHistory = async (query = "") => {
     return;
   }
 
-  historyList.innerHTML = '<p class="history-empty">Cargando historial...</p>';
+  historyTableBody.innerHTML = `
+    <tr>
+      <td colspan="5"><p class="history-empty">Cargando historial...</p></td>
+    </tr>
+  `;
 
   const params = new URLSearchParams();
   const q = String(query || "").trim();
@@ -113,10 +174,14 @@ const loadContractHistory = async (query = "") => {
 };
 
 const openContractFiles = async (contractId) => {
+  if (filesCache.has(contractId)) {
+    return filesCache.get(contractId);
+  }
+
   const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
   if (!token) {
     window.location.href = "./index.html";
-    return;
+    return null;
   }
 
   const files = await apiFetch(`/contracts/${contractId}/files`, {
@@ -126,22 +191,17 @@ const openContractFiles = async (contractId) => {
     },
   });
 
-  if (files?.pdf?.url) {
-    window.open(files.pdf.url, "_blank", "noopener,noreferrer");
-  }
-
-  if (Array.isArray(files?.documents)) {
-    files.documents.forEach((doc) => {
-      if (doc?.url) {
-        window.open(doc.url, "_blank", "noopener,noreferrer");
-      }
-    });
-  }
+  filesCache.set(contractId, files);
+  return files;
 };
 
 historySearchButton.addEventListener("click", () => {
   void loadContractHistory(historySearchInput.value || "").catch((error) => {
-    historyList.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p>`;
+    historyTableBody.innerHTML = `
+      <tr>
+        <td colspan="5"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
+      </tr>
+    `;
   });
 });
 
@@ -151,33 +211,62 @@ historySearchInput.addEventListener("input", () => {
   }
   searchDebounce = setTimeout(() => {
     void loadContractHistory(historySearchInput.value || "").catch((error) => {
-      historyList.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p>`;
+      historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="5"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
+        </tr>
+      `;
     });
   }, 260);
 });
 
-historyList.addEventListener("click", (event) => {
+historyTableBody.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
     return;
   }
 
-  if (target.matches('button[data-action="files"]')) {
+  if (target.matches("button[data-action]")) {
     const contractId = target.getAttribute("data-contract-id");
     if (!contractId) {
       return;
     }
+
+    const action = target.getAttribute("data-action");
 
     const oldLabel = target.textContent;
     target.setAttribute("disabled", "true");
     target.textContent = "Abriendo...";
 
     void openContractFiles(contractId)
+      .then((files) => {
+        if (!files) {
+          return;
+        }
+
+        const docs = Array.isArray(files.documents) ? files.documents : [];
+        const docsWithKind = docs.map((doc) => ({ ...doc, kind: getDocKind(doc) }));
+
+        if (action === "contract") {
+          openViewer("Contrato", files.pdf?.url ? [files.pdf] : []);
+          return;
+        }
+
+        if (action === "cedula") {
+          const idDocs = docsWithKind.filter((doc) => doc.kind === "cedula-front" || doc.kind === "cedula-back");
+          openViewer("Cedula (frente y reverso)", idDocs);
+          return;
+        }
+
+        if (action === "passport") {
+          const passDocs = docsWithKind.filter((doc) => doc.kind === "passport");
+          openViewer("Pasaporte", passDocs);
+        }
+      })
       .catch((error) => {
-        historyList.insertAdjacentHTML(
-          "afterbegin",
-          `<p class="history-empty">${escapeHtml(error.message || "No se pudieron abrir los archivos.")}</p>`,
-        );
+        viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudieron abrir los archivos.")}</p>`;
+        viewerModal.classList.remove("hidden");
+        viewerModal.setAttribute("aria-hidden", "false");
       })
       .finally(() => {
         target.removeAttribute("disabled");
@@ -186,6 +275,17 @@ historyList.addEventListener("click", (event) => {
   }
 });
 
+viewerCloseButton.addEventListener("click", closeViewer);
+viewerModal.addEventListener("click", (event) => {
+  if (event.target === viewerModal) {
+    closeViewer();
+  }
+});
+
 void loadContractHistory("").catch((error) => {
-  historyList.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p>`;
+  historyTableBody.innerHTML = `
+    <tr>
+      <td colspan="5"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
+    </tr>
+  `;
 });

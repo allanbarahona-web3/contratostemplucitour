@@ -70,10 +70,10 @@ const setSessionLiveBadge = (state = "off") => {
   sessionLiveBadgeEl.classList.remove(...classes);
 
   const labelByState = {
-    off: "Sin enlace en vivo",
-    connecting: "Conectando sesion en vivo...",
-    live: "Sesion en vivo activa",
-    reconnecting: "Reconectando sesion en vivo...",
+    off: "Sin conexion",
+    connecting: "Conectando...",
+    live: "Conectado",
+    reconnecting: "Reconectando...",
   };
 
   const stateClass = `state-${state}`;
