@@ -5,14 +5,20 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
 import { PrismaService } from "../prisma/prisma.service";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
+import { FinalizeContractSignatureDto } from "./dto/finalize-contract-signature.dto";
 import { SendContractEmailDto } from "./dto/send-contract-email.dto";
+import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
+
+const CONTRACT_STATUS_PENDING_SIGNATURE = "PENDING_SIGNATURE";
+const CONTRACT_STATUS_SIGNED = "SIGNED";
+const SIGNING_TOKEN_VERSION = 1;
 
 @Injectable()
 export class ContractsService {
@@ -113,6 +119,100 @@ export class ContractsService {
     }
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toBase64Url(value: string) {
+    return Buffer.from(value, "utf8").toString("base64url");
+  }
+
+  private fromBase64Url(value: string) {
+    return Buffer.from(value, "base64url").toString("utf8");
+  }
+
+  private getSigningSecret() {
+    const explicitSecret = this.configService.get<string>("SIGNING_LINK_SECRET", "").trim();
+    if (explicitSecret) {
+      return explicitSecret;
+    }
+
+    const jwtSecret = this.configService.get<string>("JWT_SECRET", "").trim();
+    if (jwtSecret) {
+      return jwtSecret;
+    }
+
+    throw new InternalServerErrorException("Falta configurar SIGNING_LINK_SECRET o JWT_SECRET.");
+  }
+
+  private signPayload(payloadB64: string) {
+    return createHmac("sha256", this.getSigningSecret()).update(payloadB64).digest("base64url");
+  }
+
+  private buildSigningToken(contractId: string, expiresAt: Date) {
+    const payload = {
+      v: SIGNING_TOKEN_VERSION,
+      contractId,
+      exp: expiresAt.toISOString(),
+    };
+
+    const payloadB64 = this.toBase64Url(JSON.stringify(payload));
+    const signature = this.signPayload(payloadB64);
+    return `${payloadB64}.${signature}`;
+  }
+
+  private parseSigningToken(token: string) {
+    const normalized = String(token || "").trim();
+    const [payloadB64, signature] = normalized.split(".");
+    if (!payloadB64 || !signature) {
+      throw new BadRequestException("Token de firma invalido.");
+    }
+
+    const expected = this.signPayload(payloadB64);
+    const providedBuf = Buffer.from(signature, "utf8");
+    const expectedBuf = Buffer.from(expected, "utf8");
+
+    if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+      throw new BadRequestException("Token de firma invalido.");
+    }
+
+    let payload: { v: number; contractId: string; exp: string };
+    try {
+      payload = JSON.parse(this.fromBase64Url(payloadB64));
+    } catch {
+      throw new BadRequestException("Token de firma invalido.");
+    }
+
+    if (payload.v !== SIGNING_TOKEN_VERSION || !payload.contractId || !payload.exp) {
+      throw new BadRequestException("Token de firma invalido.");
+    }
+
+    const expDate = new Date(payload.exp);
+    if (Number.isNaN(expDate.getTime()) || expDate.getTime() <= Date.now()) {
+      throw new BadRequestException("El enlace de firma expiro.");
+    }
+
+    return {
+      contractId: payload.contractId,
+      expiresAt: expDate,
+    };
+  }
+
+  private getPublicAppBaseUrl() {
+    const explicit = this.configService.get<string>("PUBLIC_APP_BASE_URL", "").trim();
+    if (explicit) {
+      return explicit.replace(/\/+$/, "");
+    }
+
+    const allowedOrigin = this.configService.get<string>("ALLOWED_ORIGIN", "").trim();
+    const firstOrigin = allowedOrigin
+      .split(",")
+      .map((item) => item.trim())
+      .find((item) => item.startsWith("http://") || item.startsWith("https://"));
+
+    if (firstOrigin) {
+      return firstOrigin.replace(/\/+$/, "");
+    }
+
+    throw new InternalServerErrorException("No se pudo resolver PUBLIC_APP_BASE_URL para generar links de firma.");
   }
 
   private async uploadToSpaces(params: {
@@ -248,6 +348,92 @@ export class ContractsService {
     }
   }
 
+  async sendContractSigningEmail(
+    user: { id: string; email: string; fullName: string },
+    dto: SendSigningEmailDto,
+  ) {
+    const apiKey = this.configService.get<string>("RESEND_API_KEY", "").trim();
+    const fromEmail = this.configService
+      .get<string>("CONTRACTS_FROM_EMAIL", "")
+      .trim();
+
+    if (!apiKey || !fromEmail) {
+      throw new InternalServerErrorException(
+        "Falta configurar RESEND_API_KEY o CONTRACTS_FROM_EMAIL.",
+      );
+    }
+
+    const resend = new Resend(apiKey);
+    const html = `
+      <p>Hola ${dto.clientName},</p>
+      <p>Tu contrato <strong>${dto.contractNumber}</strong> esta listo para firma.</p>
+      <p>Abre este enlace, revisa el documento y firma con tu dedo en pantalla:</p>
+      <p><a href="${dto.signingUrl}">Firmar contrato ahora</a></p>
+      <p>Si no puedes abrir el boton, copia y pega este enlace en tu navegador:</p>
+      <p>${dto.signingUrl}</p>
+      <p>Atentamente,<br/>Lucitours</p>
+    `;
+
+    try {
+      const result = await resend.emails.send({
+        from: fromEmail,
+        to: [dto.toEmail],
+        subject: `Firma pendiente de contrato - ${dto.contractNumber}`,
+        html,
+      });
+
+      return {
+        ok: true,
+        emailId: result.data?.id || null,
+        sentTo: dto.toEmail,
+        contractNumber: dto.contractNumber,
+        sentBy: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+        },
+      };
+    } catch {
+      throw new InternalServerErrorException("No se pudo enviar el correo de firma al cliente.");
+    }
+  }
+
+  async createContractSigningLink(
+    _user: { id: string; email: string; fullName: string },
+    contractId: string,
+    ttlMinutes = 60 * 24,
+  ) {
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: contractId },
+      include: {
+        client: true,
+      },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    if (contract.status === CONTRACT_STATUS_SIGNED) {
+      throw new BadRequestException("Este contrato ya esta firmado.");
+    }
+
+    const safeTtlMinutes = Math.min(Math.max(Number(ttlMinutes) || 0, 15), 60 * 24 * 7);
+    const expiresAt = new Date(Date.now() + safeTtlMinutes * 60 * 1000);
+    const token = this.buildSigningToken(contract.id, expiresAt);
+    const baseUrl = this.getPublicAppBaseUrl();
+    const signingUrl = `${baseUrl}/sign-contract.html?token=${encodeURIComponent(token)}`;
+
+    return {
+      contractId: contract.id,
+      contractNumber: contract.contractNumber,
+      clientName: contract.client?.fullName || null,
+      clientEmail: contract.client?.email || null,
+      signingUrl,
+      expiresAt,
+    };
+  }
+
   async archiveContract(
     user: { id: string; email: string; fullName: string },
     dto: ArchiveContractDto,
@@ -379,6 +565,7 @@ export class ContractsService {
         contractNumber,
         clientId: client.id,
         destination: dto.destination.trim(),
+        status: CONTRACT_STATUS_PENDING_SIGNATURE,
         generatedByUserId: user.id,
         generatedByEmail: user.email,
         generatedByName: user.fullName,
@@ -408,8 +595,125 @@ export class ContractsService {
     return {
       id: archived.id,
       contractNumber: archived.contractNumber,
+      status: archived.status,
       documentCount: archived.documents.length,
       createdAt: archived.createdAt,
+    };
+  }
+
+  async finalizeContractSignature(
+    _user: { id: string; email: string; fullName: string },
+    contractId: string,
+    dto: FinalizeContractSignatureDto,
+    signedPdfFile: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname: string;
+      size: number;
+    },
+    signedClientIp: string | null,
+    signedUserAgent: string | null,
+  ) {
+    if (!signedPdfFile?.buffer?.length || signedPdfFile.mimetype !== "application/pdf") {
+      throw new BadRequestException("Debes adjuntar un PDF firmado valido.");
+    }
+
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: contractId },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    if (contract.status === CONTRACT_STATUS_SIGNED && contract.signedPdfObjectKey) {
+      throw new BadRequestException("Este contrato ya fue marcado como firmado.");
+    }
+
+    const keyRoot = String(contract.pdfObjectKey || "").replace(/\/contract\.pdf$/i, "");
+    const fallbackKeyRoot = `contracts/signed/${this.sanitizeSegment(contract.contractNumber)}`;
+    const baseFolder = keyRoot || fallbackKeyRoot;
+    const signedObjectKey = `${baseFolder}/signed/contract-signed.pdf`;
+
+    await this.uploadToSpaces({
+      objectKey: signedObjectKey,
+      contentType: "application/pdf",
+      body: signedPdfFile.buffer,
+    });
+
+    const updated = await (this.prisma as any).contract.update({
+      where: { id: contract.id },
+      data: {
+        status: CONTRACT_STATUS_SIGNED,
+        signedPdfObjectKey: signedObjectKey,
+        signedPdfFileName: signedPdfFile.originalname || `${contract.contractNumber}-signed.pdf`,
+        signedPdfMimeType: signedPdfFile.mimetype,
+        signedPdfSize: signedPdfFile.size || signedPdfFile.buffer.length,
+        signedByName: String(dto.signedByName || "").trim(),
+        signedAt: new Date(),
+        signedClientIp,
+        signedUserAgent,
+      },
+    });
+
+    return {
+      id: updated.id,
+      contractNumber: updated.contractNumber,
+      status: updated.status,
+      signedAt: updated.signedAt,
+    };
+  }
+
+  async finalizeContractSignatureByToken(
+    token: string,
+    signedByName: string,
+    signedPdfFile: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname: string;
+      size: number;
+    },
+    signedClientIp: string | null,
+    signedUserAgent: string | null,
+  ) {
+    const parsed = this.parseSigningToken(token);
+    return this.finalizeContractSignature(
+      { id: "public", email: "public-signing", fullName: "Public Signing" },
+      parsed.contractId,
+      { signedByName },
+      signedPdfFile,
+      signedClientIp,
+      signedUserAgent,
+    );
+  }
+
+  async getPublicSigningSession(token: string) {
+    const parsed = this.parseSigningToken(token);
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: parsed.contractId },
+      include: {
+        client: true,
+      },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    const basePdfUrl = await this.buildSignedObjectUrl(contract.pdfObjectKey, 1200);
+    const signedPdfUrl = contract.signedPdfObjectKey
+      ? await this.buildSignedObjectUrl(contract.signedPdfObjectKey, 1200)
+      : null;
+
+    return {
+      contractId: contract.id,
+      contractNumber: contract.contractNumber,
+      destination: contract.destination,
+      clientName: contract.client?.fullName || "",
+      status: contract.status || CONTRACT_STATUS_PENDING_SIGNATURE,
+      pdfUrl: basePdfUrl,
+      signedPdfUrl,
+      expiresAt: parsed.expiresAt,
     };
   }
 
@@ -446,6 +750,7 @@ export class ContractsService {
       items: items.map((item: any) => ({
         id: item.id,
         contractNumber: item.contractNumber,
+        status: item.status || CONTRACT_STATUS_PENDING_SIGNATURE,
         clientFullName: item.client?.fullName || "-",
         clientIdNumber: item.client?.idNumber || "-",
         clientEmail: item.client?.email || "-",
@@ -471,6 +776,9 @@ export class ContractsService {
     }
 
     const pdfUrl = await this.buildSignedObjectUrl(contract.pdfObjectKey);
+    const signedPdfUrl = contract.signedPdfObjectKey
+      ? await this.buildSignedObjectUrl(contract.signedPdfObjectKey)
+      : null;
     const documents = await Promise.all(
       contract.documents.map(async (doc: any) => ({
         id: doc.id,
@@ -484,12 +792,23 @@ export class ContractsService {
     return {
       id: contract.id,
       contractNumber: contract.contractNumber,
+      status: contract.status || CONTRACT_STATUS_PENDING_SIGNATURE,
       pdf: {
         fileName: contract.pdfFileName,
         mimeType: contract.pdfMimeType,
         size: contract.pdfSize,
         url: pdfUrl,
       },
+      signedPdf: signedPdfUrl
+        ? {
+            fileName: contract.signedPdfFileName || `${contract.contractNumber}-signed.pdf`,
+            mimeType: contract.signedPdfMimeType || "application/pdf",
+            size: contract.signedPdfSize || 0,
+            url: signedPdfUrl,
+            signedByName: contract.signedByName || null,
+            signedAt: contract.signedAt || null,
+          }
+        : null,
       documents,
     };
   }

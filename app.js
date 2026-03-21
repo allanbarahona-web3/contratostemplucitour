@@ -25,6 +25,10 @@ const contractDocumentsInput = document.getElementById("contractDocuments");
 const historySearchInput = document.getElementById("historySearch");
 const historySearchButton = document.getElementById("historySearchButton");
 const historyList = document.getElementById("historyList");
+const signingLinkActions = document.getElementById("signingLinkActions");
+const openSigningLinkButton = document.getElementById("openSigningLinkButton");
+const copySigningLinkButton = document.getElementById("copySigningLinkButton");
+const shareSigningLinkButton = document.getElementById("shareSigningLinkButton");
 
 const MAX_DOCUMENT_COUNT = 20;
 const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024;
@@ -60,6 +64,7 @@ const logoutButton = document.getElementById("logoutButton");
 let currentAuthenticatedUser = null;
 let sessionEventSource = null;
 let historySearchDebounce = null;
+let latestSigningLinkUrl = "";
 
 const setSessionLiveBadge = (state = "off") => {
   if (!sessionLiveBadgeEl) {
@@ -79,6 +84,43 @@ const setSessionLiveBadge = (state = "off") => {
   const stateClass = `state-${state}`;
   sessionLiveBadgeEl.classList.add(classes.includes(stateClass) ? stateClass : "state-off");
   sessionLiveBadgeEl.textContent = labelByState[state] || labelByState.off;
+};
+
+const hideSigningLinkActions = () => {
+  latestSigningLinkUrl = "";
+  if (signingLinkActions) {
+    signingLinkActions.classList.add("hidden");
+  }
+  if (openSigningLinkButton) {
+    openSigningLinkButton.setAttribute("href", "#");
+  }
+  if (shareSigningLinkButton) {
+    shareSigningLinkButton.setAttribute("href", "#");
+  }
+};
+
+const showSigningLinkActions = (signingUrl) => {
+  const normalized = String(signingUrl || "").trim();
+  if (!normalized) {
+    hideSigningLinkActions();
+    return;
+  }
+
+  latestSigningLinkUrl = normalized;
+  if (openSigningLinkButton) {
+    openSigningLinkButton.setAttribute("href", normalized);
+  }
+
+  if (shareSigningLinkButton) {
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(
+      `Hola, te compartimos el enlace para firmar tu contrato de viaje: ${normalized}`,
+    )}`;
+    shareSigningLinkButton.setAttribute("href", waUrl);
+  }
+
+  if (signingLinkActions) {
+    signingLinkActions.classList.remove("hidden");
+  }
 };
 
 const setupPasswordToggle = () => {
@@ -409,6 +451,7 @@ const handleLogout = () => {
   if (historyList) {
     historyList.innerHTML = '<p class="history-empty">Inicia sesion para ver historial.</p>';
   }
+  hideSigningLinkActions();
 };
 
 const stopSessionStream = () => {
@@ -531,6 +574,7 @@ const invalidateSessionFromServer = (message = "Tu sesion expiro. Inicia sesion 
   resetContractWorkspace();
   setUnauthenticatedUi(message);
   statusText.textContent = message;
+  hideSigningLinkActions();
 
   const emailInput = loginForm.querySelector('input[name="email"]');
   if (emailInput) {
@@ -1227,7 +1271,9 @@ const buildContractHtml = (data) => {
 
   const erickSignatureBlock = `
     <div class="signature-box signature-box--erick">
-        <div class="signature-sign-area" aria-hidden="true"></div>
+        <div class="signature-sign-area signature-sign-area--erick" aria-hidden="true">
+          <img src="./assets/firmaerick.png" alt="Firma de Erick Bonilla" />
+        </div>
       <p><strong>ERICK JOSUE BONILLA PEREIRA</strong></p>
       <p>Cédula de identidad: 1-1597-0559</p>
       <p>Representante legal de Lucitours</p>
@@ -1753,6 +1799,7 @@ if (sendAndDownloadButton) {
   sendAndDownloadButton.addEventListener("click", () => {
     withBusyButton(sendAndDownloadButton, async () => {
       try {
+        hideSigningLinkActions();
         ensureValidForm();
         const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
         if (!token) {
@@ -1768,28 +1815,12 @@ if (sendAndDownloadButton) {
 
         const data = getFormData();
 
-        let emailSent = false;
-        let archived = false;
-
-        statusText.textContent = "Enviando correo con adjunto...";
-        try {
-          const formData = new FormData();
-          formData.append("toEmail", data.clientEmail);
-          formData.append("clientName", data.clientFullName);
-          formData.append("contractNumber", String(contractNumber));
-          formData.append("fileName", fileName);
-          formData.append("pdfFile", blob, fileName);
-
-          await apiFetchMultipart("/contracts/send-email", formData, token);
-          emailSent = true;
-        } catch (emailError) {
-          debugError("Error enviando correo", emailError);
-        }
-
         statusText.textContent = "Descargando PDF...";
         downloadBlob(blob, fileName);
 
         statusText.textContent = "Guardando contrato en base de datos...";
+        let archived = false;
+        let archivedContractId = "";
         try {
           const archivePayload = new FormData();
           archivePayload.append("contractNumber", String(contractNumber));
@@ -1808,10 +1839,51 @@ if (sendAndDownloadButton) {
             archivePayload.append("documents", docFile, docFile.name);
           });
 
-          await apiFetchMultipart("/contracts/archive", archivePayload, token);
+          const archiveResult = await apiFetchMultipart("/contracts/archive", archivePayload, token);
+          archivedContractId = String(archiveResult?.id || "").trim();
           archived = true;
         } catch (archiveError) {
           debugError("Error guardando contrato archivado", archiveError);
+        }
+
+        let signingUrl = "";
+        if (archived && archivedContractId) {
+          statusText.textContent = "Generando enlace de firma para cliente...";
+          try {
+            const linkResult = await apiFetch(`/contracts/${archivedContractId}/signing-link`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ ttlMinutes: 1440 }),
+            });
+            signingUrl = String(linkResult?.signingUrl || "").trim();
+            showSigningLinkActions(signingUrl);
+          } catch (linkError) {
+            debugError("No se pudo generar el enlace de firma", linkError);
+          }
+        }
+
+        let emailSent = false;
+        if (signingUrl) {
+          statusText.textContent = "Enviando correo de firma al cliente...";
+          try {
+            await apiFetch("/contracts/send-signing-email", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                toEmail: data.clientEmail,
+                clientName: data.clientFullName,
+                contractNumber: String(contractNumber),
+                signingUrl,
+              }),
+            });
+            emailSent = true;
+          } catch (emailError) {
+            debugError("Error enviando correo de firma", emailError);
+          }
         }
 
         resetContractWorkspace();
@@ -1822,13 +1894,13 @@ if (sendAndDownloadButton) {
           debugError("No se pudo reservar el siguiente numero", reserveError);
         }
 
-        statusText.textContent = emailSent
-          ? archived
-            ? "Correo enviado, PDF descargado y contrato guardado. Formulario limpio para un nuevo contrato."
-            : "Correo enviado y PDF descargado. No se pudo guardar el contrato archivado."
-          : archived
-            ? "PDF descargado y contrato guardado. No se pudo enviar el correo (archivo demasiado grande o error de servidor)."
-            : "PDF descargado. No se pudo enviar el correo ni guardar el contrato archivado.";
+        statusText.textContent = archived
+          ? emailSent
+            ? "PDF descargado, contrato guardado y enlace de firma enviado al cliente."
+            : signingUrl
+              ? "PDF descargado y contrato guardado. No se pudo enviar correo, pero puedes copiar/compartir el enlace de firma."
+              : "PDF descargado y contrato guardado. No se pudo generar el enlace de firma."
+          : "PDF descargado. No se pudo guardar el contrato en base de datos.";
         await loadContractHistory(historySearchInput?.value || "");
         debugLog("Flujo combinado completado");
       } catch (error) {
@@ -1836,6 +1908,32 @@ if (sendAndDownloadButton) {
         statusText.textContent = error.message || "No se pudo completar el envio y descarga.";
       }
     });
+  });
+}
+
+if (copySigningLinkButton) {
+  copySigningLinkButton.addEventListener("click", async () => {
+    const link = String(latestSigningLinkUrl || "").trim();
+    if (!link) {
+      statusText.textContent = "No hay enlace de firma para copiar todavia.";
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const tmp = document.createElement("textarea");
+        tmp.value = link;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        tmp.remove();
+      }
+      statusText.textContent = "Enlace de firma copiado al portapapeles.";
+    } catch {
+      statusText.textContent = "No se pudo copiar automaticamente. Copialo desde Abrir link de firma.";
+    }
   });
 }
 

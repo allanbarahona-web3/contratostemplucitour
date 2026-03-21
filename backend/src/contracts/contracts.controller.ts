@@ -15,9 +15,14 @@ import {
 import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
+import { CreateSigningLinkDto } from "./dto/create-signing-link.dto";
+import { FinalizeContractSignaturePublicDto } from "./dto/finalize-contract-signature-public.dto";
+import { FinalizeContractSignatureDto } from "./dto/finalize-contract-signature.dto";
+import { PublicSigningSessionDto } from "./dto/public-signing-session.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
 import { ContractsService } from "./contracts.service";
 import { SendContractEmailDto } from "./dto/send-contract-email.dto";
+import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
 
 @Controller("contracts")
 export class ContractsController {
@@ -129,5 +134,113 @@ export class ContractsController {
     @Param("contractId") contractId: string,
   ) {
     return this.contractsService.getContractFiles(req.user, contractId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(":contractId/finalize-signature")
+  @UseInterceptors(FileInterceptor("signedPdfFile"))
+  finalizeContractSignature(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+      ip?: string;
+      headers?: Record<string, string | string[] | undefined>;
+    },
+    @Param("contractId") contractId: string,
+    @Body() dto: FinalizeContractSignatureDto,
+    @UploadedFile()
+    file?: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname: string;
+      size: number;
+    },
+  ) {
+    if (!file) {
+      throw new BadRequestException("Debes adjuntar el PDF firmado por el cliente.");
+    }
+
+    if (file.mimetype !== "application/pdf") {
+      throw new BadRequestException("El documento firmado debe estar en formato PDF.");
+    }
+
+    const userAgentHeader = req.headers?.["user-agent"];
+    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
+
+    return this.contractsService.finalizeContractSignature(
+      req.user,
+      contractId,
+      dto,
+      file,
+      req.ip || null,
+      userAgent || null,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(":contractId/signing-link")
+  createSigningLink(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("contractId") contractId: string,
+    @Body() dto: CreateSigningLinkDto,
+  ) {
+    return this.contractsService.createContractSigningLink(req.user, contractId, dto.ttlMinutes);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("send-signing-email")
+  sendSigningEmail(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Body() dto: SendSigningEmailDto,
+  ) {
+    return this.contractsService.sendContractSigningEmail(req.user, dto);
+  }
+
+  @Get("public/signing-session")
+  getPublicSigningSession(@Query() query: PublicSigningSessionDto) {
+    return this.contractsService.getPublicSigningSession(query.token);
+  }
+
+  @Post("public/finalize-signature")
+  @UseInterceptors(FileInterceptor("signedPdfFile"))
+  finalizePublicContractSignature(
+    @Req()
+    req: {
+      ip?: string;
+      headers?: Record<string, string | string[] | undefined>;
+    },
+    @Body() dto: FinalizeContractSignaturePublicDto,
+    @UploadedFile()
+    file?: {
+      buffer: Buffer;
+      mimetype: string;
+      originalname: string;
+      size: number;
+    },
+  ) {
+    if (!file) {
+      throw new BadRequestException("Debes adjuntar el PDF firmado por el cliente.");
+    }
+
+    if (file.mimetype !== "application/pdf") {
+      throw new BadRequestException("El documento firmado debe estar en formato PDF.");
+    }
+
+    const userAgentHeader = req.headers?.["user-agent"];
+    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
+
+    return this.contractsService.finalizeContractSignatureByToken(
+      dto.token,
+      dto.signedByName,
+      file,
+      req.ip || null,
+      userAgent || null,
+    );
   }
 }

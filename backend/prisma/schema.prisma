@@ -35,6 +35,7 @@ model Contract {
   contractNumber    String             @unique
   clientId          String
   destination       String
+  status            String             @default("PENDING_SIGNATURE")
   generatedByUserId String
   generatedByEmail  String
   generatedByName   String
@@ -46,6 +47,14 @@ model Contract {
   pdfFileName       String
   pdfMimeType       String
   pdfSize           Int
+  signedPdfObjectKey String?
+  signedPdfFileName  String?
+  signedPdfMimeType  String?
+  signedPdfSize      Int?
+  signedByName       String?
+  signedAt           DateTime?
+  signedClientIp     String?
+  signedUserAgent    String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)

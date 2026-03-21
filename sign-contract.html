@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firma de contrato</title>
+    <link rel="stylesheet" href="./styles.css?v=20260321q" />
+    <script src="./config.js?v=20260321q"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="./sign-contract.js?v=20260321q" defer></script>
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+
+    <main class="history-shell">
+      <section class="panel history-main-panel">
+        <header class="panel-header">
+          <p class="kicker">Firma electronica</p>
+          <h1>Firma de Contrato</h1>
+          <p id="publicSignStatus">Cargando contrato...</p>
+        </header>
+
+        <section class="history-standalone-toolbar">
+          <p><strong>Contrato:</strong> <span id="publicContractNumber">-</span></p>
+          <p><strong>Cliente:</strong> <span id="publicClientName">-</span></p>
+          <p><strong>Estado:</strong> <span id="publicContractState">-</span></p>
+        </section>
+
+        <section class="history-standalone-list">
+          <div class="history-table-wrap" style="padding: 8px;">
+            <iframe id="publicContractFrame" title="Contrato" style="width:100%;height:58vh;border:0;border-radius:10px;background:#f4f8ff;"></iframe>
+          </div>
+
+          <div class="signature-panel" style="margin-top:12px;">
+            <div class="viewer-body signature-body">
+              <label>Nombre de quien firma
+                <input id="publicSignedByName" type="text" placeholder="Nombre completo" maxlength="120" />
+              </label>
+              <p class="signature-help">Dibuja tu firma dentro del recuadro y presiona Enviar contrato firmado.</p>
+              <div class="signature-canvas-wrap">
+                <canvas id="publicSignatureCanvas" width="900" height="260"></canvas>
+              </div>
+              <div class="signature-actions">
+                <button id="publicSignatureClear" type="button" class="ghost">Limpiar</button>
+                <button id="publicSignatureSubmit" type="button">Enviar contrato firmado</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

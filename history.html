@@ -10,9 +10,10 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321p" />
-    <script src="./config.js?v=20260321p"></script>
-    <script src="./history.js?v=20260321p" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260321q" />
+    <script src="./config.js?v=20260321q"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="./history.js?v=20260321q" defer></script>
   </head>
   <body>
     <div class="bg-shape bg-shape-a"></div>
@@ -49,12 +50,13 @@
                   <th>Cedula</th>
                   <th>Correo</th>
                   <th>Numero de contrato</th>
+                  <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody id="historyTableBody">
                 <tr>
-                  <td colspan="5">
+                  <td colspan="6">
                     <p class="history-empty">Cargando historial...</p>
                   </td>
                 </tr>
@@ -72,6 +74,28 @@
           <button id="viewerCloseButton" type="button" class="ghost">Cerrar</button>
         </div>
         <div id="viewerBody" class="viewer-body"></div>
+      </div>
+    </section>
+
+    <section id="signatureModal" class="viewer-modal hidden" aria-hidden="true">
+      <div id="signaturePanel" class="viewer-panel signature-panel">
+        <div class="viewer-head">
+          <h2>Firma del cliente</h2>
+          <button id="signatureCloseButton" type="button" class="ghost">Cerrar</button>
+        </div>
+        <div class="viewer-body signature-body">
+          <label>Nombre de quien firma
+            <input id="signedByName" type="text" placeholder="Nombre completo del cliente" maxlength="120" />
+          </label>
+          <p class="signature-help">Firma dentro del recuadro. Esta firma se incrustara en el PDF final del contrato.</p>
+          <div class="signature-canvas-wrap">
+            <canvas id="signatureCanvas" width="900" height="260"></canvas>
+          </div>
+          <div class="signature-actions">
+            <button id="signatureClearButton" type="button" class="ghost">Limpiar</button>
+            <button id="signatureSaveButton" type="button">Guardar firmado</button>
+          </div>
+        </div>
       </div>
     </section>
   </body>

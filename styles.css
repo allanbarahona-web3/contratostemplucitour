@@ -219,6 +219,23 @@ h2 {
   color: var(--muted);
 }
 
+.sign-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sign-link-actions .agent-nav-link {
+  font-size: 0.8rem;
+  padding: 7px 11px;
+}
+
+.sign-link-actions .ghost {
+  padding: 7px 11px;
+  font-size: 0.8rem;
+}
+
 .session-controls {
   display: flex;
   align-items: center;
@@ -691,6 +708,30 @@ button.ghost:hover {
   color: #5a7197;
 }
 
+.contract-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 780;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.contract-status.status-pending {
+  background: rgba(255, 202, 107, 0.22);
+  color: #6a4a06;
+  border-color: rgba(183, 124, 6, 0.34);
+}
+
+.contract-status.status-signed {
+  background: rgba(65, 195, 129, 0.24);
+  color: #145233;
+  border-color: rgba(18, 133, 82, 0.38);
+}
+
 .history-toolbar label {
   display: block;
   margin-bottom: 8px;
@@ -816,6 +857,43 @@ button.ghost:hover {
 
 .viewer-doc iframe {
   height: 72vh;
+}
+
+.signature-panel {
+  width: min(900px, 96vw);
+}
+
+.signature-body {
+  gap: 12px;
+}
+
+.signature-help {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #3a5784;
+}
+
+.signature-canvas-wrap {
+  border: 1px solid rgba(18, 63, 147, 0.28);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+}
+
+#signatureCanvas {
+  width: 100%;
+  height: 240px;
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(250, 253, 255, 1), rgba(240, 247, 255, 1));
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .history-item-head {
