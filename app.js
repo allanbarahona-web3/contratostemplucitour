@@ -20,7 +20,11 @@ const clientNationalityOtherWrap = document.getElementById("clientNationalityOth
 const erickSignaturePreview = document.getElementById("erickSignaturePreview");
 const lucitoursLogoPath = "./assets/logo-lucitour.png";
 const DEBUG_TAG = "[ContratosTemp]";
-const API_BASE = window.localStorage.getItem("contractsApiBase") || "http://localhost:3001";
+const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
+const DEFAULT_PRODUCTION_API_BASE = "https://contratostempapi-h5ppc.ondigitalocean.app";
+const storedApiBase = normalizeBaseUrl(window.localStorage.getItem("contractsApiBase"));
+const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const API_BASE = storedApiBase || (isLocalHost ? "http://localhost:3001" : DEFAULT_PRODUCTION_API_BASE);
 const AUTH_TOKEN_KEY = "contractsTempAuthToken";
 
 const loginGate = document.getElementById("loginGate");

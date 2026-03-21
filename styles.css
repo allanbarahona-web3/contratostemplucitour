@@ -424,6 +424,32 @@ button.ghost {
   border: 1px solid #ccbca9;
 }
 
+.login-form .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d8cfc1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  padding: 6px;
+  font-weight: 400;
+}
+
+.login-form .password-toggle:hover {
+  transform: translateY(-50%);
+  background: #f8fafc;
+}
+
+.login-form .password-toggle svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
 .preview-panel {
   display: grid;
   grid-template-rows: auto 1fr;
