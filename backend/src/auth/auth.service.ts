@@ -5,6 +5,12 @@ import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { LoginDto } from "./dto/login.dto";
 
+type JwtSessionPayload = {
+  sub: string;
+  email: string;
+  jti?: string;
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -76,5 +82,33 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async checkTokenSessionState(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtSessionPayload>(token);
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: {
+          id: true,
+          isActive: true,
+          activeJti: true,
+        },
+      });
+
+      const isValid = Boolean(
+        payload.jti && user && user.isActive && user.activeJti && payload.jti === user.activeJti,
+      );
+
+      return {
+        isValid,
+        userId: payload.sub,
+      };
+    } catch {
+      return {
+        isValid: false,
+        userId: null,
+      };
+    }
   }
 }

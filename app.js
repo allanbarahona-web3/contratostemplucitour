@@ -38,8 +38,30 @@ const toggleLoginPasswordButton = document.getElementById("toggleLoginPassword")
 const layoutEl = document.querySelector("main.layout");
 const sessionControlsEl = document.getElementById("sessionControls");
 const badgeEl = document.getElementById("agentBadge");
+const sessionLiveBadgeEl = document.getElementById("sessionLiveBadge");
 const logoutButton = document.getElementById("logoutButton");
 let currentAuthenticatedUser = null;
+let sessionEventSource = null;
+
+const setSessionLiveBadge = (state = "off") => {
+  if (!sessionLiveBadgeEl) {
+    return;
+  }
+
+  const classes = ["state-off", "state-connecting", "state-live", "state-reconnecting"];
+  sessionLiveBadgeEl.classList.remove(...classes);
+
+  const labelByState = {
+    off: "Sin enlace en vivo",
+    connecting: "Conectando sesion en vivo...",
+    live: "Sesion en vivo activa",
+    reconnecting: "Reconectando sesion en vivo...",
+  };
+
+  const stateClass = `state-${state}`;
+  sessionLiveBadgeEl.classList.add(classes.includes(stateClass) ? stateClass : "state-off");
+  sessionLiveBadgeEl.textContent = labelByState[state] || labelByState.off;
+};
 
 const setupPasswordToggle = () => {
   if (!loginPasswordInput || !toggleLoginPasswordButton) {
@@ -105,6 +127,7 @@ const prepareNextContract = async (token) => {
 };
 
 const handleLogout = () => {
+  stopSessionStream();
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
   currentAuthenticatedUser = null;
   loginForm.reset();
@@ -116,6 +139,55 @@ const handleLogout = () => {
   if (emailInput) {
     emailInput.focus();
   }
+};
+
+const stopSessionStream = () => {
+  if (sessionEventSource) {
+    sessionEventSource.close();
+    sessionEventSource = null;
+  }
+
+  setSessionLiveBadge("off");
+};
+
+const startSessionStream = (token) => {
+  stopSessionStream();
+
+  const normalizedToken = String(token || "").trim();
+  if (!normalizedToken || !API_BASE || typeof window.EventSource === "undefined") {
+    setSessionLiveBadge("off");
+    return;
+  }
+
+  const streamUrl = `${API_BASE}/auth/session-stream?token=${encodeURIComponent(normalizedToken)}`;
+  const source = new EventSource(streamUrl);
+  sessionEventSource = source;
+  setSessionLiveBadge("connecting");
+
+  source.addEventListener("heartbeat", () => {
+    setSessionLiveBadge("live");
+  });
+
+  source.addEventListener("session-replaced", () => {
+    stopSessionStream();
+    invalidateSessionFromServer("Tu sesion fue cerrada porque se inicio en otra maquina.");
+  });
+
+  source.addEventListener("session-invalid", () => {
+    stopSessionStream();
+    invalidateSessionFromServer("Tu sesion ya no es valida. Inicia sesion nuevamente.");
+  });
+
+  // EventSource reintenta automaticamente cuando la conexion se corta.
+  source.addEventListener("error", () => {
+    const activeToken = window.localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!activeToken || activeToken !== normalizedToken) {
+      stopSessionStream();
+      return;
+    }
+
+    setSessionLiveBadge("reconnecting");
+  });
 };
 
 const escapeHtml = (value) =>
@@ -182,6 +254,7 @@ const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
 };
 
 const invalidateSessionFromServer = (message = "Tu sesion expiro. Inicia sesion nuevamente.") => {
+  stopSessionStream();
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
   currentAuthenticatedUser = null;
   loginForm.reset();
@@ -253,6 +326,7 @@ const setupAuth = async () => {
     const user = await validateSession(existingToken);
     currentAuthenticatedUser = user;
     setAuthenticatedUi(user);
+    startSessionStream(existingToken);
     await prepareNextContract(existingToken);
     setLoginStatus("Sesion activa.");
   } catch (error) {
@@ -1530,6 +1604,7 @@ loginForm.addEventListener("submit", async (event) => {
     window.localStorage.setItem(AUTH_TOKEN_KEY, result.accessToken);
     currentAuthenticatedUser = result.user;
     setAuthenticatedUi(result.user);
+    startSessionStream(result.accessToken);
     await prepareNextContract(result.accessToken);
     setLoginStatus("Sesion iniciada.");
     statusText.textContent = "Sesion iniciada correctamente.";
