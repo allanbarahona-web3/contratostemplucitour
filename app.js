@@ -98,6 +98,12 @@ const resetContractWorkspace = () => {
   form.elements.installmentCount.value = "1";
 
   clientNationalityOtherWrap.classList.add("hidden");
+  if (form.elements.clientNationalityOther) {
+    form.elements.clientNationalityOther.required = false;
+    form.elements.clientNationalityOther.value = "";
+    form.elements.clientNationalityOther.setCustomValidity("");
+    markFieldValidity(form.elements.clientNationalityOther);
+  }
   if (reservationAmountError) {
     reservationAmountError.textContent = "";
     reservationAmountError.classList.add("hidden");
@@ -117,6 +123,18 @@ const setReservationInlineMessage = (message = "") => {
   const normalized = String(message || "").trim();
   reservationAmountError.textContent = normalized;
   reservationAmountError.classList.toggle("hidden", !normalized);
+};
+
+const markFieldValidity = (field) => {
+  if (!field || !(field instanceof HTMLElement)) {
+    return;
+  }
+
+  if (typeof field.checkValidity === "function" && !field.checkValidity()) {
+    field.setAttribute("aria-invalid", "true");
+  } else {
+    field.removeAttribute("aria-invalid");
+  }
 };
 
 const prepareNextContract = async (token) => {
@@ -358,11 +376,36 @@ const NATIONALITY_OPTIONS = [
   "Otra opcion",
 ];
 
+const CIVIL_STATUS_OPTIONS = ["Soltero", "Viudo", "Divorciado", "Casado"];
+
+const normalizeIdTypeLabel = (value) => {
+  const normalized = String(value || "").trim();
+  const lowercase = normalized.toLowerCase();
+  if (lowercase === "cedula" || lowercase === "cédula") {
+    return "Cédula";
+  }
+  return normalized;
+};
+
+const normalizeCivilStatusLabel = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  const match = CIVIL_STATUS_OPTIONS.find((option) => option.toLowerCase() === normalized);
+  return match || "Soltero";
+};
+
 const nationalityOptionsHtml = (selectedValue = "") =>
   NATIONALITY_OPTIONS.map(
     (option) =>
       `<option value="${escapeHtml(option)}" ${selectedValue === option ? "selected" : ""}>${escapeHtml(option)}</option>`,
   ).join("");
+
+const civilStatusOptionsHtml = (selectedValue = "") => {
+  const normalizedSelected = normalizeCivilStatusLabel(selectedValue);
+  return CIVIL_STATUS_OPTIONS.map(
+    (option) =>
+      `<option value="${escapeHtml(option)}" ${normalizedSelected === option ? "selected" : ""}>${escapeHtml(option)}</option>`,
+  ).join("");
+};
 
 const buildTutorOptions = (selectedValue = "") => {
   const titularName = form.elements.clientFullName.value.trim() || "Titular (sin nombre)";
@@ -397,7 +440,7 @@ const addCompanionRow = (initial = {}) => {
       <label>Nombre completo<input data-field="fullName" value="${escapeHtml(initial.fullName || "")}" required /></label>
       <label>Tipo ID
         <select data-field="idType" required>
-          <option value="Cedula" ${initial.idType === "Cedula" ? "selected" : ""}>Cedula</option>
+          <option value="Cédula" ${["Cedula", "Cédula"].includes(initial.idType) ? "selected" : ""}>Cédula</option>
           <option value="Pasaporte" ${initial.idType === "Pasaporte" ? "selected" : ""}>Pasaporte</option>
           <option value="DIMEX" ${initial.idType === "DIMEX" ? "selected" : ""}>DIMEX</option>
         </select>
@@ -406,7 +449,11 @@ const addCompanionRow = (initial = {}) => {
       <label>Correo<input data-field="email" type="email" value="${escapeHtml(initial.email || "")}" required /></label>
       <label>Telefono<input data-field="phone" value="${escapeHtml(initial.phone || "")}" required /></label>
       <label>Direccion<input data-field="address" value="${escapeHtml(initial.address || "")}" required /></label>
-      <label>Estado civil<input data-field="civilStatus" value="${escapeHtml(initial.civilStatus || "")}" required /></label>
+      <label>Estado civil
+        <select data-field="civilStatus" required>
+          ${civilStatusOptionsHtml(initial.civilStatus || "Soltero")}
+        </select>
+      </label>
       <label>Profesion<input data-field="profession" value="${escapeHtml(initial.profession || "")}" required /></label>
       <label>Nacionalidad
         <select data-field="nationality" required>
@@ -420,10 +467,20 @@ const addCompanionRow = (initial = {}) => {
   `;
 
   const nationalitySelect = row.querySelector('[data-field="nationality"]');
+  const nationalityOtherInput = row.querySelector('[data-field="nationalityOther"]');
   const nationalityOtherWrap = row.querySelector('[data-field-wrap="nationalityOther"]');
   const syncCompanionNationality = () => {
     const isOther = nationalitySelect.value === "Otra opcion";
     nationalityOtherWrap.classList.toggle("hidden", !isOther);
+
+    if (nationalityOtherInput) {
+      nationalityOtherInput.required = isOther;
+      if (!isOther) {
+        nationalityOtherInput.value = "";
+        nationalityOtherInput.setCustomValidity("");
+        markFieldValidity(nationalityOtherInput);
+      }
+    }
   };
   nationalitySelect.addEventListener("change", syncCompanionNationality);
   syncCompanionNationality();
@@ -450,7 +507,7 @@ const addMinorRow = (initial = {}) => {
       <label>Nombre del tutor legal<input data-field="tutorName" value="${escapeHtml(initial.tutorName || "")}" required /></label>
       <label>Tipo ID tutor legal
         <select data-field="tutorIdType" required>
-          <option value="Cedula" ${initial.tutorIdType === "Cedula" ? "selected" : ""}>Cedula</option>
+          <option value="Cédula" ${["Cedula", "Cédula"].includes(initial.tutorIdType) ? "selected" : ""}>Cédula</option>
           <option value="Pasaporte" ${initial.tutorIdType === "Pasaporte" ? "selected" : ""}>Pasaporte</option>
           <option value="DIMEX" ${initial.tutorIdType === "DIMEX" ? "selected" : ""}>DIMEX</option>
         </select>
@@ -488,9 +545,7 @@ const addItineraryRow = (initial = {}) => {
       <label>Fecha<input data-field="date" type="date" value="${escapeHtml(initial.date || "")}" ${
         isLocked ? "readonly" : ""
       } required /></label>
-      <label>Detalle<input data-field="detail" value="${escapeHtml(initial.detail || "")}" placeholder="Tour a X lugar" ${
-        isLocked ? "readonly" : ""
-      } required /></label>
+      <label>Detalle<input data-field="detail" value="${escapeHtml(initial.detail || "")}" placeholder="Tour a X lugar" required /></label>
       <div class="row-end">
         ${
           removable
@@ -580,11 +635,11 @@ const enforceReservationLimit = (autocorrect = false) => {
   const normalizedReservation = toMoney(reservationInput.value);
   if (normalizedReservation > total) {
     reservationInput.setCustomValidity("La reserva no puede ser mayor al monto total.");
-    reservationInput.setAttribute("aria-invalid", "true");
+    markFieldValidity(reservationInput);
     setReservationInlineMessage("La reserva no puede ser mayor al monto total.");
   } else {
     reservationInput.setCustomValidity("");
-    reservationInput.removeAttribute("aria-invalid");
+    markFieldValidity(reservationInput);
     setReservationInlineMessage("");
   }
 };
@@ -625,12 +680,12 @@ const refreshTutorOptions = () => {
 const collectCompanions = () =>
   Array.from(companionsContainer.querySelectorAll(".dynamic-card")).map((card) => ({
     fullName: card.querySelector('[data-field="fullName"]').value.trim(),
-    idType: card.querySelector('[data-field="idType"]').value.trim(),
+    idType: normalizeIdTypeLabel(card.querySelector('[data-field="idType"]').value),
     idNumber: card.querySelector('[data-field="idNumber"]').value.trim(),
     email: card.querySelector('[data-field="email"]').value.trim(),
     phone: card.querySelector('[data-field="phone"]').value.trim(),
     address: card.querySelector('[data-field="address"]').value.trim(),
-    civilStatus: card.querySelector('[data-field="civilStatus"]').value.trim(),
+    civilStatus: normalizeCivilStatusLabel(card.querySelector('[data-field="civilStatus"]').value),
     profession: card.querySelector('[data-field="profession"]').value.trim(),
     nationality: resolveNationality(
       card.querySelector('[data-field="nationality"]').value.trim(),
@@ -643,7 +698,7 @@ const collectMinors = () =>
     name: card.querySelector('[data-field="minorName"]').value.trim(),
     idNumber: card.querySelector('[data-field="minorId"]').value.trim(),
     tutorName: card.querySelector('[data-field="tutorName"]').value.trim(),
-    tutorIdType: card.querySelector('[data-field="tutorIdType"]').value.trim(),
+    tutorIdType: normalizeIdTypeLabel(card.querySelector('[data-field="tutorIdType"]').value),
     tutorId: card.querySelector('[data-field="tutorId"]').value.trim(),
     travelingWith: card.querySelector('[data-field="travelingWith"]').value.trim(),
   }));
@@ -730,12 +785,12 @@ const getFormData = () => {
     accommodationType: formData.get("accommodationType"),
     lodgingType: formData.get("lodgingType"),
     clientFullName: formData.get("clientFullName"),
-    clientIdType: formData.get("clientIdType"),
+    clientIdType: normalizeIdTypeLabel(formData.get("clientIdType")),
     clientIdNumber: formData.get("clientIdNumber"),
     clientEmail: formData.get("clientEmail"),
     clientPhone: formData.get("clientPhone"),
     clientAddress: formData.get("clientAddress"),
-    civilStatus: formData.get("civilStatus"),
+    civilStatus: normalizeCivilStatusLabel(formData.get("civilStatus")),
     profession: formData.get("profession"),
     clientNationality: resolveNationality(
       formData.get("clientNationality"),
@@ -837,6 +892,7 @@ const buildMinorAnnexHtml = (data) => {
 
 const buildContractHtml = (data) => {
   const signatureDate = formatDate(new Date().toISOString().slice(0, 10));
+  const contractDestinationUpper = String(data.destination || "").trim().toLocaleUpperCase("es-CR");
 
   const companionsIntro = data.companions.length
     ? `
@@ -915,7 +971,7 @@ const buildContractHtml = (data) => {
   `;
 
   return `
-      <h3>CONTRATO GENERAL DE VIAJE TURÍSTICO A ${contractVar(data.destination)}</h3>
+      <h3>CONTRATO GENERAL DE VIAJE TURÍSTICO A ${contractVar(contractDestinationUpper)}</h3>
       <p><strong>Contrato Número:</strong> ${contractVar(data.contractNumber)}</p>
       <p><strong>Agente Responsable:</strong> ${contractVar(data.generatedByAgentName)} (${contractVar(data.generatedByAgentEmail)})</p>
 
@@ -1030,10 +1086,15 @@ const buildContractHtml = (data) => {
 };
 
 const ensureValidForm = () => {
-  enforceReservationLimit(true);
+  form.classList.add("was-validated");
+  enforceReservationLimit(false);
   syncItineraryDateBounds(false);
 
   if (!form.reportValidity()) {
+    const firstInvalid = form.querySelector(":invalid");
+    if (firstInvalid && typeof firstInvalid.focus === "function") {
+      firstInvalid.focus();
+    }
     throw new Error("Completa los campos obligatorios.");
   }
 
@@ -1506,6 +1567,40 @@ hasMinorCompanionInput.addEventListener("change", () => {
 clientNationalitySelect.addEventListener("change", () => {
   const isOther = clientNationalitySelect.value === "Otra opcion";
   clientNationalityOtherWrap.classList.toggle("hidden", !isOther);
+
+  const clientNationalityOtherInput = form.elements.clientNationalityOther;
+  if (clientNationalityOtherInput) {
+    clientNationalityOtherInput.required = isOther;
+    if (!isOther) {
+      clientNationalityOtherInput.value = "";
+      clientNationalityOtherInput.setCustomValidity("");
+      markFieldValidity(clientNationalityOtherInput);
+    }
+  }
+});
+
+if (clientNationalitySelect) {
+  clientNationalitySelect.dispatchEvent(new Event("change"));
+}
+
+form.addEventListener(
+  "invalid",
+  (event) => {
+    form.classList.add("was-validated");
+    markFieldValidity(event.target);
+  },
+  true,
+);
+
+form.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (target.matches("input, select, textarea")) {
+    markFieldValidity(target);
+  }
 });
 
 form.elements.clientFullName.addEventListener("input", () => {
