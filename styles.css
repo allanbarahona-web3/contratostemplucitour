@@ -424,6 +424,39 @@ button.ghost {
   border: 1px solid #ccbca9;
 }
 
+.password-input-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-input-wrap > .password-toggle {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 6px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  align-self: center;
+  justify-self: end;
+  transform: none;
+}
+
+.password-input-wrap > .password-toggle:hover {
+  color: #334155;
+  background: transparent;
+  transform: none;
+}
+
+.password-input-wrap > .password-toggle.active {
+  color: #0f766e;
+}
+
 .preview-panel {
   display: grid;
   grid-template-rows: auto 1fr;
