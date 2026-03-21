@@ -4,7 +4,6 @@ const statusText = document.getElementById("statusText");
 const previewButton = document.getElementById("previewButton");
 const downloadButton = document.getElementById("downloadButton");
 const emailButton = document.getElementById("emailButton");
-const waButton = document.getElementById("waButton");
 const addCompanionButton = document.getElementById("addCompanionButton");
 const companionsContainer = document.getElementById("companionsContainer");
 const addItineraryButton = document.getElementById("addItineraryButton");
@@ -1302,6 +1301,19 @@ const downloadBlob = (blob, fileName) => {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 };
 
+const blobToBase64 = async (blob) => {
+  const arrayBuffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    const chunk = bytes.subarray(index, index + 0x8000);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return window.btoa(binary);
+};
+
 const withBusyButton = async (button, fn) => {
   const oldLabel = button.textContent;
   button.disabled = true;
@@ -1359,32 +1371,42 @@ downloadButton.addEventListener("click", () => {
 });
 
 emailButton.addEventListener("click", () => {
-  try {
-    ensureValidForm();
-    const data = getFormData();
-    const subject = encodeURIComponent(`Contrato para firma - ${data.contractNumber}`);
-    const body = encodeURIComponent(
-      `Adjuntar PDF generado de contrato ${data.contractNumber}.\nCliente: ${data.clientFullName}.`,
-    );
-    window.open(`mailto:${data.clientEmail}?subject=${subject}&body=${body}`, "_blank");
-    statusText.textContent = "Correo preparado. Adjunta el PDF descargado manualmente.";
-  } catch (error) {
-    statusText.textContent = error.message || "No se pudo preparar el correo.";
-  }
-});
+  withBusyButton(emailButton, async () => {
+    try {
+      ensureValidForm();
+      const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        throw new Error("Tu sesion no esta activa. Inicia sesion nuevamente.");
+      }
 
-waButton.addEventListener("click", () => {
-  try {
-    ensureValidForm();
-    const data = getFormData();
-    const text = encodeURIComponent(
-      `Hola ${data.clientFullName}, te compartimos tu contrato ${data.contractNumber}. Adjuntaremos el PDF en este chat.`,
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
-    statusText.textContent = "WhatsApp preparado. Adjunta el PDF descargado manualmente.";
-  } catch (error) {
-    statusText.textContent = error.message || "No se pudo preparar WhatsApp.";
-  }
+      statusText.textContent = "Generando PDF para correo...";
+      const { blob, fileName, contractNumber } = await generatePdfBlob((message) => {
+        statusText.textContent = message;
+      });
+
+      const data = getFormData();
+      const pdfBase64 = await blobToBase64(blob);
+
+      statusText.textContent = "Enviando correo con adjunto...";
+      await apiFetch("/contracts/send-email", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          toEmail: data.clientEmail,
+          clientName: data.clientFullName,
+          contractNumber,
+          fileName,
+          pdfBase64,
+        }),
+      });
+
+      statusText.textContent = "Correo enviado con contrato adjunto correctamente.";
+    } catch (error) {
+      statusText.textContent = error.message || "No se pudo enviar el correo.";
+    }
+  });
 });
 
 addCompanionButton.addEventListener("click", () => {
