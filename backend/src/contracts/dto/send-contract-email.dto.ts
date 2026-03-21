@@ -18,8 +18,4 @@ export class SendContractEmailDto {
   @IsNotEmpty()
   @MaxLength(180)
   fileName!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  pdfBase64!: string;
 }

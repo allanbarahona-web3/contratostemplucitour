@@ -77,6 +77,7 @@ export class ContractsService {
   async sendContractEmail(
     user: { id: string; email: string; fullName: string },
     dto: SendContractEmailDto,
+    pdfBuffer: Buffer,
   ) {
     const apiKey = this.configService.get<string>("RESEND_API_KEY", "").trim();
     const fromEmail = this.configService
@@ -90,12 +91,11 @@ export class ContractsService {
     }
 
     const resend = new Resend(apiKey);
-    const cleanedBase64 = String(dto.pdfBase64 || "").replace(/^data:application\/pdf;base64,/, "");
-    const pdfBytes = Buffer.from(cleanedBase64, "base64");
-
-    if (!pdfBytes.length) {
+    if (!pdfBuffer.length) {
       throw new InternalServerErrorException("Adjunto PDF invalido o vacio.");
     }
+
+    const pdfBase64 = pdfBuffer.toString("base64");
 
     const subject = `Contrato para firma - ${dto.contractNumber}`;
     const html = `
@@ -114,7 +114,7 @@ export class ContractsService {
         attachments: [
           {
             filename: dto.fileName,
-            content: cleanedBase64,
+            content: pdfBase64,
           },
         ],
       });

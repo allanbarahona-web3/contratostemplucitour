@@ -1303,17 +1303,25 @@ const downloadBlob = (blob, fileName) => {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 };
 
-const blobToBase64 = async (blob) => {
-  const arrayBuffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
+const apiFetchMultipart = async (path, formData, token) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
 
-  for (let index = 0; index < bytes.length; index += 0x8000) {
-    const chunk = bytes.subarray(index, index + 0x8000);
-    binary += String.fromCharCode(...chunk);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401 && path !== "/auth/login") {
+      invalidateSessionFromServer("Tu sesion fue cerrada porque se inicio en otra maquina.");
+    }
+    const msg = payload.message || "No se pudo completar la solicitud.";
+    throw new Error(Array.isArray(msg) ? msg.join(", ") : String(msg));
   }
 
-  return window.btoa(binary);
+  return payload;
 };
 
 const withBusyButton = async (button, fn) => {
@@ -1357,25 +1365,19 @@ if (sendAndDownloadButton) {
         });
 
         const data = getFormData();
-        const pdfBase64 = await blobToBase64(blob);
 
         let emailSent = false;
 
         statusText.textContent = "Enviando correo con adjunto...";
         try {
-          await apiFetch("/contracts/send-email", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              toEmail: data.clientEmail,
-              clientName: data.clientFullName,
-              contractNumber,
-              fileName,
-              pdfBase64,
-            }),
-          });
+          const formData = new FormData();
+          formData.append("toEmail", data.clientEmail);
+          formData.append("clientName", data.clientFullName);
+          formData.append("contractNumber", String(contractNumber));
+          formData.append("fileName", fileName);
+          formData.append("pdfFile", blob, fileName);
+
+          await apiFetchMultipart("/contracts/send-email", formData, token);
           emailSent = true;
         } catch (emailError) {
           debugError("Error enviando correo", emailError);
