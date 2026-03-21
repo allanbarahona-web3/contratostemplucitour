@@ -252,6 +252,25 @@ export class ContractsService {
     );
   }
 
+  private async downloadObjectBuffer(objectKey: string) {
+    const cfg = this.getSpacesConfig();
+    const client = this.getSpacesClient();
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: cfg.bucket,
+        Key: objectKey,
+      }),
+    );
+
+    const body = response.Body as { transformToByteArray?: () => Promise<Uint8Array> } | undefined;
+    if (!body?.transformToByteArray) {
+      throw new InternalServerErrorException("No se pudo leer el archivo de contrato.");
+    }
+
+    const bytes = await body.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
   async reserveNextNumber(user: { id: string; email: string; fullName: string }) {
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const contractNumber = this.buildContractNumber();
@@ -374,8 +393,6 @@ export class ContractsService {
       <p>Tu contrato <strong>${dto.contractNumber}</strong> esta listo para firma.</p>
       <p>Abre este enlace, revisa el documento y firma con tu dedo en pantalla:</p>
       <p><a href="${dto.signingUrl}">Firmar contrato ahora</a></p>
-      <p>Si no puedes abrir el boton, copia y pega este enlace en tu navegador:</p>
-      <p>${dto.signingUrl}</p>
       <p>Atentamente,<br/>Lucitours</p>
     `;
 
@@ -719,6 +736,36 @@ export class ContractsService {
       pdfUrl: basePdfUrl,
       signedPdfUrl,
       expiresAt: parsed.expiresAt,
+    };
+  }
+
+  async getPublicSigningPdf(token: string) {
+    const parsed = this.parseSigningToken(token);
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: parsed.contractId },
+      select: {
+        contractNumber: true,
+        pdfObjectKey: true,
+        pdfFileName: true,
+        signedPdfObjectKey: true,
+        signedPdfFileName: true,
+      },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    const objectKey = contract.signedPdfObjectKey || contract.pdfObjectKey;
+    const fileName =
+      contract.signedPdfFileName ||
+      contract.pdfFileName ||
+      `${String(contract.contractNumber || "contrato").trim()}-signing.pdf`;
+
+    const buffer = await this.downloadObjectBuffer(objectKey);
+    return {
+      fileName,
+      buffer,
     };
   }
 

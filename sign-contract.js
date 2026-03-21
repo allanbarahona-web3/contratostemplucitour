@@ -84,6 +84,14 @@ const apiFetchMultipart = async (path, formData) => {
   return payload;
 };
 
+const getSigningPdfUrl = () => {
+  if (!sessionToken) {
+    return "";
+  }
+
+  return `${API_BASE}/contracts/public/signing-pdf?token=${encodeURIComponent(sessionToken)}`;
+};
+
 const clearCanvas = () => {
   if (!(signatureCanvas instanceof HTMLCanvasElement)) return;
   const ctx = signatureCanvas.getContext("2d");
@@ -160,7 +168,7 @@ const buildSignedPdfBlob = async () => {
     throw new Error("No se pudo cargar la libreria de firma.");
   }
 
-  const sourcePdfUrl = sessionData?.signedPdfUrl || sessionData?.pdfUrl;
+  const sourcePdfUrl = getSigningPdfUrl();
   if (!sourcePdfUrl) {
     throw new Error("No se encontro el PDF para firmar.");
   }
@@ -273,7 +281,7 @@ if (signatureCanvas instanceof HTMLCanvasElement) {
 
 if (viewContractButton) {
   viewContractButton.addEventListener("click", () => {
-    const sourcePdfUrl = sessionData?.signedPdfUrl || sessionData?.pdfUrl;
+    const sourcePdfUrl = getSigningPdfUrl();
     if (!sourcePdfUrl) {
       setStatus("No se encontro el contrato para visualizacion.");
       return;

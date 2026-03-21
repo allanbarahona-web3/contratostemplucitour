@@ -7,11 +7,13 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
+import { Response } from "express";
 import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
@@ -205,6 +207,17 @@ export class ContractsController {
   @Get("public/signing-session")
   getPublicSigningSession(@Query() query: PublicSigningSessionDto) {
     return this.contractsService.getPublicSigningSession(query.token);
+  }
+
+  @Get("public/signing-pdf")
+  async getPublicSigningPdf(
+    @Query() query: PublicSigningSessionDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.contractsService.getPublicSigningPdf(query.token);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+    return file.buffer;
   }
 
   @Post("public/finalize-signature")
