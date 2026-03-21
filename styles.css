@@ -747,6 +747,11 @@ button.ghost:hover {
   display: none;
 }
 
+.viewer-modal[aria-hidden="true"] {
+  display: none !important;
+  pointer-events: none;
+}
+
 .viewer-panel {
   width: min(1100px, 96vw);
   max-height: 92vh;

@@ -2,6 +2,7 @@ const historySearchInput = document.getElementById("historySearch");
 const historySearchButton = document.getElementById("historySearchButton");
 const historyTableBody = document.getElementById("historyTableBody");
 const viewerModal = document.getElementById("viewerModal");
+const viewerPanel = document.getElementById("viewerPanel");
 const viewerTitle = document.getElementById("viewerTitle");
 const viewerBody = document.getElementById("viewerBody");
 const viewerCloseButton = document.getElementById("viewerCloseButton");
@@ -278,12 +279,22 @@ historyTableBody.addEventListener("click", (event) => {
   }
 });
 
-viewerCloseButton.addEventListener("click", closeViewer);
-viewerModal.addEventListener("click", (event) => {
-  if (event.target === viewerModal) {
-    closeViewer();
-  }
-});
+if (viewerCloseButton) {
+  viewerCloseButton.addEventListener("click", closeViewer);
+}
+
+if (viewerModal) {
+  viewerModal.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    if (viewerPanel && !viewerPanel.contains(target)) {
+      closeViewer();
+    }
+  });
+}
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !viewerModal.classList.contains("hidden")) {
     closeViewer();
