@@ -404,10 +404,45 @@ const addItineraryRow = (initial = {}) => {
   const closingRow = itineraryContainer.querySelector('[data-kind="closing"]');
   if (kind === "custom" && closingRow) {
     itineraryContainer.insertBefore(row, closingRow);
+    syncItineraryDateBounds();
     return;
   }
 
   itineraryContainer.appendChild(row);
+  syncItineraryDateBounds();
+};
+
+const getTourDateRange = () => {
+  const startDate = String(form.elements.startDate.value || "").trim();
+  const endDate = String(form.elements.endDate.value || "").trim();
+  return { startDate, endDate };
+};
+
+const syncItineraryDateBounds = (autocorrect = false) => {
+  const { startDate, endDate } = getTourDateRange();
+  const dateInputs = itineraryContainer.querySelectorAll('[data-field="date"]');
+
+  dateInputs.forEach((input) => {
+    input.min = startDate || "";
+    input.max = endDate || "";
+
+    const value = String(input.value || "").trim();
+    if (!value || !startDate || !endDate) {
+      input.setCustomValidity("");
+      return;
+    }
+
+    if (value < startDate || value > endDate) {
+      if (autocorrect) {
+        input.value = value < startDate ? startDate : endDate;
+        input.setCustomValidity("");
+      } else {
+        input.setCustomValidity("La fecha de itinerario debe estar dentro del rango del viaje.");
+      }
+    } else {
+      input.setCustomValidity("");
+    }
+  });
 };
 
 const recalcBalance = () => {
@@ -441,6 +476,11 @@ const enforceReservationLimit = (autocorrect = false) => {
   } else {
     reservationInput.setCustomValidity("");
   }
+};
+
+const hardClampReservation = () => {
+  enforceReservationLimit(true);
+  recalcBalance();
 };
 
 const recalcPaymentDueDate = () => {
@@ -879,6 +919,9 @@ const buildContractHtml = (data) => {
 };
 
 const ensureValidForm = () => {
+  enforceReservationLimit(true);
+  syncItineraryDateBounds(false);
+
   if (!form.reportValidity()) {
     throw new Error("Completa los campos obligatorios.");
   }
@@ -904,6 +947,14 @@ const ensureValidForm = () => {
 
   if (collectItinerary().length === 0) {
     throw new Error("Debes agregar al menos un item de itinerario.");
+  }
+
+  const { startDate, endDate } = getTourDateRange();
+  for (const item of collectItinerary()) {
+    const itineraryDate = String(item.date || "").trim();
+    if (itineraryDate && startDate && endDate && (itineraryDate < startDate || itineraryDate > endDate)) {
+      throw new Error("Las fechas del itinerario deben estar dentro del rango de inicio y fin del viaje.");
+    }
   }
 
   if (hasMinorCompanionInput.checked && collectMinors().length === 0) {
@@ -1343,6 +1394,7 @@ form.elements.startDate.addEventListener("change", () => {
   if (firstDateInput) {
     firstDateInput.value = form.elements.startDate.value;
   }
+  syncItineraryDateBounds(true);
   recalcPaymentDueDate();
 });
 
@@ -1351,6 +1403,14 @@ form.elements.endDate.addEventListener("change", () => {
   if (lastDateInput) {
     lastDateInput.value = form.elements.endDate.value;
   }
+  syncItineraryDateBounds(true);
+});
+
+itineraryContainer.addEventListener("change", (event) => {
+  const target = event.target;
+  if (target && target.matches('[data-field="date"]')) {
+    syncItineraryDateBounds(true);
+  }
 });
 
 form.elements.totalAmount.addEventListener("input", () => {
@@ -1358,9 +1418,21 @@ form.elements.totalAmount.addEventListener("input", () => {
   recalcBalance();
 });
 
+form.elements.totalAmount.addEventListener("change", () => {
+  hardClampReservation();
+});
+
 form.elements.reservationAmount.addEventListener("input", () => {
   enforceReservationLimit(true);
   recalcBalance();
+});
+
+form.elements.reservationAmount.addEventListener("change", () => {
+  hardClampReservation();
+});
+
+form.elements.reservationAmount.addEventListener("blur", () => {
+  hardClampReservation();
 });
 
 form.elements.installmentCount.addEventListener("input", () => {
