@@ -75,7 +75,7 @@ body {
 }
 
 .password-input-wrap input {
-  padding-right: 42px;
+  padding-right: 72px;
 }
 
 .password-toggle {
@@ -84,23 +84,16 @@ body {
   top: 50%;
   right: 10px;
   transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
   color: #64748b;
-  display: grid;
-  place-items: center;
   cursor: pointer;
   z-index: 2;
 }
 
 .password-toggle:hover {
   color: #334155;
-}
-
-.password-toggle svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
 }
 
 .password-toggle.active {

@@ -53,6 +53,7 @@ const setupPasswordToggle = () => {
   toggleLoginPasswordButton.addEventListener("click", () => {
     const isVisible = loginPasswordInput.type === "text";
     loginPasswordInput.type = isVisible ? "password" : "text";
+    toggleLoginPasswordButton.textContent = isVisible ? "Mostrar" : "Ocultar";
     toggleLoginPasswordButton.classList.toggle("active", !isVisible);
     toggleLoginPasswordButton.setAttribute("aria-pressed", String(!isVisible));
     toggleLoginPasswordButton.setAttribute("aria-label", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
