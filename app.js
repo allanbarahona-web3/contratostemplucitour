@@ -23,8 +23,11 @@ const DEBUG_TAG = "[ContratosTemp]";
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
 const DEFAULT_PRODUCTION_API_BASE = "https://contratostempapi-h5ppc.ondigitalocean.app";
 const storedApiBase = normalizeBaseUrl(window.localStorage.getItem("contractsApiBase"));
+const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const API_BASE = storedApiBase || (isLocalHost ? "http://localhost:3001" : DEFAULT_PRODUCTION_API_BASE);
+const hasLocalStoredApiBase = /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(storedApiBase);
+const runtimeStoredApiBase = !isLocalHost && hasLocalStoredApiBase ? "" : storedApiBase;
+const API_BASE = runtimeStoredApiBase || configuredApiBase || (isLocalHost ? "http://localhost:3001" : DEFAULT_PRODUCTION_API_BASE);
 const AUTH_TOKEN_KEY = "contractsTempAuthToken";
 
 const loginGate = document.getElementById("loginGate");
@@ -33,6 +36,7 @@ const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const loginPasswordInput = document.getElementById("loginPassword");
 const toggleLoginPasswordButton = document.getElementById("toggleLoginPassword");
+const toggleLoginPasswordLabel = document.getElementById("toggleLoginPasswordLabel");
 const layoutEl = document.querySelector("main.layout");
 const sessionControlsEl = document.getElementById("sessionControls");
 const badgeEl = document.getElementById("agentBadge");
@@ -47,6 +51,9 @@ const setupPasswordToggle = () => {
   toggleLoginPasswordButton.addEventListener("click", () => {
     const isVisible = loginPasswordInput.type === "text";
     loginPasswordInput.type = isVisible ? "password" : "text";
+    if (toggleLoginPasswordLabel) {
+      toggleLoginPasswordLabel.textContent = isVisible ? "Ver" : "Ocultar";
+    }
     toggleLoginPasswordButton.setAttribute("aria-pressed", String(!isVisible));
     toggleLoginPasswordButton.setAttribute("aria-label", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
     toggleLoginPasswordButton.setAttribute("title", isVisible ? "Mostrar contrasena" : "Ocultar contrasena");
