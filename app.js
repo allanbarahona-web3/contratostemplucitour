@@ -1328,14 +1328,16 @@ const withBusyButton = async (button, fn) => {
   }
 };
 
-previewButton.addEventListener("click", () => {
-  try {
-    ensureValidForm();
-    renderPreview();
-  } catch (error) {
-    statusText.textContent = error.message || "No se pudo generar la vista previa.";
-  }
-});
+if (previewButton) {
+  previewButton.addEventListener("click", () => {
+    try {
+      ensureValidForm();
+      renderPreview();
+    } catch (error) {
+      statusText.textContent = error.message || "No se pudo generar la vista previa.";
+    }
+  });
+}
 
 if (sendAndDownloadButton) {
   sendAndDownloadButton.addEventListener("click", () => {
