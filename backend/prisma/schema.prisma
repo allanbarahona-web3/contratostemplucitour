@@ -16,3 +16,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model ContractNumber {
+  id              String   @id @default(cuid())
+  number          String   @unique
+  createdByUserId String
+  createdByEmail  String
+  createdByName   String
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+}

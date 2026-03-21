@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcryptjs";
+import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { LoginDto } from "./dto/login.dto";
 
@@ -12,6 +13,11 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
+    const honeypot = (dto.website || "").trim();
+    if (honeypot) {
+      throw new UnauthorizedException("Credenciales invalidas");
+    }
+
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email } });
 
@@ -24,14 +30,19 @@ export class AuthService {
       throw new UnauthorizedException("Credenciales invalidas");
     }
 
-    const token = await this.jwtService.signAsync({
+    const tokenId = randomUUID();
+    const token = await this.jwtService.signAsync(
+      {
       sub: user.id,
       email: user.email,
       fullName: user.fullName,
-    });
+      },
+      { jwtid: tokenId },
+    );
 
     return {
       accessToken: token,
+      jti: tokenId,
       user: {
         id: user.id,
         email: user.email,
