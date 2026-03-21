@@ -1359,22 +1359,29 @@ if (sendAndDownloadButton) {
         const data = getFormData();
         const pdfBase64 = await blobToBase64(blob);
 
-        statusText.textContent = "Enviando correo con adjunto...";
-        await apiFetch("/contracts/send-email", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            toEmail: data.clientEmail,
-            clientName: data.clientFullName,
-            contractNumber,
-            fileName,
-            pdfBase64,
-          }),
-        });
+        let emailSent = false;
 
-        statusText.textContent = "Correo enviado. Descargando PDF...";
+        statusText.textContent = "Enviando correo con adjunto...";
+        try {
+          await apiFetch("/contracts/send-email", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              toEmail: data.clientEmail,
+              clientName: data.clientFullName,
+              contractNumber,
+              fileName,
+              pdfBase64,
+            }),
+          });
+          emailSent = true;
+        } catch (emailError) {
+          debugError("Error enviando correo", emailError);
+        }
+
+        statusText.textContent = "Descargando PDF...";
         downloadBlob(blob, fileName);
 
         resetContractWorkspace();
@@ -1385,7 +1392,9 @@ if (sendAndDownloadButton) {
           debugError("No se pudo reservar el siguiente numero", reserveError);
         }
 
-        statusText.textContent = "Correo enviado y PDF descargado. Formulario limpio para un nuevo contrato.";
+        statusText.textContent = emailSent
+          ? "Correo enviado y PDF descargado. Formulario limpio para un nuevo contrato."
+          : "PDF descargado. No se pudo enviar el correo (archivo demasiado grande o error de servidor).";
         debugLog("Flujo combinado completado");
       } catch (error) {
         debugError("Error en flujo combinado", error);
