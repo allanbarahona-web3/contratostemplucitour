@@ -210,11 +210,6 @@ const apiFetchMultipart = async (path, formData) => {
 };
 
 const getSigningPdfUrl = () => {
-  const fromSession = String(sessionData?.pdfUrl || "").trim();
-  if (fromSession) {
-    return fromSession;
-  }
-
   if (!sessionToken) {
     return "";
   }
