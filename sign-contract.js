@@ -117,7 +117,13 @@ const getSourcePdfBytes = async () => {
     throw new Error("No se pudo cargar el PDF original.");
   }
 
-  sourcePdfBytesCache = new Uint8Array(await sourceResponse.arrayBuffer());
+  const sourceBytes = new Uint8Array(await sourceResponse.arrayBuffer());
+  const pdfHeader = new TextDecoder().decode(sourceBytes.slice(0, 5));
+  if (pdfHeader !== "%PDF-") {
+    throw new Error("No se pudo leer el PDF original. Intenta recargar el enlace de firma.");
+  }
+
+  sourcePdfBytesCache = sourceBytes;
   return sourcePdfBytesCache;
 };
 
@@ -204,6 +210,11 @@ const apiFetchMultipart = async (path, formData) => {
 };
 
 const getSigningPdfUrl = () => {
+  const fromSession = String(sessionData?.pdfUrl || "").trim();
+  if (fromSession) {
+    return fromSession;
+  }
+
   if (!sessionToken) {
     return "";
   }
