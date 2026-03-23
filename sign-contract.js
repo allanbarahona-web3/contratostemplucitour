@@ -80,20 +80,34 @@ const renderPdfInViewer = async (pdfBytes) => {
   const doc = await pdfjs.getDocument({ data: pdfBytes }).promise;
   contractViewer.innerHTML = "";
 
-  const containerWidth = Math.max(280, contractViewer.clientWidth - 16);
+  const measuredWidth =
+    contractViewer.clientWidth ||
+    contractViewer.parentElement?.clientWidth ||
+    Math.floor(window.innerWidth * 0.92);
+  const containerWidth = Math.max(280, measuredWidth - 16);
+  const deviceScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+
   for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
     const page = await doc.getPage(pageNumber);
     const baseViewport = page.getViewport({ scale: 1 });
     const scale = containerWidth / baseViewport.width;
     const viewport = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
+    canvas.width = Math.floor(viewport.width * deviceScale);
+    canvas.height = Math.floor(viewport.height * deviceScale);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+
     const context = canvas.getContext("2d");
     if (!context) {
       continue;
     }
-    await page.render({ canvasContext: context, viewport }).promise;
+
+    await page.render({
+      canvasContext: context,
+      viewport,
+      transform: deviceScale > 1 ? [deviceScale, 0, 0, deviceScale, 0, 0] : null,
+    }).promise;
 
     const pageWrap = document.createElement("div");
     pageWrap.className = "public-pdf-page";
@@ -413,6 +427,7 @@ if (viewContractButton) {
   viewContractButton.addEventListener("click", () => {
     setStatus("Cargando contrato...");
     viewContractButton.setAttribute("disabled", "true");
+    contractViewer?.classList.remove("hidden");
 
     void getSourcePdfBytes()
       .then((bytes) => renderPdfInViewer(bytes))

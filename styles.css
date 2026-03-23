@@ -922,19 +922,21 @@ button.ghost:hover {
 }
 
 .public-sign-page {
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .public-sign-page .history-shell {
   width: min(980px, 100vw);
-  height: 100dvh;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: 10px 8px;
 }
 
 .public-sign-page .history-main-panel {
-  height: 100%;
+  min-height: calc(100dvh - 20px);
+  height: auto;
   display: flex;
   flex-direction: column;
 }
@@ -943,7 +945,7 @@ button.ghost:hover {
   flex: 1;
   margin: 10px 12px 12px;
   max-height: none;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .public-sign-page #publicReadStep,
@@ -1271,6 +1273,7 @@ button.ghost:hover {
 
   .public-sign-page .history-shell {
     padding: 0;
+    min-height: 100dvh;
   }
 
   .public-sign-page .panel {
@@ -1291,6 +1294,7 @@ button.ghost:hover {
   .public-sign-page .history-standalone-list {
     margin: 8px 12px 12px;
     padding-right: 0;
+    overflow: auto;
   }
 
   .public-sign-page #publicReadStep iframe {
