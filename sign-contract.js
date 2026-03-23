@@ -49,14 +49,24 @@ const revokeContractPdfObjectUrl = () => {
   }
 };
 
+const PDFJS_VERSION = "4.5.136";
+const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.mjs`;
+const PDFJS_WORKER_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
+
+const configurePdfJsWorker = (pdfjs) => {
+  if (pdfjs?.GlobalWorkerOptions) {
+    pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  }
+  return pdfjs;
+};
+
 const getPdfJs = async () => {
   if (window.pdfjsLib) {
-    return window.pdfjsLib;
+    return configurePdfJsWorker(window.pdfjsLib);
   }
 
-  const moduleNs = await import("https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs");
-  const pdfjs = moduleNs?.default || moduleNs;
-  pdfjs.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
+  const moduleNs = await import(PDFJS_MODULE_URL);
+  const pdfjs = configurePdfJsWorker(moduleNs?.default || moduleNs);
   window.pdfjsLib = pdfjs;
   return pdfjs;
 };
