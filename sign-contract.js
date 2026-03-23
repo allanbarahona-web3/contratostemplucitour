@@ -121,17 +121,36 @@ const getSourcePdfBytes = async () => {
     return sourcePdfBytesCache;
   }
 
+  return fetchSourcePdfBytes({ forceRefresh: false });
+};
+
+const fetchSourcePdfBytes = async ({ forceRefresh = false } = {}) => {
+  if (!forceRefresh && sourcePdfBytesCache) {
+    return sourcePdfBytesCache;
+  }
+
   const sourcePdfUrl = getSigningPdfUrl();
   if (!sourcePdfUrl) {
     throw new Error("No se encontro el PDF para firmar.");
   }
 
-  const sourceResponse = await fetch(sourcePdfUrl);
+  const sourceResponse = await fetch(sourcePdfUrl, {
+    cache: forceRefresh ? "no-store" : "default",
+  });
   if (!sourceResponse.ok) {
     throw new Error("No se pudo cargar el PDF original.");
   }
 
+  const responseContentType = String(sourceResponse.headers.get("content-type") || "").toLowerCase();
+  if (!responseContentType.includes("application/pdf")) {
+    throw new Error("El archivo origen no vino en formato PDF. Recarga el enlace de firma.");
+  }
+
   const sourceBytes = new Uint8Array(await sourceResponse.arrayBuffer());
+  if (!sourceBytes.length) {
+    throw new Error("El PDF original viene vacio. Recarga el enlace de firma.");
+  }
+
   const pdfHeader = new TextDecoder().decode(sourceBytes.slice(0, 5));
   if (pdfHeader !== "%PDF-") {
     throw new Error("No se pudo leer el PDF original. Intenta recargar el enlace de firma.");
@@ -307,9 +326,23 @@ const buildSignedPdfBlob = async () => {
     throw new Error("No se pudo cargar la libreria de firma.");
   }
 
-  const pdfBytes = await getSourcePdfBytes();
+  let pdfBytes = await getSourcePdfBytes();
   const { PDFDocument, rgb } = window.PDFLib;
-  const pdfDoc = await PDFDocument.load(pdfBytes);
+  let pdfDoc;
+
+  try {
+    pdfDoc = await PDFDocument.load(pdfBytes);
+  } catch {
+    // If a proxy/cache edge returned non-PDF content, force one fresh fetch before failing.
+    sourcePdfBytesCache = null;
+    pdfBytes = await fetchSourcePdfBytes({ forceRefresh: true });
+    try {
+      pdfDoc = await PDFDocument.load(pdfBytes);
+    } catch {
+      throw new Error("No se pudo procesar el PDF original. Recarga el enlace de firma y vuelve a intentar.");
+    }
+  }
+
   const signaturePng = await canvasToPngBytes();
   const signatureImage = await pdfDoc.embedPng(signaturePng);
 
