@@ -19,6 +19,24 @@ const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3001" : "");
 
+const getSignaturePlacementConfig = () => {
+  const cfg = window.APP_CONFIG?.SIGNATURE_PLACEMENT || {};
+  const toNumber = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  return {
+    anchorOffsetX: toNumber(cfg.ANCHOR_OFFSET_X, 8),
+    anchorOffsetY: toNumber(cfg.ANCHOR_OFFSET_Y, 34),
+    fallbackXRatio: toNumber(cfg.FALLBACK_X_RATIO, 0.1),
+    fallbackYRatio: toNumber(cfg.FALLBACK_Y_RATIO, 0.085),
+    widthRatio: toNumber(cfg.WIDTH_RATIO, 0.34),
+    maxWidth: toNumber(cfg.MAX_WIDTH, 220),
+    pagePadding: toNumber(cfg.PAGE_PADDING, 24),
+  };
+};
+
 let sessionToken = "";
 let sessionData = null;
 let signatureDirty = false;
@@ -307,9 +325,122 @@ const endDraw = () => {
   lastPoint = null;
 };
 
+const normalizeSearchText = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+const findInkBounds = () => {
+  const ctx = signatureCanvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+
+  const { width, height } = signatureCanvas;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const pixels = imageData.data;
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const alpha = pixels[(y * width + x) * 4 + 3];
+      if (alpha > 10) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return null;
+  }
+
+  return { minX, minY, maxX, maxY };
+};
+
+const locateClientSignatureAnchor = async (pdfBytes, signerName) => {
+  const pdfjs = await getPdfJs();
+  const doc = await pdfjs.getDocument({ data: pdfBytes }).promise;
+  const normalizedSigner = normalizeSearchText(signerName);
+  const candidates = [];
+
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const pdfPage = await doc.getPage(pageNumber);
+    const textContent = await pdfPage.getTextContent();
+    for (const item of textContent.items || []) {
+      const text = normalizeSearchText(item.str);
+      if (!text) {
+        continue;
+      }
+
+      const isNameMatch =
+        normalizedSigner.length >= 4 && (text.includes(normalizedSigner) || normalizedSigner.includes(text));
+      if (!isNameMatch) {
+        continue;
+      }
+
+      const [, , , , x = 0, y = 0] = Array.isArray(item.transform) ? item.transform : [];
+      candidates.push({
+        pageIndex: pageNumber - 1,
+        x,
+        y,
+      });
+    }
+  }
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  const maxPageIndex = Math.max(...candidates.map((entry) => entry.pageIndex));
+  const pageCandidates = candidates.filter((entry) => entry.pageIndex === maxPageIndex);
+  const chosen = pageCandidates.reduce((best, current) => {
+    if (!best) return current;
+    return current.y < best.y ? current : best;
+  }, null);
+
+  if (!chosen) {
+    return null;
+  }
+
+  return chosen;
+};
+
 const canvasToPngBytes = async () => {
+  const bounds = findInkBounds();
+  if (!bounds) {
+    throw new Error("Debes dibujar tu firma antes de enviar.");
+  }
+
+  const padding = 10;
+  const cropX = Math.max(0, bounds.minX - padding);
+  const cropY = Math.max(0, bounds.minY - padding);
+  const cropRight = Math.min(signatureCanvas.width, bounds.maxX + padding + 1);
+  const cropBottom = Math.min(signatureCanvas.height, bounds.maxY + padding + 1);
+  const cropWidth = Math.max(1, cropRight - cropX);
+  const cropHeight = Math.max(1, cropBottom - cropY);
+
+  const trimmedCanvas = document.createElement("canvas");
+  trimmedCanvas.width = cropWidth;
+  trimmedCanvas.height = cropHeight;
+  const trimmedCtx = trimmedCanvas.getContext("2d");
+  if (!trimmedCtx) {
+    throw new Error("No se pudo preparar la firma para el PDF.");
+  }
+
+  trimmedCtx.drawImage(signatureCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
   const blob = await new Promise((resolve, reject) => {
-    signatureCanvas.toBlob((value) => {
+    trimmedCanvas.toBlob((value) => {
       if (!value) {
         reject(new Error("No se pudo convertir la firma."));
         return;
@@ -327,7 +458,7 @@ const buildSignedPdfBlob = async () => {
   }
 
   let pdfBytes = await getSourcePdfBytes();
-  const { PDFDocument, rgb } = window.PDFLib;
+  const { PDFDocument } = window.PDFLib;
   let pdfDoc;
 
   try {
@@ -347,27 +478,29 @@ const buildSignedPdfBlob = async () => {
   const signatureImage = await pdfDoc.embedPng(signaturePng);
 
   const pages = pdfDoc.getPages();
-  const page = pages[pages.length - 1];
+  const anchor = await locateClientSignatureAnchor(pdfBytes, sessionData?.clientName || "");
+  const page = pages[anchor?.pageIndex ?? pages.length - 1];
   const pageWidth = page.getWidth();
   const pageHeight = page.getHeight();
+  const placement = getSignaturePlacementConfig();
 
-  const signWidth = Math.min(180, pageWidth * 0.26);
+  const signWidth = Math.min(placement.maxWidth, pageWidth * placement.widthRatio);
   const signHeight = (signatureImage.height / signatureImage.width) * signWidth;
-  const signX = Math.max(42, pageWidth * 0.1);
-  const signY = Math.max(84, pageHeight * 0.085);
+  const defaultX = Math.max(42, pageWidth * placement.fallbackXRatio);
+  const defaultY = Math.max(84, pageHeight * placement.fallbackYRatio);
+  const anchoredX = anchor ? anchor.x + placement.anchorOffsetX : defaultX;
+  const anchoredY = anchor ? anchor.y + placement.anchorOffsetY : defaultY;
+  const signX = Math.max(placement.pagePadding, Math.min(anchoredX, pageWidth - signWidth - placement.pagePadding));
+  const signY = Math.max(
+    placement.pagePadding,
+    Math.min(anchoredY, pageHeight - signHeight - placement.pagePadding),
+  );
 
   page.drawImage(signatureImage, {
     x: signX,
     y: signY,
     width: signWidth,
     height: signHeight,
-  });
-
-  page.drawText("Firma cliente", {
-    x: signX,
-    y: Math.max(52, signY - 14),
-    size: 9,
-    color: rgb(0.2, 0.29, 0.42),
   });
 
   const signedBytes = await pdfDoc.save();
