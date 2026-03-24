@@ -726,6 +726,40 @@ export class ContractsService {
     const signedPdfUrl = contract.signedPdfObjectKey
       ? await this.buildSignedObjectUrl(contract.signedPdfObjectKey, 1200)
       : null;
+    const payload =
+      contract.payload && typeof contract.payload === "object" && !Array.isArray(contract.payload)
+        ? (contract.payload as Record<string, any>)
+        : {};
+    const rawSignatureAnchor = payload.signatureAnchor;
+    const signatureAnchorCandidate =
+      rawSignatureAnchor &&
+      typeof rawSignatureAnchor === "object" &&
+      !Array.isArray(rawSignatureAnchor) &&
+      typeof rawSignatureAnchor.pageIndex === "number" &&
+      rawSignatureAnchor.box &&
+      typeof rawSignatureAnchor.box === "object"
+        ? {
+            pageIndex: Number(rawSignatureAnchor.pageIndex),
+            box: {
+              x: Number(rawSignatureAnchor.box.x),
+              y: Number(rawSignatureAnchor.box.y),
+              width: Number(rawSignatureAnchor.box.width),
+              height: Number(rawSignatureAnchor.box.height),
+            },
+          }
+        : null;
+    const signatureAnchor =
+      signatureAnchorCandidate &&
+      Number.isFinite(signatureAnchorCandidate.pageIndex) &&
+      Number.isFinite(signatureAnchorCandidate.box.x) &&
+      Number.isFinite(signatureAnchorCandidate.box.y) &&
+      Number.isFinite(signatureAnchorCandidate.box.width) &&
+      Number.isFinite(signatureAnchorCandidate.box.height) &&
+      signatureAnchorCandidate.pageIndex >= 0 &&
+      signatureAnchorCandidate.box.width > 0 &&
+      signatureAnchorCandidate.box.height > 0
+        ? signatureAnchorCandidate
+        : null;
 
     return {
       contractId: contract.id,
@@ -735,6 +769,7 @@ export class ContractsService {
       status: contract.status || CONTRACT_STATUS_PENDING_SIGNATURE,
       pdfUrl: basePdfUrl,
       signedPdfUrl,
+      signatureAnchor,
       expiresAt: parsed.expiresAt,
     };
   }

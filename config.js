@@ -9,5 +9,9 @@ window.APP_CONFIG = {
     WIDTH_RATIO: 0.34,
     MAX_WIDTH: 220,
     PAGE_PADDING: 24,
+    BOX_SCALE: 0.9,
+    BOX_INSET: 4,
+    BOX_OFFSET_X: 0,
+    BOX_OFFSET_Y: 0,
   },
 };

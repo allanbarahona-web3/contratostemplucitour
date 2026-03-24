@@ -34,6 +34,39 @@ const getSignaturePlacementConfig = () => {
     widthRatio: toNumber(cfg.WIDTH_RATIO, 0.34),
     maxWidth: toNumber(cfg.MAX_WIDTH, 220),
     pagePadding: toNumber(cfg.PAGE_PADDING, 24),
+    boxScale: toNumber(cfg.BOX_SCALE, 0.9),
+    boxInset: toNumber(cfg.BOX_INSET, 4),
+    boxOffsetX: toNumber(cfg.BOX_OFFSET_X, 0),
+    boxOffsetY: toNumber(cfg.BOX_OFFSET_Y, 0),
+  };
+};
+
+const getSessionSignatureAnchor = () => {
+  const anchor = sessionData?.signatureAnchor;
+  if (!anchor || typeof anchor !== "object") {
+    return null;
+  }
+
+  const pageIndex = Number(anchor.pageIndex);
+  const box = anchor.box;
+  if (!box || typeof box !== "object") {
+    return null;
+  }
+
+  const x = Number(box.x);
+  const y = Number(box.y);
+  const width = Number(box.width);
+  const height = Number(box.height);
+  if (![pageIndex, x, y, width, height].every(Number.isFinite)) {
+    return null;
+  }
+  if (width <= 0 || height <= 0 || pageIndex < 0) {
+    return null;
+  }
+
+  return {
+    pageIndex,
+    box: { x, y, width, height },
   };
 };
 
@@ -478,23 +511,53 @@ const buildSignedPdfBlob = async () => {
   const signatureImage = await pdfDoc.embedPng(signaturePng);
 
   const pages = pdfDoc.getPages();
-  const anchor = await locateClientSignatureAnchor(pdfBytes, sessionData?.clientName || "");
-  const page = pages[anchor?.pageIndex ?? pages.length - 1];
+  const placement = getSignaturePlacementConfig();
+  const storedAnchor = getSessionSignatureAnchor();
+  const textAnchor = storedAnchor ? null : await locateClientSignatureAnchor(pdfBytes, sessionData?.clientName || "");
+  const activeAnchor = storedAnchor || textAnchor;
+  const page = pages[activeAnchor?.pageIndex ?? pages.length - 1];
   const pageWidth = page.getWidth();
   const pageHeight = page.getHeight();
-  const placement = getSignaturePlacementConfig();
+  let signWidth = Math.min(placement.maxWidth, pageWidth * placement.widthRatio);
+  let signHeight = (signatureImage.height / signatureImage.width) * signWidth;
+  let signX;
+  let signY;
 
-  const signWidth = Math.min(placement.maxWidth, pageWidth * placement.widthRatio);
-  const signHeight = (signatureImage.height / signatureImage.width) * signWidth;
-  const defaultX = Math.max(42, pageWidth * placement.fallbackXRatio);
-  const defaultY = Math.max(84, pageHeight * placement.fallbackYRatio);
-  const anchoredX = anchor ? anchor.x + placement.anchorOffsetX : defaultX;
-  const anchoredY = anchor ? anchor.y + placement.anchorOffsetY : defaultY;
-  const signX = Math.max(placement.pagePadding, Math.min(anchoredX, pageWidth - signWidth - placement.pagePadding));
-  const signY = Math.max(
-    placement.pagePadding,
-    Math.min(anchoredY, pageHeight - signHeight - placement.pagePadding),
-  );
+  if (storedAnchor && storedAnchor.pageIndex < pages.length) {
+    const box = storedAnchor.box;
+    const maxWidthInsideBox = Math.max(1, box.width * placement.boxScale - placement.boxInset * 2);
+    const maxHeightInsideBox = Math.max(1, box.height * placement.boxScale - placement.boxInset * 2);
+
+    signWidth = Math.min(signWidth, maxWidthInsideBox);
+    signHeight = (signatureImage.height / signatureImage.width) * signWidth;
+    if (signHeight > maxHeightInsideBox) {
+      signHeight = maxHeightInsideBox;
+      signWidth = signHeight * (signatureImage.width / signatureImage.height);
+    }
+
+    const centeredX = box.x + (box.width - signWidth) / 2 + placement.boxOffsetX;
+    const centeredY = box.y + (box.height - signHeight) / 2 + placement.boxOffsetY;
+    const minBoxX = box.x + placement.boxInset;
+    const maxBoxX = box.x + box.width - signWidth - placement.boxInset;
+    const minBoxY = box.y + placement.boxInset;
+    const maxBoxY = box.y + box.height - signHeight - placement.boxInset;
+
+    signX = Math.max(minBoxX, Math.min(centeredX, maxBoxX));
+    signY = Math.max(minBoxY, Math.min(centeredY, maxBoxY));
+  } else {
+    const defaultX = Math.max(42, pageWidth * placement.fallbackXRatio);
+    const defaultY = Math.max(84, pageHeight * placement.fallbackYRatio);
+    const anchoredX = textAnchor ? textAnchor.x + placement.anchorOffsetX : defaultX;
+    const anchoredY = textAnchor ? textAnchor.y + placement.anchorOffsetY : defaultY;
+    signX = Math.max(
+      placement.pagePadding,
+      Math.min(anchoredX, pageWidth - signWidth - placement.pagePadding),
+    );
+    signY = Math.max(
+      placement.pagePadding,
+      Math.min(anchoredY, pageHeight - signHeight - placement.pagePadding),
+    );
+  }
 
   page.drawImage(signatureImage, {
     x: signX,

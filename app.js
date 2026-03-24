@@ -1556,6 +1556,19 @@ const generatePdfBlob = async (onProgress = () => {}) => {
 
   const captureNode = buildPdfCaptureNode();
   const captureHeightCssPx = Math.max(captureNode.scrollHeight, 1);
+  const captureWidthCssPx = Math.max(captureNode.scrollWidth, 1);
+  const clientSignatureAreaEl = captureNode.querySelector(".signature-box--person .signature-sign-area");
+  let clientSignatureAreaCssPx = null;
+  if (clientSignatureAreaEl) {
+    const rootRect = captureNode.getBoundingClientRect();
+    const signRect = clientSignatureAreaEl.getBoundingClientRect();
+    clientSignatureAreaCssPx = {
+      left: Math.max(0, signRect.left - rootRect.left),
+      top: Math.max(0, signRect.top - rootRect.top),
+      width: Math.max(1, signRect.width),
+      height: Math.max(1, signRect.height),
+    };
+  }
   const clauseBlockRangesCssPx = collectClauseBlockRanges(captureNode);
   const protectedRangesCssPx = Array.from(captureNode.querySelectorAll(".signature-box--erick")).map((el) => {
     const start = Math.max(0, el.offsetTop - 18);
@@ -1597,6 +1610,15 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   }
 
   const scaleToCanvas = canvas.height / captureHeightCssPx;
+  const scaleXToCanvas = canvas.width / captureWidthCssPx;
+  const clientSignatureAreaPx = clientSignatureAreaCssPx
+    ? {
+        left: Math.floor(clientSignatureAreaCssPx.left * scaleXToCanvas),
+        top: Math.floor(clientSignatureAreaCssPx.top * scaleToCanvas),
+        width: Math.max(1, Math.ceil(clientSignatureAreaCssPx.width * scaleXToCanvas)),
+        height: Math.max(1, Math.ceil(clientSignatureAreaCssPx.height * scaleToCanvas)),
+      }
+    : null;
   const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, .signature-box")).map((el) => {
     const start = Math.max(0, el.offsetTop - 6);
     const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 6);
@@ -1628,6 +1650,7 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   const maxSliceHeightPx = Math.max(1, Math.floor(pageSliceHeightPx * 1.45));
   let renderedPx = 0;
   let renderedPages = 0;
+  const renderedSlices = [];
 
   while (renderedPx < canvas.height) {
     let sliceEndPx = Math.min(renderedPx + pageSliceHeightPx, canvas.height);
@@ -1674,6 +1697,13 @@ const generatePdfBlob = async (onProgress = () => {}) => {
     const sliceHeightPt = sliceHeightPx / pxPerPt;
     const isFirstPage = renderedPages === 0;
     const pageHeaderHeight = isFirstPage ? firstPageHeaderHeight : headerHeight;
+    renderedSlices.push({
+      pageIndex: renderedPages,
+      startPx: renderedPx,
+      endPx: sliceEndPx,
+      sliceHeightPx,
+      pageHeaderHeight,
+    });
     pdf.addImage(
       pageCanvas.toDataURL("image/png"),
       "PNG",
@@ -1739,10 +1769,43 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   onProgress("PDF listo para descarga.");
   debugLog("PDF generado", { contractNumber: data.contractNumber });
 
+  let signatureAnchor = null;
+  if (clientSignatureAreaPx) {
+    const areaTopPx = clientSignatureAreaPx.top;
+    const areaBottomPx = clientSignatureAreaPx.top + clientSignatureAreaPx.height;
+    const areaMidPx = areaTopPx + Math.floor(clientSignatureAreaPx.height / 2);
+    const targetSlice =
+      renderedSlices.find((slice) => areaMidPx >= slice.startPx && areaMidPx <= slice.endPx) ||
+      renderedSlices.find((slice) => areaTopPx >= slice.startPx && areaBottomPx <= slice.endPx) ||
+      null;
+
+    if (targetSlice) {
+      const imageBottomPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
+      const localBottomPx = areaBottomPx - targetSlice.startPx;
+      const localTopPx = areaTopPx - targetSlice.startPx;
+      const areaBoxBottomPt = imageBottomPt + (targetSlice.sliceHeightPx - localBottomPx) / pxPerPt;
+      const areaBoxTopPt = imageBottomPt + (targetSlice.sliceHeightPx - localTopPx) / pxPerPt;
+      const areaBoxHeightPt = Math.max(1, areaBoxTopPt - areaBoxBottomPt);
+      const areaBoxLeftPt = margin + clientSignatureAreaPx.left / pxPerPt;
+      const areaBoxWidthPt = Math.max(1, clientSignatureAreaPx.width / pxPerPt);
+
+      signatureAnchor = {
+        pageIndex: targetSlice.pageIndex,
+        box: {
+          x: Number(areaBoxLeftPt.toFixed(2)),
+          y: Number(areaBoxBottomPt.toFixed(2)),
+          width: Number(areaBoxWidthPt.toFixed(2)),
+          height: Number(areaBoxHeightPt.toFixed(2)),
+        },
+      };
+    }
+  }
+
   return {
     blob: pdf.output("blob"),
     fileName: `CONTRATO-${safeContract}-${safeName}.PDF`,
     contractNumber: data.contractNumber,
+    signatureAnchor,
   };
 };
 
@@ -1816,11 +1879,15 @@ if (sendAndDownloadButton) {
         statusText.textContent = "Generando PDF para correo y descarga...";
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
-        const { blob, fileName, contractNumber } = await generatePdfBlob((message) => {
+        const { blob, fileName, contractNumber, signatureAnchor } = await generatePdfBlob((message) => {
           statusText.textContent = message;
         });
 
         const data = getFormData();
+        const payloadWithAnchor = {
+          ...data,
+          signatureAnchor: signatureAnchor || null,
+        };
 
         statusText.textContent = "Descargando PDF...";
         downloadBlob(blob, fileName);
@@ -1838,7 +1905,7 @@ if (sendAndDownloadButton) {
           archivePayload.append("issuedAt", String(data.issuedAt || ""));
           archivePayload.append("startDate", String(data.startDate || ""));
           archivePayload.append("endDate", String(data.endDate || ""));
-          archivePayload.append("payloadJson", JSON.stringify(data));
+          archivePayload.append("payloadJson", JSON.stringify(payloadWithAnchor));
           archivePayload.append("pdfFile", blob, fileName);
 
           const extraDocs = await collectAllContractDocuments();
