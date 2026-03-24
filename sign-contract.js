@@ -93,6 +93,38 @@ const setStatus = (message, kind = "info") => {
   }
 };
 
+const finishSigningExperience = () => {
+  const finalMessage = "Muchas gracias por enviarnos tu contrato firmado. Estaremos en contacto pronto.";
+  setStatus(finalMessage, "success");
+
+  const appRoot = document.querySelector("main");
+  if (appRoot) {
+    appRoot.innerHTML = `
+      <section class="panel history-main-panel" style="max-width:760px;margin:6vh auto 0 auto;">
+        <header class="panel-header">
+          <p class="kicker">Contrato recibido</p>
+          <h1>Gracias</h1>
+          <p>${finalMessage}</p>
+          <p style="margin-top:10px;opacity:.75;">Esta ventana se cerrara automaticamente.</p>
+        </header>
+      </section>
+    `;
+  }
+
+  setTimeout(() => {
+    try {
+      window.close();
+    } catch {
+      // ignore close errors on manually-opened tabs
+    }
+  }, 1200);
+
+  // Fallback: if the browser blocks window.close(), leave a blank page.
+  setTimeout(() => {
+    window.location.replace("about:blank");
+  }, 2200);
+};
+
 const revokeContractPdfObjectUrl = () => {
   if (contractPdfObjectUrl) {
     URL.revokeObjectURL(contractPdfObjectUrl);
@@ -636,12 +668,12 @@ const submitSignedContract = async () => {
   await apiFetchMultipart("/contracts/public/finalize-signature", payload);
   contractStateEl.textContent = "SIGNED";
   setStatus("Contrato firmado enviado correctamente. Proceso finalizado.", "success");
-  window.alert("Contrato firmado enviado correctamente.");
   submitButton.setAttribute("disabled", "true");
   clearButton?.setAttribute("disabled", "true");
   backToReadButton?.setAttribute("disabled", "true");
   goToSignButton?.setAttribute("disabled", "true");
   viewContractButton?.setAttribute("disabled", "true");
+  finishSigningExperience();
 };
 
 if (signatureCanvas instanceof HTMLCanvasElement) {
