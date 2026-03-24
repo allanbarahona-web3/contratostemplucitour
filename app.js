@@ -1784,11 +1784,11 @@ const generatePdfBlob = async (onProgress = () => {}) => {
       null;
 
     if (targetSlice) {
-      const imageBottomPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
+      const imageTopPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
       const localBottomPx = areaBottomPx - targetSlice.startPx;
       const localTopPx = areaTopPx - targetSlice.startPx;
-      const areaBoxBottomPt = imageBottomPt + (targetSlice.sliceHeightPx - localBottomPx) / pxPerPt;
-      const areaBoxTopPt = imageBottomPt + (targetSlice.sliceHeightPx - localTopPx) / pxPerPt;
+      const areaBoxBottomPt = pageHeight - (imageTopPt + localBottomPx / pxPerPt);
+      const areaBoxTopPt = pageHeight - (imageTopPt + localTopPx / pxPerPt);
       const areaBoxHeightPt = Math.max(1, areaBoxTopPt - areaBoxBottomPt);
       const areaBoxLeftPt = margin + clientSignatureAreaPx.left / pxPerPt;
       const areaBoxWidthPt = Math.max(1, clientSignatureAreaPx.width / pxPerPt);
