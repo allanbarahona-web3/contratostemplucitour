@@ -1255,18 +1255,22 @@ const buildContractHtml = (data) => {
       idType: data.clientIdType,
       idNumber: data.clientIdNumber,
       role: "Cliente",
+      isClient: true,
     },
     ...data.companions.map((person) => ({
       name: person.fullName,
       idType: person.idType,
       idNumber: person.idNumber,
       role: "Acompañante",
+      isClient: false,
     })),
   ]
     .map(
       (person) => `
-      <div class="signature-box signature-box--person">
-        <div class="signature-sign-area" aria-hidden="true"></div>
+      <div class="signature-box signature-box--person${person.isClient ? " signature-box--client" : ""}">
+        <div class="signature-sign-area${person.isClient ? " signature-sign-area--client" : ""}" aria-hidden="true">
+          ${person.isClient ? '<span class="signature-sign-label">Firma del cliente</span>' : ""}
+        </div>
           <p><strong>${contractVar(person.name)}</strong></p>
           <p>${contractVar(person.idType)}: ${contractVar(person.idNumber)}</p>
           <p>Rol: ${contractVar(person.role)}</p>
@@ -1557,7 +1561,7 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   const captureNode = buildPdfCaptureNode();
   const captureHeightCssPx = Math.max(captureNode.scrollHeight, 1);
   const captureWidthCssPx = Math.max(captureNode.scrollWidth, 1);
-  const clientSignatureAreaEl = captureNode.querySelector(".signature-box--person .signature-sign-area");
+  const clientSignatureAreaEl = captureNode.querySelector(".signature-box--client .signature-sign-area");
   let clientSignatureAreaCssPx = null;
   if (clientSignatureAreaEl) {
     const rootRect = captureNode.getBoundingClientRect();
