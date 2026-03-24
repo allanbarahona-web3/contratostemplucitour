@@ -1018,6 +1018,65 @@ button.ghost:hover {
   margin: 0 0 10px;
 }
 
+.public-sign-finish-panel {
+  max-width: 760px;
+  margin: clamp(22px, 7vh, 76px) auto 0 auto;
+  min-height: auto !important;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(17, 47, 93, 0.17);
+  background:
+    radial-gradient(1100px 240px at 100% -10%, rgba(18, 63, 121, 0.13), transparent 60%),
+    linear-gradient(180deg, #ffffff, #f7fbff);
+}
+
+.public-sign-finish-accent {
+  position: absolute;
+  left: -28px;
+  top: 20px;
+  width: 74px;
+  height: 74px;
+  border-radius: 16px;
+  transform: rotate(22deg);
+  background: linear-gradient(135deg, #123f79, #2e6cb7);
+  box-shadow: 0 12px 24px rgba(18, 63, 121, 0.26);
+}
+
+.public-sign-finish-header {
+  position: relative;
+  padding-left: 72px;
+}
+
+.public-sign-finish-message {
+  margin-top: 8px;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: #173a6a;
+}
+
+.public-sign-finish-submessage {
+  margin-top: 8px;
+  font-size: 0.94rem;
+  color: #446086;
+}
+
+.public-sign-finish-actions {
+  padding: 0 24px 24px 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.public-sign-finish-actions button {
+  width: fit-content;
+  min-width: 185px;
+}
+
+.public-sign-finish-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #5f7598;
+}
+
 .history-item-head {
   display: flex;
   align-items: center;
@@ -1321,6 +1380,30 @@ button.ghost:hover {
 
   .public-sign-page #publicReadStep iframe {
     height: 52dvh !important;
+  }
+
+  .public-sign-finish-panel {
+    margin-top: 28px;
+  }
+
+  .public-sign-finish-header {
+    padding-left: 52px;
+  }
+
+  .public-sign-finish-accent {
+    width: 56px;
+    height: 56px;
+    top: 22px;
+    left: -22px;
+  }
+
+  .public-sign-finish-actions {
+    padding: 0 16px 18px 16px;
+  }
+
+  .public-sign-finish-actions button {
+    width: 100%;
+    min-width: 0;
   }
 
   .public-pdf-viewer {

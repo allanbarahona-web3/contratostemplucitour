@@ -100,29 +100,38 @@ const finishSigningExperience = () => {
   const appRoot = document.querySelector("main");
   if (appRoot) {
     appRoot.innerHTML = `
-      <section class="panel history-main-panel" style="max-width:760px;margin:6vh auto 0 auto;">
-        <header class="panel-header">
+      <section class="panel history-main-panel public-sign-finish-panel">
+        <div class="public-sign-finish-accent" aria-hidden="true"></div>
+        <header class="panel-header public-sign-finish-header">
           <p class="kicker">Contrato recibido</p>
-          <h1>Gracias</h1>
-          <p>${finalMessage}</p>
-          <p style="margin-top:10px;opacity:.75;">Esta ventana se cerrara automaticamente.</p>
+          <h1>Gracias por firmar</h1>
+          <p class="public-sign-finish-message">${finalMessage}</p>
+          <p class="public-sign-finish-submessage">Nuestro equipo validara el documento y te contactaremos en breve.</p>
         </header>
+        <div class="public-sign-finish-actions">
+          <button id="publicSignCloseButton" type="button">Cerrar ventana</button>
+          <p id="publicSignCloseHint" class="public-sign-finish-hint">Si tu navegador no permite cerrar la pestaña automaticamente, puedes cerrarla manualmente.</p>
+        </div>
       </section>
     `;
+
+    const closeButton = document.getElementById("publicSignCloseButton");
+    const closeHint = document.getElementById("publicSignCloseHint");
+    closeButton?.addEventListener("click", () => {
+      try {
+        window.close();
+      } catch {
+        // ignore close errors on manually-opened tabs
+      }
+
+      setTimeout(() => {
+        if (closeHint) {
+          closeHint.textContent =
+            "Tu navegador bloqueo el cierre automatico. Puedes cerrar esta pestaña manualmente.";
+        }
+      }, 500);
+    });
   }
-
-  setTimeout(() => {
-    try {
-      window.close();
-    } catch {
-      // ignore close errors on manually-opened tabs
-    }
-  }, 1200);
-
-  // Fallback: if the browser blocks window.close(), leave a blank page.
-  setTimeout(() => {
-    window.location.replace("about:blank");
-  }, 2200);
 };
 
 const revokeContractPdfObjectUrl = () => {
