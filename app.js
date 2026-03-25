@@ -30,6 +30,7 @@ const signingLinkInput = document.getElementById("signingLinkInput");
 const openSigningLinkButton = document.getElementById("openSigningLinkButton");
 const copySigningLinkButton = document.getElementById("copySigningLinkButton");
 const shareSigningLinkButton = document.getElementById("shareSigningLinkButton");
+const companionSigningLinksEl = document.getElementById("companionSigningLinks");
 
 const MAX_DOCUMENT_COUNT = 20;
 const MAX_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024;
@@ -101,9 +102,22 @@ const hideSigningLinkActions = () => {
   if (shareSigningLinkButton) {
     shareSigningLinkButton.setAttribute("href", "#");
   }
+  if (companionSigningLinksEl) {
+    companionSigningLinksEl.innerHTML = "";
+    companionSigningLinksEl.classList.add("hidden");
+  }
 };
 
-const showSigningLinkActions = (signingUrl) => {
+const buildWhatsappShareUrl = (signingUrl, signerName = "") => {
+  const normalizedUrl = String(signingUrl || "").trim();
+  const normalizedSigner = String(signerName || "").trim();
+  const signerText = normalizedSigner ? ` para ${normalizedSigner}` : "";
+  return `https://wa.me/?text=${encodeURIComponent(
+    `Hola, te compartimos el enlace para firmar tu contrato de viaje${signerText}: ${normalizedUrl}`,
+  )}`;
+};
+
+const showSigningLinkActions = (signingUrl, signingLinks = []) => {
   const normalized = String(signingUrl || "").trim();
   if (!normalized) {
     hideSigningLinkActions();
@@ -119,10 +133,43 @@ const showSigningLinkActions = (signingUrl) => {
   }
 
   if (shareSigningLinkButton) {
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(
-      `Hola, te compartimos el enlace para firmar tu contrato de viaje: ${normalized}`,
-    )}`;
+    const waUrl = buildWhatsappShareUrl(normalized);
     shareSigningLinkButton.setAttribute("href", waUrl);
+  }
+
+  if (companionSigningLinksEl) {
+    const companions = Array.isArray(signingLinks)
+      ? signingLinks.filter((item) => String(item?.signerKey || "") !== "client")
+      : [];
+
+    if (companions.length > 0) {
+      companionSigningLinksEl.innerHTML = companions
+        .map((item) => {
+          const url = String(item?.signingUrl || "").trim();
+          if (!url) {
+            return "";
+          }
+
+          const signerName = escapeHtml(item?.signerName || "Acompanante");
+          const role = escapeHtml(item?.signerRole || "ACOMPANANTE");
+          const shareUrl = buildWhatsappShareUrl(url, item?.signerName || "");
+
+          return `
+            <article class="companion-signing-item">
+              <p><strong>${signerName}</strong> (${role})</p>
+              <div class="sign-link-buttons">
+                <a class="agent-nav-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">Ver contrato</a>
+                <a class="agent-nav-link" href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+      companionSigningLinksEl.classList.remove("hidden");
+    } else {
+      companionSigningLinksEl.innerHTML = "";
+      companionSigningLinksEl.classList.add("hidden");
+    }
   }
 
   if (signingLinkActions) {
@@ -1251,13 +1298,15 @@ const buildContractHtml = (data) => {
 
   const clientAndCompanionSignatureBlocks = [
     {
+      signerKey: "client",
       name: data.clientFullName,
       idType: data.clientIdType,
       idNumber: data.clientIdNumber,
       role: "Cliente",
       isClient: true,
     },
-    ...data.companions.map((person) => ({
+    ...data.companions.map((person, index) => ({
+      signerKey: `companion-${index}`,
       name: person.fullName,
       idType: person.idType,
       idNumber: person.idNumber,
@@ -1268,12 +1317,14 @@ const buildContractHtml = (data) => {
     .map(
       (person) => `
       <div class="signature-box signature-box--person${person.isClient ? " signature-box--client" : ""}">
-        <div class="signature-sign-area${person.isClient ? " signature-sign-area--client" : ""}" aria-hidden="true">
-          ${person.isClient ? '<span class="signature-sign-label">Firma del cliente</span>' : ""}
+        <div class="signature-sign-area${person.isClient ? " signature-sign-area--client" : ""}" data-signer-key="${escapeAttr(
+          person.signerKey,
+        )}" aria-hidden="true">
+          <span class="signature-sign-label">${person.isClient ? "Firma del cliente" : "Firma del acompa\u00f1ante"}</span>
         </div>
           <p><strong>${contractVar(person.name)}</strong></p>
           <p>${contractVar(person.idType)}: ${contractVar(person.idNumber)}</p>
-          <p>Rol: ${contractVar(person.role)}</p>
+          <p>${contractVar(person.role)}</p>
           <p>Fecha: ${contractVar(signatureDate)}</p>
       </div>
     `,
@@ -1561,18 +1612,23 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   const captureNode = buildPdfCaptureNode();
   const captureHeightCssPx = Math.max(captureNode.scrollHeight, 1);
   const captureWidthCssPx = Math.max(captureNode.scrollWidth, 1);
-  const clientSignatureAreaEl = captureNode.querySelector(".signature-box--client .signature-sign-area");
-  let clientSignatureAreaCssPx = null;
-  if (clientSignatureAreaEl) {
-    const rootRect = captureNode.getBoundingClientRect();
-    const signRect = clientSignatureAreaEl.getBoundingClientRect();
-    clientSignatureAreaCssPx = {
+  const rootRect = captureNode.getBoundingClientRect();
+  const signatureAreaElements = Array.from(captureNode.querySelectorAll(".signature-box--person .signature-sign-area"));
+  const signatureAreasCssPx = signatureAreaElements.reduce((acc, areaEl) => {
+    const signerKey = String(areaEl.getAttribute("data-signer-key") || "").trim();
+    if (!signerKey) {
+      return acc;
+    }
+
+    const signRect = areaEl.getBoundingClientRect();
+    acc[signerKey] = {
       left: Math.max(0, signRect.left - rootRect.left),
       top: Math.max(0, signRect.top - rootRect.top),
       width: Math.max(1, signRect.width),
       height: Math.max(1, signRect.height),
     };
-  }
+    return acc;
+  }, {});
   const clauseBlockRangesCssPx = collectClauseBlockRanges(captureNode);
   const protectedRangesCssPx = Array.from(captureNode.querySelectorAll(".signature-box--erick")).map((el) => {
     const start = Math.max(0, el.offsetTop - 18);
@@ -1615,14 +1671,15 @@ const generatePdfBlob = async (onProgress = () => {}) => {
 
   const scaleToCanvas = canvas.height / captureHeightCssPx;
   const scaleXToCanvas = canvas.width / captureWidthCssPx;
-  const clientSignatureAreaPx = clientSignatureAreaCssPx
-    ? {
-        left: Math.floor(clientSignatureAreaCssPx.left * scaleXToCanvas),
-        top: Math.floor(clientSignatureAreaCssPx.top * scaleToCanvas),
-        width: Math.max(1, Math.ceil(clientSignatureAreaCssPx.width * scaleXToCanvas)),
-        height: Math.max(1, Math.ceil(clientSignatureAreaCssPx.height * scaleToCanvas)),
-      }
-    : null;
+  const signatureAreasPx = Object.entries(signatureAreasCssPx).reduce((acc, [key, area]) => {
+    acc[key] = {
+      left: Math.floor(area.left * scaleXToCanvas),
+      top: Math.floor(area.top * scaleToCanvas),
+      width: Math.max(1, Math.ceil(area.width * scaleXToCanvas)),
+      height: Math.max(1, Math.ceil(area.height * scaleToCanvas)),
+    };
+    return acc;
+  }, {});
   const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, .signature-box")).map((el) => {
     const start = Math.max(0, el.offsetTop - 6);
     const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 6);
@@ -1773,43 +1830,47 @@ const generatePdfBlob = async (onProgress = () => {}) => {
   onProgress("PDF listo para descarga.");
   debugLog("PDF generado", { contractNumber: data.contractNumber });
 
-  let signatureAnchor = null;
-  if (clientSignatureAreaPx) {
-    const areaTopPx = clientSignatureAreaPx.top;
-    const areaBottomPx = clientSignatureAreaPx.top + clientSignatureAreaPx.height;
-    const areaMidPx = areaTopPx + Math.floor(clientSignatureAreaPx.height / 2);
+  const signatureAnchors = Object.entries(signatureAreasPx).reduce((acc, [signerKey, area]) => {
+    const areaTopPx = area.top;
+    const areaBottomPx = area.top + area.height;
+    const areaMidPx = areaTopPx + Math.floor(area.height / 2);
     const targetSlice =
       renderedSlices.find((slice) => areaMidPx >= slice.startPx && areaMidPx <= slice.endPx) ||
       renderedSlices.find((slice) => areaTopPx >= slice.startPx && areaBottomPx <= slice.endPx) ||
       null;
 
-    if (targetSlice) {
-      const imageTopPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
-      const localBottomPx = areaBottomPx - targetSlice.startPx;
-      const localTopPx = areaTopPx - targetSlice.startPx;
-      const areaBoxBottomPt = pageHeight - (imageTopPt + localBottomPx / pxPerPt);
-      const areaBoxTopPt = pageHeight - (imageTopPt + localTopPx / pxPerPt);
-      const areaBoxHeightPt = Math.max(1, areaBoxTopPt - areaBoxBottomPt);
-      const areaBoxLeftPt = margin + clientSignatureAreaPx.left / pxPerPt;
-      const areaBoxWidthPt = Math.max(1, clientSignatureAreaPx.width / pxPerPt);
-
-      signatureAnchor = {
-        pageIndex: targetSlice.pageIndex,
-        box: {
-          x: Number(areaBoxLeftPt.toFixed(2)),
-          y: Number(areaBoxBottomPt.toFixed(2)),
-          width: Number(areaBoxWidthPt.toFixed(2)),
-          height: Number(areaBoxHeightPt.toFixed(2)),
-        },
-      };
+    if (!targetSlice) {
+      return acc;
     }
-  }
+
+    const imageTopPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
+    const localBottomPx = areaBottomPx - targetSlice.startPx;
+    const localTopPx = areaTopPx - targetSlice.startPx;
+    const areaBoxBottomPt = pageHeight - (imageTopPt + localBottomPx / pxPerPt);
+    const areaBoxTopPt = pageHeight - (imageTopPt + localTopPx / pxPerPt);
+    const areaBoxHeightPt = Math.max(1, areaBoxTopPt - areaBoxBottomPt);
+    const areaBoxLeftPt = margin + area.left / pxPerPt;
+    const areaBoxWidthPt = Math.max(1, area.width / pxPerPt);
+
+    acc[signerKey] = {
+      pageIndex: targetSlice.pageIndex,
+      box: {
+        x: Number(areaBoxLeftPt.toFixed(2)),
+        y: Number(areaBoxBottomPt.toFixed(2)),
+        width: Number(areaBoxWidthPt.toFixed(2)),
+        height: Number(areaBoxHeightPt.toFixed(2)),
+      },
+    };
+
+    return acc;
+  }, {});
 
   return {
     blob: pdf.output("blob"),
     fileName: `CONTRATO-${safeContract}-${safeName}.PDF`,
     contractNumber: data.contractNumber,
-    signatureAnchor,
+    signatureAnchor: signatureAnchors.client || null,
+    signatureAnchors,
   };
 };
 
@@ -1883,7 +1944,7 @@ if (sendAndDownloadButton) {
         statusText.textContent = "Generando PDF para correo y descarga...";
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
-        const { blob, fileName, contractNumber, signatureAnchor } = await generatePdfBlob((message) => {
+        const { blob, fileName, contractNumber, signatureAnchor, signatureAnchors } = await generatePdfBlob((message) => {
           statusText.textContent = message;
         });
 
@@ -1891,6 +1952,7 @@ if (sendAndDownloadButton) {
         const payloadWithAnchor = {
           ...data,
           signatureAnchor: signatureAnchor || null,
+          signatureAnchors: signatureAnchors || null,
         };
 
         statusText.textContent = "Descargando PDF...";
@@ -1925,8 +1987,9 @@ if (sendAndDownloadButton) {
         }
 
         let signingUrl = "";
+        let signingLinks = [];
         if (archived && archivedContractId) {
-          statusText.textContent = "Generando enlace de firma para cliente...";
+          statusText.textContent = "Generando enlaces de firma...";
           try {
             const linkResult = await apiFetch(`/contracts/${archivedContractId}/signing-link`, {
               method: "POST",
@@ -1936,31 +1999,54 @@ if (sendAndDownloadButton) {
               body: JSON.stringify({ ttlMinutes: 1440 }),
             });
             signingUrl = String(linkResult?.signingUrl || "").trim();
-            showSigningLinkActions(signingUrl);
+            signingLinks = Array.isArray(linkResult?.signingLinks) ? linkResult.signingLinks : [];
+            showSigningLinkActions(signingUrl, signingLinks);
           } catch (linkError) {
             debugError("No se pudo generar el enlace de firma", linkError);
           }
         }
 
-        let emailSent = false;
+        let emailSentCount = 0;
         if (signingUrl) {
-          statusText.textContent = "Enviando correo de firma al cliente...";
-          try {
-            await apiFetch("/contracts/send-signing-email", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                toEmail: data.clientEmail,
-                clientName: data.clientFullName,
-                contractNumber: String(contractNumber),
-                signingUrl,
-              }),
-            });
-            emailSent = true;
-          } catch (emailError) {
-            debugError("Error enviando correo de firma", emailError);
+          const normalizedSigningLinks = signingLinks.length
+            ? signingLinks
+            : [
+                {
+                  signerKey: "client",
+                  signerName: data.clientFullName,
+                  signerEmail: data.clientEmail,
+                  signingUrl,
+                },
+              ];
+
+          const emailableTargets = normalizedSigningLinks.filter((item) => {
+            const email = String(item?.signerEmail || "").trim();
+            const url = String(item?.signingUrl || "").trim();
+            return Boolean(email && url);
+          });
+
+          if (emailableTargets.length > 0) {
+            statusText.textContent = "Enviando correos de firma...";
+          }
+
+          for (const target of emailableTargets) {
+            try {
+              await apiFetch("/contracts/send-signing-email", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  toEmail: String(target.signerEmail || "").trim(),
+                  clientName: String(target.signerName || "").trim() || "Firmante",
+                  contractNumber: String(contractNumber),
+                  signingUrl: String(target.signingUrl || "").trim(),
+                }),
+              });
+              emailSentCount += 1;
+            } catch (emailError) {
+              debugError("Error enviando correo de firma", emailError);
+            }
           }
         }
 
@@ -1973,11 +2059,11 @@ if (sendAndDownloadButton) {
         }
 
         statusText.textContent = archived
-          ? emailSent
-            ? "PDF descargado, contrato guardado y enlace de firma enviado al cliente."
+          ? emailSentCount > 0
+            ? "PDF descargado, contrato guardado y enlaces de firma enviados."
             : signingUrl
-              ? "PDF descargado y contrato guardado. No se pudo enviar correo, pero puedes copiar/compartir el enlace de firma."
-              : "PDF descargado y contrato guardado. No se pudo generar el enlace de firma."
+              ? "PDF descargado y contrato guardado. No se pudieron enviar todos los correos, pero puedes compartir los enlaces de firma."
+              : "PDF descargado y contrato guardado. No se pudieron generar enlaces de firma."
           : "PDF descargado. No se pudo guardar el contrato en base de datos.";
         await loadContractHistory(historySearchInput?.value || "");
         debugLog("Flujo combinado completado");

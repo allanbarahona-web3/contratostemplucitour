@@ -441,7 +441,7 @@ const findInkBounds = () => {
   return { minX, minY, maxX, maxY };
 };
 
-const locateClientSignatureAnchor = async (pdfBytes, signerName) => {
+const locateSignerSignatureAnchor = async (pdfBytes, signerName) => {
   const pdfjs = await getPdfJs();
   const doc = await pdfjs.getDocument({ data: pdfBytes }).promise;
   const normalizedSigner = normalizeSearchText(signerName);
@@ -554,7 +554,7 @@ const buildSignedPdfBlob = async () => {
   const pages = pdfDoc.getPages();
   const placement = getSignaturePlacementConfig();
   const storedAnchor = getSessionSignatureAnchor();
-  const textAnchor = storedAnchor ? null : await locateClientSignatureAnchor(pdfBytes, sessionData?.clientName || "");
+  const textAnchor = storedAnchor ? null : await locateSignerSignatureAnchor(pdfBytes, sessionData?.signerName || "");
   const activeAnchor = storedAnchor || textAnchor;
   const page = pages[activeAnchor?.pageIndex ?? pages.length - 1];
   const pageWidth = page.getWidth();
@@ -623,10 +623,10 @@ const loadSigningSession = async () => {
 
   sessionData = data;
   contractNumberEl.textContent = data.contractNumber || "-";
-  clientNameEl.textContent = data.clientName || "-";
+  clientNameEl.textContent = data.signerName || data.clientName || "-";
   contractStateEl.textContent = data.status || "-";
   if (signedByNameLabel) {
-    signedByNameLabel.textContent = data.clientName || "-";
+    signedByNameLabel.textContent = data.signerName || data.clientName || "-";
   }
 
   if (contractFrame) {
@@ -656,7 +656,7 @@ const loadSigningSession = async () => {
 };
 
 const submitSignedContract = async () => {
-  const signer = String(sessionData?.clientName || "").trim();
+  const signer = String(sessionData?.signerName || sessionData?.clientName || "").trim();
   if (!signer) {
     throw new Error("No se pudo resolver el nombre del firmante desde el contrato.");
   }
@@ -674,9 +674,20 @@ const submitSignedContract = async () => {
   payload.append("signedByName", signer);
   payload.append("signedPdfFile", signedPdfBlob, `${sessionData.contractNumber || "contrato"}-signed.pdf`);
 
-  await apiFetchMultipart("/contracts/public/finalize-signature", payload);
-  contractStateEl.textContent = "SIGNED";
-  setStatus("Contrato firmado enviado correctamente. Proceso finalizado.", "success");
+  const result = await apiFetchMultipart("/contracts/public/finalize-signature", payload);
+  const nextStatus = String(result?.status || "").toUpperCase();
+  contractStateEl.textContent = nextStatus || "PENDING_SIGNATURE";
+
+  if (nextStatus === "SIGNED") {
+    setStatus("Contrato firmado enviado correctamente. Proceso finalizado.", "success");
+  } else {
+    const signedCount = Number(result?.signedCount || 0);
+    const totalSigners = Number(result?.totalSigners || 0);
+    const progressText =
+      signedCount > 0 && totalSigners > 0 ? ` (${signedCount}/${totalSigners} firmas completadas)` : "";
+    setStatus(`Firma registrada correctamente${progressText}.`, "success");
+  }
+
   submitButton.setAttribute("disabled", "true");
   clearButton?.setAttribute("disabled", "true");
   backToReadButton?.setAttribute("disabled", "true");
