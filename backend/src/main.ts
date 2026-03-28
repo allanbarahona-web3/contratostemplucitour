@@ -5,6 +5,22 @@ import { json, urlencoded } from "express";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 
+const normalizeDatabaseUrl = () => {
+  const raw = String(process.env.DATABASE_URL || "");
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return;
+  }
+
+  const unquoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1).trim()
+      : trimmed;
+
+  process.env.DATABASE_URL = unquoted;
+};
+
 const parseAllowedOrigins = (rawValue: string) => {
   const value = String(rawValue || "").trim();
   if (!value || value === "*") {
@@ -20,6 +36,8 @@ const parseAllowedOrigins = (rawValue: string) => {
 };
 
 async function bootstrap() {
+  normalizeDatabaseUrl();
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const allowedOrigins = parseAllowedOrigins(configService.get<string>("ALLOWED_ORIGIN", "*"));
