@@ -204,6 +204,18 @@ export class ContractsController {
     return this.contractsService.sendContractSigningEmail(req.user, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post(":contractId/resend-signed-email")
+  resendSignedEmail(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("contractId") contractId: string,
+  ) {
+    return this.contractsService.resendSignedContractEmailToParties(req.user, contractId);
+  }
+
   @Get("public/signing-session")
   getPublicSigningSession(@Query() query: PublicSigningSessionDto) {
     return this.contractsService.getPublicSigningSession(query.token);

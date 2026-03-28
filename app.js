@@ -300,6 +300,13 @@ const renderHistory = (items = []) => {
           </div>
           <div class="history-item-actions">
             <button type="button" class="ghost" data-action="files" data-contract-id="${escapeAttr(item.id)}">Ver archivos</button>
+            ${
+              String(item.status || "").toUpperCase() === "SIGNED"
+                ? `<button type="button" class="ghost" data-action="resend-signed" data-contract-id="${escapeAttr(
+                    item.id,
+                  )}">Reenviar firmado</button>`
+                : ""
+            }
           </div>
         </article>
       `,
@@ -362,6 +369,20 @@ const openContractFiles = async (contractId) => {
       }
     });
   }
+};
+
+const resendSignedContract = async (contractId) => {
+  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    throw new Error("Sesion no activa.");
+  }
+
+  return apiFetch(`/contracts/${contractId}/resend-signed-email`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
 
 const blobToFile = (blob, fileName, mimeType) =>
@@ -2317,6 +2338,37 @@ if (historyList) {
         .catch((error) => {
           debugError("No se pudo abrir archivos del contrato", error);
           statusText.textContent = "No se pudieron abrir los archivos del contrato.";
+        })
+        .finally(() => {
+          target.removeAttribute("disabled");
+          target.textContent = oldText;
+        });
+      return;
+    }
+
+    if (target.matches('button[data-action="resend-signed"]')) {
+      const contractId = target.getAttribute("data-contract-id");
+      if (!contractId) {
+        return;
+      }
+
+      target.setAttribute("disabled", "true");
+      const oldText = target.textContent;
+      target.textContent = "Reenviando...";
+
+      void resendSignedContract(contractId)
+        .then((result) => {
+          const sent = Number(result?.sentCount || 0);
+          const failed = Number(result?.failedCount || 0);
+          statusText.textContent =
+            failed > 0
+              ? `Contrato reenviado a ${sent} destinatario(s). ${failed} fallo(aron).`
+              : `Contrato reenviado correctamente a ${sent} destinatario(s).`;
+        })
+        .catch((error) => {
+          debugError("No se pudo reenviar contrato firmado", error);
+          statusText.textContent =
+            error?.message || "No se pudo reenviar el contrato firmado.";
         })
         .finally(() => {
           target.removeAttribute("disabled");

@@ -500,6 +500,123 @@ export class ContractsService {
     }
   }
 
+  async resendSignedContractEmailToParties(
+    user: { id: string; email: string; fullName: string },
+    contractId: string,
+  ) {
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: contractId },
+      include: {
+        client: true,
+      },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    if (String(contract.status || "").toUpperCase() !== CONTRACT_STATUS_SIGNED || !contract.signedPdfObjectKey) {
+      throw new BadRequestException("El contrato aun no esta firmado por todas las partes.");
+    }
+
+    const apiKey = this.configService.get<string>("RESEND_API_KEY", "").trim();
+    const fromEmail = this.configService
+      .get<string>("CONTRACTS_FROM_EMAIL", "")
+      .trim();
+
+    if (!apiKey || !fromEmail) {
+      throw new InternalServerErrorException(
+        "Falta configurar RESEND_API_KEY o CONTRACTS_FROM_EMAIL.",
+      );
+    }
+
+    const payload = this.getPayloadRecord(contract.payload);
+    const participants = this.getSigningParticipants(contract);
+    const seenEmails = new Set<string>();
+    const recipients: Array<{ email: string; name: string; role: SigningRole }> = [];
+
+    participants.forEach((participant) => {
+      const normalizedEmail = String(participant.email || "").trim().toLowerCase();
+      if (!normalizedEmail || seenEmails.has(normalizedEmail)) {
+        return;
+      }
+
+      seenEmails.add(normalizedEmail);
+      recipients.push({
+        email: normalizedEmail,
+        name: participant.name,
+        role: participant.role,
+      });
+    });
+
+    if (!recipients.length) {
+      throw new BadRequestException("No hay correos de titular o acompanantes para reenviar el contrato firmado.");
+    }
+
+    const signedPdfBuffer = await this.downloadObjectBuffer(contract.signedPdfObjectKey);
+    if (!signedPdfBuffer.length) {
+      throw new InternalServerErrorException("No se pudo leer el contrato firmado para reenviar.");
+    }
+
+    const resend = new Resend(apiKey);
+    const pdfBase64 = signedPdfBuffer.toString("base64");
+    const fileName =
+      String(contract.signedPdfFileName || "").trim() || `${String(contract.contractNumber || "contrato").trim()}-signed.pdf`;
+
+    const sentTo: string[] = [];
+    const failedTo: string[] = [];
+
+    for (const recipient of recipients) {
+      const html = `
+        <p>Hola ${recipient.name || ""},</p>
+        <p>Te compartimos el contrato firmado <strong>${contract.contractNumber}</strong>.</p>
+        <p>Este documento ya fue completado y firmado por todas las partes.</p>
+        <p>Atentamente,<br/>Lucitours</p>
+      `;
+
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          to: [recipient.email],
+          subject: `Contrato firmado - ${contract.contractNumber}`,
+          html,
+          attachments: [
+            {
+              filename: fileName,
+              content: pdfBase64,
+            },
+          ],
+        });
+        sentTo.push(recipient.email);
+      } catch {
+        failedTo.push(recipient.email);
+      }
+    }
+
+    if (!sentTo.length) {
+      throw new InternalServerErrorException("No se pudo reenviar el contrato firmado a ningun destinatario.");
+    }
+
+    return {
+      ok: true,
+      contractId: contract.id,
+      contractNumber: contract.contractNumber,
+      sentCount: sentTo.length,
+      failedCount: failedTo.length,
+      sentTo,
+      failedTo,
+      requestedBy: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
+      signedAt: contract.signedAt || null,
+      signerSummary: Array.isArray(payload?.signedParticipants)
+        ? payload.signedParticipants
+        : null,
+    };
+  }
+
   async createContractSigningLink(
     _user: { id: string; email: string; fullName: string },
     contractId: string,
