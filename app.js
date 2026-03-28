@@ -385,6 +385,28 @@ const resendSignedContract = async (contractId) => {
   });
 };
 
+const showResendSignedSummary = (result) => {
+  const sent = Array.isArray(result?.sentTo) ? result.sentTo : [];
+  const failed = Array.isArray(result?.failedTo) ? result.failedTo : [];
+  const contractNumber = String(result?.contractNumber || "").trim() || "-";
+
+  const lines = [
+    `Contrato: ${contractNumber}`,
+    `Enviados: ${sent.length}`,
+    `Fallidos: ${failed.length}`,
+  ];
+
+  if (sent.length) {
+    lines.push("", "Correos enviados:", ...sent.map((email) => `- ${email}`));
+  }
+
+  if (failed.length) {
+    lines.push("", "Correos con fallo:", ...failed.map((email) => `- ${email}`));
+  }
+
+  window.alert(lines.join("\n"));
+};
+
 const blobToFile = (blob, fileName, mimeType) =>
   new File([blob], fileName, {
     type: mimeType,
@@ -2364,6 +2386,7 @@ if (historyList) {
             failed > 0
               ? `Contrato reenviado a ${sent} destinatario(s). ${failed} fallo(aron).`
               : `Contrato reenviado correctamente a ${sent} destinatario(s).`;
+          showResendSignedSummary(result);
         })
         .catch((error) => {
           debugError("No se pudo reenviar contrato firmado", error);
