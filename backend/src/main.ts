@@ -18,7 +18,13 @@ const normalizeDatabaseUrl = () => {
       ? trimmed.slice(1, -1).trim()
       : trimmed;
 
-  process.env.DATABASE_URL = unquoted;
+  // Some deployment UIs accidentally persist values like:
+  // DATABASE_URL="postgresql://..."
+  // We recover the first postgres URL to keep boot resilient.
+  const recoveredMatch = unquoted.match(/postgres(?:ql)?:\/\/[^\s"']+/i);
+  const normalized = recoveredMatch ? recoveredMatch[0].trim() : unquoted;
+
+  process.env.DATABASE_URL = normalized;
 };
 
 const parseAllowedOrigins = (rawValue: string) => {
