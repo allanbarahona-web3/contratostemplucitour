@@ -18,6 +18,7 @@ const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
 const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE = configuredApiBase || (isLocalHost ? "http://localhost:3001" : "");
+const PUBLIC_APP_BASE_URL = normalizeBaseUrl(window.APP_CONFIG?.PUBLIC_APP_BASE_URL);
 
 const getSignaturePlacementConfig = () => {
   const cfg = window.APP_CONFIG?.SIGNATURE_PLACEMENT || {};
@@ -93,9 +94,35 @@ const setStatus = (message, kind = "info") => {
   }
 };
 
+const closeWindowWithFallback = () => {
+  const fallbackUrl =
+    PUBLIC_APP_BASE_URL ||
+    (window.location.origin && window.location.origin !== "null" ? window.location.origin : "https://contratos.lucitour.com");
+
+  try {
+    window.open("", "_self");
+  } catch {
+    // Ignore browser-specific limitations.
+  }
+
+  try {
+    window.close();
+  } catch {
+    // Ignore browser-specific limitations.
+  }
+
+  setTimeout(() => {
+    if (!document.hidden) {
+      window.location.replace(fallbackUrl);
+    }
+  }, 450);
+};
+
 const finishSigningExperience = () => {
   const finalMessage = "Muchas gracias por enviarnos tu contrato firmado. Estaremos en contacto pronto.";
   setStatus(finalMessage, "success");
+
+  document.body.classList.add("public-sign-complete");
 
   const appRoot = document.querySelector("main");
   if (appRoot) {
@@ -109,8 +136,9 @@ const finishSigningExperience = () => {
           <p class="public-sign-finish-submessage">Nuestro equipo validara el documento y te contactaremos en breve.</p>
         </header>
         <div class="public-sign-finish-actions">
-          <button id="publicSignCloseButton" type="button">Cerrar ventana</button>
-          <p id="publicSignCloseHint" class="public-sign-finish-hint">Si tu navegador no permite cerrar la pestaña automaticamente, puedes cerrarla manualmente.</p>
+          <button id="publicSignCloseButton" type="button">Cerrar</button>
+          <a class="public-sign-finish-back-link" href="${PUBLIC_APP_BASE_URL || "https://contratos.lucitour.com"}">Volver al sitio</a>
+          <p id="publicSignCloseHint" class="public-sign-finish-hint">Intentaremos cerrar esta pestaña automaticamente. Si tu navegador lo bloquea, te llevaremos al sitio principal.</p>
         </div>
       </section>
     `;
@@ -118,19 +146,22 @@ const finishSigningExperience = () => {
     const closeButton = document.getElementById("publicSignCloseButton");
     const closeHint = document.getElementById("publicSignCloseHint");
     closeButton?.addEventListener("click", () => {
-      try {
-        window.close();
-      } catch {
-        // ignore close errors on manually-opened tabs
-      }
+      closeWindowWithFallback();
 
       setTimeout(() => {
         if (closeHint) {
           closeHint.textContent =
-            "Tu navegador bloqueo el cierre automatico. Puedes cerrar esta pestaña manualmente.";
+            "Tu navegador bloqueo el cierre automatico. Te redirigimos al sitio principal.";
         }
-      }, 500);
+      }, 600);
     });
+
+    setTimeout(() => {
+      const hintEl = document.getElementById("publicSignCloseHint");
+      if (hintEl && !document.hidden) {
+        hintEl.textContent = "Puedes cerrar ahora o volver al sitio principal.";
+      }
+    }, 3000);
   }
 };
 

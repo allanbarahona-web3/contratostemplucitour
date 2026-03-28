@@ -949,6 +949,12 @@ button.ghost:hover {
   overflow-y: auto;
 }
 
+.public-sign-page.public-sign-complete {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+}
+
 .public-sign-page .history-shell {
   width: min(980px, 100vw);
   min-height: 100dvh;
@@ -1041,15 +1047,31 @@ button.ghost:hover {
 }
 
 .public-sign-finish-panel {
+  width: min(760px, calc(100vw - 28px));
   max-width: 760px;
-  margin: clamp(22px, 7vh, 76px) auto 0 auto;
+  margin: 0 auto;
   min-height: auto !important;
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(17, 47, 93, 0.17);
+  border-radius: 22px;
+  box-shadow: 0 26px 56px rgba(11, 34, 66, 0.18);
   background:
     radial-gradient(1100px 240px at 100% -10%, rgba(18, 63, 121, 0.13), transparent 60%),
     linear-gradient(180deg, #ffffff, #f7fbff);
+}
+
+.public-sign-complete .history-shell {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 22px 14px;
+}
+
+.public-sign-complete .history-main-panel {
+  min-height: auto;
+  height: auto;
 }
 
 .public-sign-finish-accent {
@@ -1067,36 +1089,56 @@ button.ghost:hover {
 .public-sign-finish-header {
   position: relative;
   padding-left: 72px;
+  padding-top: 28px;
+  padding-bottom: 8px;
+  text-align: left;
 }
 
 .public-sign-finish-message {
   margin-top: 8px;
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   line-height: 1.55;
-  color: #173a6a;
+  color: #153764;
 }
 
 .public-sign-finish-submessage {
   margin-top: 8px;
-  font-size: 0.94rem;
-  color: #446086;
+  font-size: 0.95rem;
+  color: #3f5a80;
 }
 
 .public-sign-finish-actions {
   padding: 0 24px 24px 24px;
   display: grid;
   gap: 10px;
+  align-items: center;
 }
 
 .public-sign-finish-actions button {
-  width: fit-content;
-  min-width: 185px;
+  width: 100%;
+  min-width: 0;
+}
+
+.public-sign-finish-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(22, 57, 103, 0.26);
+  color: #173964;
+  text-decoration: none;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .public-sign-finish-hint {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: #5f7598;
+  text-align: center;
 }
 
 .history-item-head {
@@ -1405,11 +1447,12 @@ button.ghost:hover {
   }
 
   .public-sign-finish-panel {
-    margin-top: 28px;
+    width: min(620px, calc(100vw - 20px));
   }
 
   .public-sign-finish-header {
     padding-left: 52px;
+    padding-top: 20px;
   }
 
   .public-sign-finish-accent {
