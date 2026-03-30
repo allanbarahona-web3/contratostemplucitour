@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
@@ -928,6 +928,9 @@ export class ContractsService {
       throw new BadRequestException("Se requiere la imagen de la firma en base64.");
     }
 
+    // Hash the raw token — used as a one-time-use receipt stored in payload
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+
     const contract = await (this.prisma as any).contract.findUnique({
       where: { id: parsed.contractId },
       include: { client: true },
@@ -952,9 +955,18 @@ export class ContractsService {
       ? payload.signedParticipants.filter((item: any) => item && typeof item === "object")
       : [];
 
+    // Guard 1: signer already completed their signature
     const alreadySigned = signedParticipants.some((item: any) => String(item?.signerKey || "") === signer.key);
     if (alreadySigned) {
       throw new BadRequestException("Este firmante ya completo su firma.");
+    }
+
+    // Guard 2: this exact token was already spent (replay protection)
+    const usedTokenHashes: string[] = Array.isArray(payload.usedSigningTokens)
+      ? (payload.usedSigningTokens as string[])
+      : [];
+    if (usedTokenHashes.includes(tokenHash)) {
+      throw new BadRequestException("Este enlace de firma ya fue utilizado.");
     }
 
     const keyRoot = String(contract.pdfObjectKey || "").replace(/\/contract\.pdf$/i, "");
@@ -967,6 +979,9 @@ export class ContractsService {
     const pngBuffer = Buffer.from(signatureImageBase64.trim(), "base64");
     const signerAnchor = this.getSignatureAnchorForSigner(payload, signer.key);
     const signedPdfBuffer = await this.embedSignatureInPdf(basePdfBuffer, pngBuffer, signerAnchor);
+
+    // SHA-256 of the final signed PDF bytes
+    const signedPdfHash = createHash("sha256").update(signedPdfBuffer).digest("hex");
 
     const signedObjectKey = `${baseFolder}/signed/contract-signed.pdf`;
     await this.uploadToSpaces({
@@ -984,17 +999,27 @@ export class ContractsService {
 
     const now = new Date();
     const signerName = String(signer.name || signedByName || "").trim();
-    const nextSignedParticipants = [
-      ...signedParticipants,
-      {
-        signerKey: signer.key,
-        signerRole: signer.role,
-        signerName,
-        signedAt: now.toISOString(),
-        signedClientIp: signedClientIp || null,
-        signedUserAgent: signedUserAgent || null,
-      },
-    ];
+
+    // Structured evidence entry — one per signer event
+    const evidenceEntry = {
+      signerKey: signer.key,
+      signerRole: signer.role,
+      signerName,
+      signedAt: now.toISOString(),
+      signedClientIp: signedClientIp || null,
+      signedUserAgent: signedUserAgent || null,
+      signedPdfObjectKey: signedObjectKey,
+      signedPdfSizeBytes: signedPdfBuffer.length,
+      signedPdfSha256: signedPdfHash,
+      tokenHash,
+    };
+
+    const nextSignedParticipants = [...signedParticipants, evidenceEntry];
+    const nextUsedTokenHashes = [...usedTokenHashes, tokenHash];
+
+    const signatureEvidence: unknown[] = Array.isArray(payload.signatureEvidence)
+      ? payload.signatureEvidence
+      : [];
 
     const requiredSignerKeys = participants.map((item) => item.key);
     const completedKeys = new Set(
@@ -1019,6 +1044,8 @@ export class ContractsService {
           ...payload,
           requiredSignerKeys,
           signedParticipants: nextSignedParticipants,
+          usedSigningTokens: nextUsedTokenHashes,
+          signatureEvidence: [...signatureEvidence, evidenceEntry],
         },
       },
     });
