@@ -7,20 +7,18 @@ import {
   Post,
   Query,
   Req,
-  Res,
   UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { Response } from "express";
 import { Throttle } from "@nestjs/throttler";
 import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
 import { CreateSigningLinkDto } from "./dto/create-signing-link.dto";
 import { FinalizeContractSignaturePublicDto } from "./dto/finalize-contract-signature-public.dto";
-import { FinalizeContractSignatureDto } from "./dto/finalize-contract-signature.dto";
+
 import { PublicSigningSessionDto } from "./dto/public-signing-session.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
 import { ContractsService } from "./contracts.service";
@@ -127,47 +125,6 @@ export class ContractsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post("internal/:contractId/finalize-signature")
-  @UseInterceptors(FileInterceptor("signedPdfFile"))
-  finalizeContractSignature(
-    @Req()
-    req: {
-      user: { id: string; email: string; fullName: string };
-      ip?: string;
-      headers?: Record<string, string | string[] | undefined>;
-    },
-    @Param("contractId") contractId: string,
-    @Body() dto: FinalizeContractSignatureDto,
-    @UploadedFile()
-    file?: {
-      buffer: Buffer;
-      mimetype: string;
-      originalname: string;
-      size: number;
-    },
-  ) {
-    if (!file) {
-      throw new BadRequestException("Debes adjuntar el PDF firmado por el cliente.");
-    }
-
-    if (file.mimetype !== "application/pdf") {
-      throw new BadRequestException("El documento firmado debe estar en formato PDF.");
-    }
-
-    const userAgentHeader = req.headers?.["user-agent"];
-    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
-
-    return this.contractsService.finalizeContractSignature(
-      req.user,
-      contractId,
-      dto,
-      file,
-      req.ip || null,
-      userAgent || null,
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Post(":contractId/signing-link")
   createSigningLink(
     @Req()
@@ -211,20 +168,6 @@ export class ContractsController {
     @Query() query: PublicSigningSessionDto,
   ) {
     return this.contractsService.getPublicSigningSession(query.token, req.ip || null);
-  }
-
-  @Throttle({ default: { ttl: 60000, limit: 20 } })
-  @Get("public/signing-pdf")
-  async getPublicSigningPdf(
-    @Req() req: { ip?: string },
-    @Query() query: PublicSigningSessionDto,
-    @Res() res: Response,
-  ) {
-    const file = await this.contractsService.getPublicSigningPdf(query.token, req.ip || null);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    res.setHeader("Content-Length", String(file.buffer.length));
-    res.status(200).send(file.buffer);
   }
 
   @Throttle({ default: { ttl: 60000, limit: 30 } })

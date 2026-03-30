@@ -13,7 +13,7 @@ import { Resend } from "resend";
 import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
-import { FinalizeContractSignatureDto } from "./dto/finalize-contract-signature.dto";
+
 import { SendContractEmailDto } from "./dto/send-contract-email.dto";
 import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
@@ -864,69 +864,6 @@ export class ContractsService {
     };
   }
 
-  async finalizeContractSignature(
-    _user: { id: string; email: string; fullName: string },
-    contractId: string,
-    dto: FinalizeContractSignatureDto,
-    signedPdfFile: {
-      buffer: Buffer;
-      mimetype: string;
-      originalname: string;
-      size: number;
-    },
-    signedClientIp: string | null,
-    signedUserAgent: string | null,
-  ) {
-    if (!signedPdfFile?.buffer?.length || signedPdfFile.mimetype !== "application/pdf") {
-      throw new BadRequestException("Debes adjuntar un PDF firmado valido.");
-    }
-
-    const contract = await (this.prisma as any).contract.findUnique({
-      where: { id: contractId },
-    });
-
-    if (!contract) {
-      throw new NotFoundException("Contrato no encontrado.");
-    }
-
-    if (contract.status === CONTRACT_STATUS_SIGNED && contract.signedPdfObjectKey) {
-      throw new BadRequestException("Este contrato ya fue marcado como firmado.");
-    }
-
-    const keyRoot = String(contract.pdfObjectKey || "").replace(/\/contract\.pdf$/i, "");
-    const fallbackKeyRoot = `contracts/signed/${this.sanitizeSegment(contract.contractNumber)}`;
-    const baseFolder = keyRoot || fallbackKeyRoot;
-    const signedObjectKey = `${baseFolder}/signed/contract-signed.pdf`;
-
-    await this.uploadToSpaces({
-      objectKey: signedObjectKey,
-      contentType: "application/pdf",
-      body: signedPdfFile.buffer,
-    });
-
-    const updated = await (this.prisma as any).contract.update({
-      where: { id: contract.id },
-      data: {
-        status: CONTRACT_STATUS_SIGNED,
-        signedPdfObjectKey: signedObjectKey,
-        signedPdfFileName: signedPdfFile.originalname || `${contract.contractNumber}-signed.pdf`,
-        signedPdfMimeType: signedPdfFile.mimetype,
-        signedPdfSize: signedPdfFile.size || signedPdfFile.buffer.length,
-        signedByName: String(dto.signedByName || "").trim(),
-        signedAt: new Date(),
-        signedClientIp,
-        signedUserAgent,
-      },
-    });
-
-    return {
-      id: updated.id,
-      contractNumber: updated.contractNumber,
-      status: updated.status,
-      signedAt: updated.signedAt,
-    };
-  }
-
   async finalizeContractSignatureByToken(
     token: string,
     signedByName: string,
@@ -1234,36 +1171,6 @@ export class ContractsService {
       signatureAnchor,
       contractHtmlUrl,
       expiresAt: parsed.expiresAt,
-    };
-  }
-
-  async getPublicSigningPdf(token: string, callerIp?: string | null) {
-    const parsed = this.parseSigningToken(token, callerIp);
-    const contract = await (this.prisma as any).contract.findUnique({
-      where: { id: parsed.contractId },
-      select: {
-        contractNumber: true,
-        pdfObjectKey: true,
-        pdfFileName: true,
-        signedPdfObjectKey: true,
-        signedPdfFileName: true,
-      },
-    });
-
-    if (!contract) {
-      throw new NotFoundException("Contrato no encontrado.");
-    }
-
-    const objectKey = contract.signedPdfObjectKey || contract.pdfObjectKey;
-    const fileName =
-      contract.signedPdfFileName ||
-      contract.pdfFileName ||
-      `${String(contract.contractNumber || "contrato").trim()}-signing.pdf`;
-
-    const buffer = await this.downloadObjectBuffer(objectKey);
-    return {
-      fileName,
-      buffer,
     };
   }
 
