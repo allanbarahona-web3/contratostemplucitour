@@ -23,6 +23,7 @@ export class PdfRenderService {
         newPage: () => Promise<{
           setViewport: (opts: Record<string, unknown>) => Promise<void>;
           setContent: (html: string, opts: Record<string, unknown>) => Promise<void>;
+          emulateMediaType: (type: string) => Promise<void>;
           evaluate: <T>(fn: (...args: unknown[]) => T, ...args: unknown[]) => Promise<T>;
           pdf: (opts: Record<string, unknown>) => Promise<Uint8Array>;
         }>;
@@ -55,11 +56,12 @@ export class PdfRenderService {
       const page = await browser.newPage();
       await page.setViewport({ width: 794, height: 1123 });
       await page.setContent(standaloneHtml, { waitUntil: "networkidle0" });
+      await page.emulateMediaType("print");
 
       const signatureAnchors = await page.evaluate(
         (a4HeightPx: unknown, a4HeightPt: unknown, pxToPt: unknown): Record<string, SignatureAnchor> => {
           const elems = document.querySelectorAll<HTMLElement>(
-            ".signature-sign-area[data-signer-key]",
+            "[data-signer-key]",
           );
           const anchors: Record<string, SignatureAnchor> = {};
           elems.forEach((el) => {
@@ -87,7 +89,11 @@ export class PdfRenderService {
         CSS_PX_TO_PT,
       );
 
-      const pdfBytes = await page.pdf({ format: "A4", printBackground: true });
+      const pdfBytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+      });
 
       return {
         pdfBuffer: Buffer.from(pdfBytes),
