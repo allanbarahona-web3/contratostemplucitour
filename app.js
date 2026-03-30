@@ -244,7 +244,7 @@ const markFieldValidity = (field) => {
     return;
   }
 
-  if (typeof field.checkValidity === "function" && !field.checkValidity()) {
+  if ("validity" in field && !field.validity.valid) {
     field.setAttribute("aria-invalid", "true");
   } else {
     field.removeAttribute("aria-invalid");
