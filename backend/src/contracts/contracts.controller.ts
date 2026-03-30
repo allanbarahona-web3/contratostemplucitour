@@ -75,7 +75,6 @@ export class ContractsController {
   @Post("archive")
   @UseInterceptors(
     FileFieldsInterceptor([
-      { name: "pdfFile", maxCount: 1 },
       { name: "documents", maxCount: 20 },
     ]),
   )
@@ -87,12 +86,6 @@ export class ContractsController {
     @Body() dto: ArchiveContractDto,
     @UploadedFiles()
     files: {
-      pdfFile?: Array<{
-        buffer: Buffer;
-        mimetype: string;
-        originalname: string;
-        size: number;
-      }>;
       documents?: Array<{
         buffer: Buffer;
         mimetype: string;
@@ -101,15 +94,9 @@ export class ContractsController {
       }>;
     },
   ) {
-    const pdfFile = files?.pdfFile?.[0];
-    if (!pdfFile) {
-      throw new BadRequestException("Debes adjuntar el PDF del contrato.");
-    }
-
     return this.contractsService.archiveContract(
       req.user,
       dto,
-      pdfFile,
       files?.documents || [],
     );
   }
@@ -233,8 +220,16 @@ export class ContractsController {
     res.status(200).send(file.buffer);
   }
 
+  @Post("public/mark-viewed")
+  markContractViewed(@Body() body: { token?: string }) {
+    const token = String(body?.token || "").trim();
+    if (!token) {
+      throw new BadRequestException("Se requiere el token.");
+    }
+    return this.contractsService.markContractViewed(token);
+  }
+
   @Post("public/finalize-signature")
-  @UseInterceptors(FileInterceptor("signedPdfFile"))
   finalizePublicContractSignature(
     @Req()
     req: {
@@ -242,29 +237,14 @@ export class ContractsController {
       headers?: Record<string, string | string[] | undefined>;
     },
     @Body() dto: FinalizeContractSignaturePublicDto,
-    @UploadedFile()
-    file?: {
-      buffer: Buffer;
-      mimetype: string;
-      originalname: string;
-      size: number;
-    },
   ) {
-    if (!file) {
-      throw new BadRequestException("Debes adjuntar el PDF firmado por el cliente.");
-    }
-
-    if (file.mimetype !== "application/pdf") {
-      throw new BadRequestException("El documento firmado debe estar en formato PDF.");
-    }
-
     const userAgentHeader = req.headers?.["user-agent"];
     const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
 
     return this.contractsService.finalizeContractSignatureByToken(
       dto.token,
       dto.signedByName,
-      file,
+      dto.signatureImageBase64,
       req.ip || null,
       userAgent || null,
     );

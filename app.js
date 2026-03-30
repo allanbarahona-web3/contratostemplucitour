@@ -1570,351 +1570,43 @@ const renderPreview = () => {
   return data;
 };
 
-const buildPdfCaptureNode = () => {
-  const captureRoot = document.createElement("section");
-  const sourceWidth = Math.ceil(previewEl.getBoundingClientRect().width || previewEl.offsetWidth || 980);
-
-  captureRoot.style.position = "fixed";
-  captureRoot.style.left = "-10000px";
-  captureRoot.style.top = "0";
-  captureRoot.style.width = `${sourceWidth}px`;
-  captureRoot.style.padding = "0";
-  captureRoot.style.margin = "0";
-  captureRoot.style.background = "#ffffff";
-  captureRoot.style.zIndex = "-1";
-
-  const addPaperClone = (paperEl) => {
-    if (!paperEl || paperEl.classList.contains("hidden")) return;
-    const clone = paperEl.cloneNode(true);
-    clone.style.width = "100%";
-    clone.style.margin = "0 0 16px 0";
-    clone.style.minHeight = "0";
-    clone.style.border = "0";
-    clone.style.borderRadius = "0";
-    clone.style.boxShadow = "none";
-    captureRoot.appendChild(clone);
-  };
-
-  addPaperClone(previewEl);
-  addPaperClone(minorAnnexPreview);
-  document.body.appendChild(captureRoot);
-
-  return captureRoot;
-};
-
-const collectClauseBlockRanges = (captureRoot) => {
-  const ranges = [];
-  const papers = captureRoot.querySelectorAll(".contract-paper");
-
-  papers.forEach((paper) => {
-    const headings = Array.from(paper.querySelectorAll("h3"));
-    const clausesTitle = headings.find((h3) => /cl[aá]usulas/i.test(h3.textContent || ""));
-    if (!clausesTitle) return;
-
-    const clausesTitleIndex = headings.indexOf(clausesTitle);
-    const endTitle = headings.slice(clausesTitleIndex + 1).find((h3) => /firmas/i.test(h3.textContent || ""));
-
-    const clauseStarts = [];
-    let current = clausesTitle.nextElementSibling;
-    while (current && current !== endTitle) {
-      if (
-        current.tagName === "P" &&
-        current.firstElementChild &&
-        current.firstElementChild.tagName === "STRONG" &&
-        /:\s*/.test(current.firstElementChild.textContent || "")
-      ) {
-        clauseStarts.push(current);
-      }
-      current = current.nextElementSibling;
-    }
-
-    clauseStarts.forEach((startEl, index) => {
-      const nextStart = clauseStarts[index + 1] || endTitle || null;
-      const start = Math.max(0, startEl.offsetTop - 10);
-      const end = nextStart
-        ? Math.max(start + 1, nextStart.offsetTop - 10)
-        : Math.max(start + 1, paper.offsetTop + paper.offsetHeight - 10);
-      ranges.push({ start, end });
-    });
-  });
-
-  return ranges;
-};
-
-const generatePdfBlob = async (onProgress = () => {}) => {
-  debugLog("Inicio de generatePdfBlob");
-  onProgress("Validando datos del contrato...");
-  ensureValidForm();
-  onProgress("Construyendo vista previa para PDF...");
-  const data = renderPreview();
-
-  await new Promise((resolve) => setTimeout(resolve, 40));
-  onProgress("Renderizando paginas...");
-  debugLog("Renderizando html2canvas del contenido de contrato");
-
-  const captureNode = buildPdfCaptureNode();
-  const captureHeightCssPx = Math.max(captureNode.scrollHeight, 1);
-  const captureWidthCssPx = Math.max(captureNode.scrollWidth, 1);
-  const rootRect = captureNode.getBoundingClientRect();
-  const signatureAreaElements = Array.from(captureNode.querySelectorAll(".signature-box--person .signature-sign-area"));
-  const signatureAreasCssPx = signatureAreaElements.reduce((acc, areaEl) => {
-    const signerKey = String(areaEl.getAttribute("data-signer-key") || "").trim();
-    if (!signerKey) {
-      return acc;
-    }
-
-    const signRect = areaEl.getBoundingClientRect();
-    acc[signerKey] = {
-      left: Math.max(0, signRect.left - rootRect.left),
-      top: Math.max(0, signRect.top - rootRect.top),
-      width: Math.max(1, signRect.width),
-      height: Math.max(1, signRect.height),
-    };
-    return acc;
-  }, {});
-  const clauseBlockRangesCssPx = collectClauseBlockRanges(captureNode);
-  const protectedRangesCssPx = Array.from(captureNode.querySelectorAll(".signature-box--erick")).map((el) => {
-    const start = Math.max(0, el.offsetTop - 18);
-    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 18);
-    return { start, end };
-  });
-
-  const canvas = await window
-    .html2canvas(captureNode, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-    })
-    .finally(() => {
-      captureNode.remove();
-    });
-  debugLog("Canvas renderizado", { width: canvas.width, height: canvas.height });
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p", "pt", "a4");
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 26;
-  const headerHeight = 18;
-  const firstPageHeaderHeight = 64;
-  const footerHeight = 24;
-  const contentTopInset = 6;
-  const contentBottomInset = 12;
-  const printableWidth = pageWidth - margin * 2;
-  const contentHeight = Math.max(
-    1,
-    pageHeight - margin * 2 - headerHeight - footerHeight - contentTopInset - contentBottomInset,
-  );
-
-  onProgress("Aplicando encabezado y paginacion...");
-  const logoImage = await loadImage(lucitoursLogoPath).catch(() => null);
-  if (!logoImage) {
-    debugLog("No se pudo cargar logo para header; se continua sin logo");
-  }
-
-  const scaleToCanvas = canvas.height / captureHeightCssPx;
-  const scaleXToCanvas = canvas.width / captureWidthCssPx;
-  const signatureAreasPx = Object.entries(signatureAreasCssPx).reduce((acc, [key, area]) => {
-    acc[key] = {
-      left: Math.floor(area.left * scaleXToCanvas),
-      top: Math.floor(area.top * scaleToCanvas),
-      width: Math.max(1, Math.ceil(area.width * scaleXToCanvas)),
-      height: Math.max(1, Math.ceil(area.height * scaleToCanvas)),
-    };
-    return acc;
-  }, {});
-  const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, p, li, table, .signature-box, .annex-sign-box")).map((el) => {
-    const start = Math.max(0, el.offsetTop - 8);
-    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 8);
-    return { start, end };
-  });
-
-  const allProtectedRangesCssPx = [...protectedRangesCssPx, ...clauseBlockRangesCssPx, ...textBlockRangesCssPx].sort(
-    (a, b) => a.start - b.start,
-  );
-
-  const mergedProtectedRangesCssPx = allProtectedRangesCssPx.reduce((acc, range) => {
-    const last = acc[acc.length - 1];
-    if (!last || range.start > last.end) {
-      acc.push({ ...range });
-      return acc;
-    }
-    last.end = Math.max(last.end, range.end);
-    return acc;
-  }, []);
-
-  const protectedRangesPx = mergedProtectedRangesCssPx.map((range) => ({
-    start: Math.floor(range.start * scaleToCanvas),
-    end: Math.ceil(range.end * scaleToCanvas),
-  }));
-
-  const pxPerPt = canvas.width / printableWidth;
-  const pageSliceHeightPx = Math.max(1, Math.floor(contentHeight * pxPerPt));
-  const minSliceHeightPx = Math.max(1, Math.floor(pageSliceHeightPx * 0.55));
-  const maxSliceHeightPx = Math.max(1, Math.floor(pageSliceHeightPx * 1.45));
-  let renderedPx = 0;
-  let renderedPages = 0;
-  const renderedSlices = [];
-
-  while (renderedPx < canvas.height) {
-    let sliceEndPx = Math.min(renderedPx + pageSliceHeightPx, canvas.height);
-
-    for (const range of protectedRangesPx) {
-        const rangeHeight = range.end - range.start;
-        if (rangeHeight > maxSliceHeightPx) {
-          continue;
-        }
-
-      const cutsProtectedBlock = range.start < sliceEndPx && range.end > sliceEndPx;
-      if (!cutsProtectedBlock) continue;
-
-      const moveUpHeight = range.start - renderedPx;
-      if (moveUpHeight >= minSliceHeightPx) {
-        sliceEndPx = range.start;
-        break;
-      }
-
-      const moveDownEnd = Math.min(canvas.height, range.end);
-      const moveDownHeight = moveDownEnd - renderedPx;
-      if (moveDownHeight <= maxSliceHeightPx || canvas.height - moveDownEnd < minSliceHeightPx) {
-        sliceEndPx = moveDownEnd;
-      }
-      break;
-    }
-
-    const sliceHeightPx = Math.max(1, sliceEndPx - renderedPx);
-    const pageCanvas = document.createElement("canvas");
-    pageCanvas.width = canvas.width;
-    pageCanvas.height = sliceHeightPx;
-
-    const ctx = pageCanvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("No se pudo preparar la pagina PDF.");
-    }
-
-    ctx.drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-
-    if (renderedPages > 0) {
-      pdf.addPage();
-    }
-
-    const sliceHeightPt = sliceHeightPx / pxPerPt;
-    const isFirstPage = renderedPages === 0;
-    const pageHeaderHeight = isFirstPage ? firstPageHeaderHeight : headerHeight;
-    renderedSlices.push({
-      pageIndex: renderedPages,
-      startPx: renderedPx,
-      endPx: sliceEndPx,
-      sliceHeightPx,
-      pageHeaderHeight,
-    });
-    pdf.addImage(
-      pageCanvas.toDataURL("image/png"),
-      "PNG",
-      margin,
-      margin + pageHeaderHeight + contentTopInset,
-      printableWidth,
-      sliceHeightPt,
-      undefined,
-      "FAST",
-    );
-
-    renderedPx += sliceHeightPx;
-    renderedPages += 1;
-  }
-
-  const totalPages = pdf.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page += 1) {
-    pdf.setPage(page);
-
-    if (page === 1) {
-      const logoX = margin;
-      const logoY = margin - 1;
-      const logoSize = 36;
-      if (logoImage) {
-        pdf.addImage(logoImage, "PNG", logoX, logoY, logoSize, logoSize);
-      }
-
-      const headerRightX = pageWidth - margin;
-      pdf.setTextColor(49, 73, 106);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.text("VIAJES LUCITOURS TURISMO INTERNACIONAL", headerRightX, margin + 13, { align: "right" });
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.text("3-101-874546", headerRightX, margin + 29, { align: "right" });
-      pdf.text("+506 6015-9906", headerRightX, margin + 44, { align: "right" });
-      pdf.text("contratos@lucitour.com", headerRightX, margin + 59, { align: "right" });
-    }
-
-    const lineY = margin + (page === 1 ? firstPageHeaderHeight : headerHeight) - 5;
-    pdf.setDrawColor(210, 214, 220);
-    pdf.line(margin, lineY, pageWidth - margin, lineY);
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    pdf.setTextColor(90, 98, 112);
-    pdf.text(`Pagina ${page} de ${totalPages}`, pageWidth / 2, pageHeight - margin + 8, {
-      align: "center",
-    });
-  }
-
-  const safeName = String(data.clientFullName || "CLIENTE")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^A-Z0-9-]/g, "");
-  const safeContract = String(data.contractNumber || "CONTRATO")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^A-Z0-9-]/g, "");
-
-  onProgress("PDF listo para descarga.");
-  debugLog("PDF generado", { contractNumber: data.contractNumber });
-
-  const signatureAnchors = Object.entries(signatureAreasPx).reduce((acc, [signerKey, area]) => {
-    const areaTopPx = area.top;
-    const areaBottomPx = area.top + area.height;
-    const areaMidPx = areaTopPx + Math.floor(area.height / 2);
-    const targetSlice =
-      renderedSlices.find((slice) => areaMidPx >= slice.startPx && areaMidPx <= slice.endPx) ||
-      renderedSlices.find((slice) => areaTopPx >= slice.startPx && areaBottomPx <= slice.endPx) ||
-      null;
-
-    if (!targetSlice) {
-      return acc;
-    }
-
-    const imageTopPt = margin + targetSlice.pageHeaderHeight + contentTopInset;
-    const localBottomPx = areaBottomPx - targetSlice.startPx;
-    const localTopPx = areaTopPx - targetSlice.startPx;
-    const areaBoxBottomPt = pageHeight - (imageTopPt + localBottomPx / pxPerPt);
-    const areaBoxTopPt = pageHeight - (imageTopPt + localTopPx / pxPerPt);
-    const areaBoxHeightPt = Math.max(1, areaBoxTopPt - areaBoxBottomPt);
-    const areaBoxLeftPt = margin + area.left / pxPerPt;
-    const areaBoxWidthPt = Math.max(1, area.width / pxPerPt);
-
-    acc[signerKey] = {
-      pageIndex: targetSlice.pageIndex,
-      box: {
-        x: Number(areaBoxLeftPt.toFixed(2)),
-        y: Number(areaBoxBottomPt.toFixed(2)),
-        width: Number(areaBoxWidthPt.toFixed(2)),
-        height: Number(areaBoxHeightPt.toFixed(2)),
-      },
-    };
-
-    return acc;
-  }, {});
-
-  return {
-    blob: pdf.output("blob"),
-    fileName: `CONTRATO-${safeContract}-${safeName}.PDF`,
-    contractNumber: data.contractNumber,
-    signatureAnchor: signatureAnchors.client || null,
-    signatureAnchors,
-  };
+const buildPdfHtmlDocument = (contractBodyHtml) => {
+  const baseUrl = window.location.origin;
+  // Convert relative ./assets/ references to absolute URLs so Puppeteer can load them
+  const body = contractBodyHtml.replace(/src="\.\/assets\//g, `src="${baseUrl}/assets/`);
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<style>
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:13.5px;color:#0f172a;background:#fff;line-height:1.45;}
+.contract-paper{width:100%;margin:0;padding:0;}
+.contract-paper h3{margin:14px 0 8px;font-size:1rem;letter-spacing:-.015em;}
+.contract-paper p,.contract-paper li{margin:5px 0;font-size:.895rem;line-height:1.48;overflow-wrap:anywhere;word-break:break-word;}
+.contract-paper p>strong:first-child{display:block;margin-bottom:2px;}
+.contract-var{font-weight:700;color:#0f172a;}
+.contract-paper ul{margin:8px 0 8px 20px;padding:0;}
+.annex-block{border:1px dashed rgba(15,23,42,.24);border-radius:8px;padding:10px;margin:10px 0;}
+.annex-signatures{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+.annex-sign-box p{margin:4px 0;}
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-top:28px;}
+.signature-box{padding-top:4px;}
+.signature-sign-area{height:96px;border-bottom:1px solid rgba(15,23,42,.32);margin-bottom:8px;position:relative;}
+.signature-box--person .signature-sign-area{height:96px;}
+.signature-box--client .signature-sign-area{height:106px;border:1.5px solid rgba(15,23,42,.48);border-radius:8px;margin-bottom:8px;background:#fff;}
+.signature-sign-label{position:absolute;top:-10px;left:10px;padding:0 6px;font-size:10px;line-height:1.2;letter-spacing:.03em;text-transform:uppercase;color:#31496a;background:#fff;}
+.signature-sign-area--erick{display:flex;align-items:flex-end;justify-content:center;padding:0 8px;}
+.signature-box img{width:auto;max-width:220px;max-height:90px;height:auto;object-fit:contain;transform:translateY(5px);}
+@media(max-width:520px){.signatures{grid-template-columns:1fr;}.annex-signatures{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<section class="contract-paper">
+${body}
+</section>
+</body>
+</html>`;
 };
 
 const downloadBlob = (blob, fileName) => {
@@ -1984,29 +1676,18 @@ if (sendAndDownloadButton) {
           throw new Error("Tu sesion no esta activa. Inicia sesion nuevamente.");
         }
 
-        statusText.textContent = "Generando PDF para correo y descarga...";
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
-        const { blob, fileName, contractNumber, signatureAnchor, signatureAnchors } = await generatePdfBlob((message) => {
-          statusText.textContent = message;
-        });
-
-        const data = getFormData();
-        const payloadWithAnchor = {
-          ...data,
-          signatureAnchor: signatureAnchor || null,
-          signatureAnchors: signatureAnchors || null,
-        };
-
-        statusText.textContent = "Descargando PDF...";
-        downloadBlob(blob, fileName);
+        statusText.textContent = "Construyendo contrato...";
+        const data = renderPreview();
+        const contractHtml = buildPdfHtmlDocument(buildContractHtml(data));
+        const payloadData = { ...data };
 
         statusText.textContent = "Guardando contrato en base de datos...";
         let archived = false;
         let archivedContractId = "";
+        let pdfUrl = "";
         try {
           const archivePayload = new FormData();
-          archivePayload.append("contractNumber", String(contractNumber));
+          archivePayload.append("contractNumber", String(data.contractNumber));
           archivePayload.append("clientFullName", String(data.clientFullName || ""));
           archivePayload.append("clientIdNumber", String(data.clientIdNumber || ""));
           archivePayload.append("clientEmail", String(data.clientEmail || ""));
@@ -2014,8 +1695,8 @@ if (sendAndDownloadButton) {
           archivePayload.append("issuedAt", String(data.issuedAt || ""));
           archivePayload.append("startDate", String(data.startDate || ""));
           archivePayload.append("endDate", String(data.endDate || ""));
-          archivePayload.append("payloadJson", JSON.stringify(payloadWithAnchor));
-          archivePayload.append("pdfFile", blob, fileName);
+          archivePayload.append("payloadJson", JSON.stringify(payloadData));
+          archivePayload.append("contractHtml", contractHtml);
 
           const extraDocs = await collectAllContractDocuments();
           extraDocs.forEach((docFile) => {
@@ -2024,9 +1705,15 @@ if (sendAndDownloadButton) {
 
           const archiveResult = await apiFetchMultipart("/contracts/archive", archivePayload, token);
           archivedContractId = String(archiveResult?.id || "").trim();
+          pdfUrl = String(archiveResult?.pdfUrl || "").trim();
           archived = true;
         } catch (archiveError) {
-          debugError("Error guardando contrato archivado", archiveError);
+          debugError("Error guardando contrato", archiveError);
+        }
+
+        if (pdfUrl) {
+          statusText.textContent = "Descargando PDF...";
+          window.open(pdfUrl, "_blank", "noopener,noreferrer");
         }
 
         let signingUrl = "";
@@ -2036,9 +1723,7 @@ if (sendAndDownloadButton) {
           try {
             const linkResult = await apiFetch(`/contracts/${archivedContractId}/signing-link`, {
               method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
+              headers: { Authorization: `Bearer ${token}` },
               body: JSON.stringify({ ttlMinutes: 1440 }),
             });
             signingUrl = String(linkResult?.signingUrl || "").trim();
@@ -2053,20 +1738,11 @@ if (sendAndDownloadButton) {
         if (signingUrl) {
           const normalizedSigningLinks = signingLinks.length
             ? signingLinks
-            : [
-                {
-                  signerKey: "client",
-                  signerName: data.clientFullName,
-                  signerEmail: data.clientEmail,
-                  signingUrl,
-                },
-              ];
+            : [{ signerKey: "client", signerName: data.clientFullName, signerEmail: data.clientEmail, signingUrl }];
 
-          const emailableTargets = normalizedSigningLinks.filter((item) => {
-            const email = String(item?.signerEmail || "").trim();
-            const url = String(item?.signingUrl || "").trim();
-            return Boolean(email && url);
-          });
+          const emailableTargets = normalizedSigningLinks.filter(
+            (item) => String(item?.signerEmail || "").trim() && String(item?.signingUrl || "").trim(),
+          );
 
           if (emailableTargets.length > 0) {
             statusText.textContent = "Enviando correos de firma...";
@@ -2076,13 +1752,11 @@ if (sendAndDownloadButton) {
             try {
               await apiFetch("/contracts/send-signing-email", {
                 method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
+                headers: { Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
                   toEmail: String(target.signerEmail || "").trim(),
                   clientName: String(target.signerName || "").trim() || "Firmante",
-                  contractNumber: String(contractNumber),
+                  contractNumber: String(data.contractNumber),
                   signingUrl: String(target.signingUrl || "").trim(),
                 }),
               });
@@ -2103,20 +1777,21 @@ if (sendAndDownloadButton) {
 
         statusText.textContent = archived
           ? emailSentCount > 0
-            ? "PDF descargado, contrato guardado y enlaces de firma enviados."
+            ? "Contrato guardado y enlaces de firma enviados."
             : signingUrl
-              ? "PDF descargado y contrato guardado. No se pudieron enviar todos los correos, pero puedes compartir los enlaces de firma."
-              : "PDF descargado y contrato guardado. No se pudieron generar enlaces de firma."
-          : "PDF descargado. No se pudo guardar el contrato en base de datos.";
+              ? "Contrato guardado. No se pudieron enviar todos los correos, pero puedes compartir los enlaces de firma."
+              : "Contrato guardado. No se pudieron generar enlaces de firma."
+          : "No se pudo guardar el contrato en base de datos.";
         await loadContractHistory(historySearchInput?.value || "");
-        debugLog("Flujo combinado completado");
+        debugLog("Flujo completado");
       } catch (error) {
-        debugError("Error en flujo combinado", error);
-        statusText.textContent = error.message || "No se pudo completar el envio y descarga.";
+        debugError("Error en flujo de envio", error);
+        statusText.textContent = error.message || "No se pudo completar el envio.";
       }
     });
   });
 }
+
 
 if (copySigningLinkButton) {
   copySigningLinkButton.addEventListener("click", async () => {

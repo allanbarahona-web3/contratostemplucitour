@@ -1476,3 +1476,276 @@ button.ghost:hover {
     max-height: 52dvh;
   }
 }
+
+/* ─── Mobile signing page (sign-contract.html) ─────────────────── */
+.sign-page-body {
+  min-height: 100dvh;
+  background: linear-gradient(160deg, var(--bg-0) 0%, var(--bg-2) 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+}
+
+.sign-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+}
+
+.sign-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  padding: 40px 20px;
+}
+
+.sign-error {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fca5a5;
+  font-size: 1rem;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.sign-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.sign-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sign-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sign-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sign-contract-number {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sign-client-name {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sign-state-badge {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.sign-step-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+}
+
+.sign-instruction {
+  padding: 14px 20px 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.sign-contract-frame-wrap {
+  flex: 1;
+  margin: 0 12px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #fff;
+  min-height: 0;
+}
+
+.sign-contract-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 55dvh;
+  border: none;
+  display: block;
+  border-radius: var(--radius-md);
+}
+
+.sign-actions {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sign-actions--row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sign-btn {
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+  box-shadow: none;
+  background: none;
+  color: inherit;
+}
+
+.sign-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sign-btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sign-btn--primary:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.sign-btn--primary:not(:disabled):active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.sign-btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sign-btn--ghost:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.sign-btn--ghost:not(:disabled):active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.sign-canvas-wrap {
+  margin: 4px 16px 0;
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.sign-canvas-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.sign-canvas {
+  display: block;
+  width: 100%;
+  border: 1.5px dashed rgba(13, 34, 70, 0.22);
+  border-radius: var(--radius-sm);
+  cursor: crosshair;
+  touch-action: none;
+  background: #fafcff;
+}
+
+.sign-status {
+  padding: 6px 20px 12px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.72);
+  min-height: 30px;
+  margin: 0;
+}
+
+.sign-status--error {
+  color: #fca5a5;
+}
+
+.sign-status--info {
+  color: #93c5fd;
+}
+
+.sign-success {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  color: #fff;
+}
+
+.sign-success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: #fff;
+  margin: 0 auto 20px;
+}
+
+.sign-success h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #fff;
+  border: none;
+  padding: 0;
+  background: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.sign-success p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 340px;
+  margin: 0 auto;
+}

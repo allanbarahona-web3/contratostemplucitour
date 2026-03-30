@@ -28,6 +28,10 @@ export class ArchiveContractDto {
   @IsNotEmpty()
   payloadJson!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  contractHtml!: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(40)

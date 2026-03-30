@@ -3,57 +3,92 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Firma de contrato</title>
-    <link rel="stylesheet" href="./styles.css?v=20260328c" />
-    <script src="./config.js?v=20260328c"></script>
-    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/pdfjs-dist@4.5.136/build/pdf.min.mjs" type="module"></script>
-    <script src="./sign-contract.js?v=20260328c" defer></script>
+    <meta name="theme-color" content="#1a3a5c" />
+    <title>Firmar contrato – Lucitours</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./config.js" defer></script>
   </head>
-  <body class="public-sign-page">
-    <div class="bg-shape bg-shape-a"></div>
-    <div class="bg-shape bg-shape-b"></div>
+  <body class="sign-page-body">
+    <div class="sign-page">
 
-    <main class="history-shell">
-      <section class="panel history-main-panel">
-        <header class="panel-header">
-          <p class="kicker">Firma electronica</p>
-          <h1>Firma de Contrato</h1>
-          <p id="publicSignStatus">Cargando contrato...</p>
+      <!-- Loading state -->
+      <div id="loadingState" class="sign-loading">
+        <p>Cargando contrato&hellip;</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="errorState" class="sign-error hidden">
+        <p id="errorMessage">Ocurrio un error.</p>
+      </div>
+
+      <!-- Step 1: Read contract -->
+      <div id="readStep" class="sign-step hidden">
+        <header class="sign-header">
+          <img src="./assets/lucitours-logo.png" alt="Lucitours" class="sign-logo" onerror="this.style.display='none'" />
+          <div class="sign-meta">
+            <p class="sign-contract-number" id="publicContractNumber">–</p>
+            <p class="sign-client-name" id="publicClientName">–</p>
+            <p class="sign-state-badge" id="publicContractState">–</p>
+          </div>
         </header>
 
-        <section class="history-standalone-toolbar">
-          <p><strong>Contrato:</strong> <span id="publicContractNumber">-</span></p>
-          <p><strong>Firmante:</strong> <span id="publicClientName">-</span></p>
-          <p><strong>Estado:</strong> <span id="publicContractState">-</span></p>
-        </section>
+        <p class="sign-instruction">Lee el contrato completo antes de firmar.</p>
 
-        <section class="history-standalone-list">
-          <div id="publicReadStep" class="history-table-wrap" style="padding: 10px;">
-            <div class="signature-actions" style="justify-content:flex-start;margin-bottom:8px;">
-              <button id="publicViewContractButton" type="button" class="ghost">Ver contrato</button>
-              <button id="publicGoToSignButton" type="button" disabled>Firmar</button>
-            </div>
-            <div id="publicContractViewer" class="public-pdf-viewer hidden"></div>
-            <iframe id="publicContractFrame" title="Contrato" style="width:100%;height:58vh;border:0;border-radius:10px;background:#f4f8ff;display:none;"></iframe>
-          </div>
+        <div class="sign-contract-frame-wrap">
+          <iframe
+            id="publicContractFrame"
+            class="sign-contract-frame"
+            title="Contrato"
+            sandbox="allow-same-origin"
+          ></iframe>
+        </div>
 
-          <div id="publicSignStep" class="signature-panel hidden" style="margin-top:12px;">
-            <div class="viewer-body signature-body">
-              <p class="signature-help"><strong>Paso 2:</strong> Firma en el recuadro y luego presiona Enviar contrato firmado.</p>
-              <p class="signature-help"><strong>Firmante:</strong> <span id="publicSignedByNameLabel">-</span></p>
-              <div class="signature-canvas-wrap">
-                <canvas id="publicSignatureCanvas" width="900" height="260"></canvas>
-              </div>
-              <div class="signature-actions">
-                <button id="publicBackToReadButton" type="button" class="ghost">Volver a ver contrato</button>
-                <button id="publicSignatureClear" type="button" class="ghost">Borrar firma</button>
-                <button id="publicSignatureSubmit" type="button">Enviar contrato firmado</button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
+        <div class="sign-actions">
+          <button type="button" id="goToSignButton" class="sign-btn sign-btn--primary" disabled>
+            Firmar contrato
+          </button>
+        </div>
+
+        <p id="publicSignStatus" class="sign-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <!-- Step 2: Draw signature -->
+      <div id="signStep" class="sign-step hidden">
+        <header class="sign-header">
+          <img src="./assets/lucitours-logo.png" alt="Lucitours" class="sign-logo" onerror="this.style.display='none'" />
+          <p class="sign-step-label">Paso 2 &mdash; Firma</p>
+        </header>
+
+        <p class="sign-instruction">
+          Firma con tu dedo o el ratón en el recuadro de abajo.
+        </p>
+
+        <div class="sign-canvas-wrap">
+          <p class="sign-canvas-label">Tu firma</p>
+          <canvas id="publicSignatureCanvas" class="sign-canvas" aria-label="Lienzo de firma"></canvas>
+        </div>
+
+        <div class="sign-actions sign-actions--row">
+          <button type="button" id="backToReadButton" class="sign-btn sign-btn--ghost">Atrás</button>
+          <button type="button" id="publicSignatureClear" class="sign-btn sign-btn--ghost">Borrar</button>
+          <button type="button" id="publicSignatureSubmit" class="sign-btn sign-btn--primary">
+            Enviar firma
+          </button>
+        </div>
+
+        <p id="signStepStatus" class="sign-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <!-- Step 3: Success -->
+      <div id="successStep" class="sign-step hidden">
+        <div class="sign-success">
+          <div class="sign-success-icon" aria-hidden="true">&#10003;</div>
+          <h2>¡Firma registrada!</h2>
+          <p id="successMessage">Tu firma fue enviada correctamente.</p>
+        </div>
+      </div>
+
+    </div>
+    <script src="./sign-contract.js"></script>
   </body>
 </html>

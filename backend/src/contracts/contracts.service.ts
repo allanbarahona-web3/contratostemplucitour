@@ -9,6 +9,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
+import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
 import { FinalizeContractSignatureDto } from "./dto/finalize-contract-signature.dto";
@@ -17,6 +18,7 @@ import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
 
 const CONTRACT_STATUS_PENDING_SIGNATURE = "PENDING_SIGNATURE";
+const CONTRACT_STATUS_VIEWED = "VIEWED";
 const CONTRACT_STATUS_SIGNED = "SIGNED";
 const SIGNING_TOKEN_VERSION = 1;
 
@@ -45,6 +47,7 @@ export class ContractsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly pdfRenderService: PdfRenderService,
   ) {}
 
   private pad(value: number, size = 2) {
@@ -673,12 +676,6 @@ export class ContractsService {
   async archiveContract(
     user: { id: string; email: string; fullName: string },
     dto: ArchiveContractDto,
-    pdfFile: {
-      buffer: Buffer;
-      mimetype: string;
-      originalname: string;
-      size: number;
-    },
     documents: Array<{
       buffer: Buffer;
       mimetype: string;
@@ -686,15 +683,15 @@ export class ContractsService {
       size: number;
     }> = [],
   ) {
+    if (!dto.contractHtml?.trim()) {
+      throw new BadRequestException("Se requiere contractHtml para generar el PDF del contrato.");
+    }
+
     let payload: unknown;
     try {
       payload = JSON.parse(dto.payloadJson);
     } catch {
       throw new InternalServerErrorException("payloadJson no tiene un JSON valido.");
-    }
-
-    if (!pdfFile?.buffer?.length || pdfFile.mimetype !== "application/pdf") {
-      throw new InternalServerErrorException("Debes adjuntar un PDF valido para archivar el contrato.");
     }
 
     if (documents.length > this.maxDocumentCount) {
@@ -728,11 +725,11 @@ export class ContractsService {
       payload && typeof payload === "object" && !Array.isArray(payload)
         ? (payload as Record<string, unknown>)
         : {};
-    const clientPhone = String(payloadRecord.clientPhone || "").trim() || null;
+    const clientPhone = String((payloadRecord as Record<string, unknown>).clientPhone || "").trim() || null;
     const emergencyContactName =
-      String(payloadRecord.emergencyContactName || "").trim() || null;
+      String((payloadRecord as Record<string, unknown>).emergencyContactName || "").trim() || null;
     const emergencyContactPhone =
-      String(payloadRecord.emergencyContactPhone || "").trim() || null;
+      String((payloadRecord as Record<string, unknown>).emergencyContactPhone || "").trim() || null;
 
     const client = await (this.prisma as any).client.upsert({
       where: { idNumber: dto.clientIdNumber.trim() },
@@ -758,13 +755,29 @@ export class ContractsService {
     const m = this.pad(now.getMonth() + 1);
     const d = this.pad(now.getDate());
     const baseFolder = `contracts/${y}/${m}/${d}/${this.sanitizeSegment(contractNumber)}`;
+    const { pdfBuffer, signatureAnchors } =
+      await this.pdfRenderService.renderContractToBuffer(dto.contractHtml);
+
     const pdfKey = `${baseFolder}/contract.pdf`;
+    const htmlKey = `${baseFolder}/contract.html`;
 
     await this.uploadToSpaces({
       objectKey: pdfKey,
       contentType: "application/pdf",
-      body: pdfFile.buffer,
+      body: pdfBuffer,
     });
+
+    await this.uploadToSpaces({
+      objectKey: htmlKey,
+      contentType: "text/html; charset=utf-8",
+      body: Buffer.from(dto.contractHtml, "utf-8"),
+    });
+
+    const enrichedPayload = {
+      ...payloadRecord,
+      signatureAnchors,
+      signatureAnchor: signatureAnchors?.["client"] ?? null,
+    };
 
     const uploadedDocuments: Array<{
       kind?: string;
@@ -808,11 +821,12 @@ export class ContractsService {
         issuedAt: this.toDateOrNull(dto.issuedAt),
         startDate: this.toDateOrNull(dto.startDate),
         endDate: this.toDateOrNull(dto.endDate),
-        payload: payload as any,
+        payload: enrichedPayload as any,
         pdfObjectKey: pdfKey,
-        pdfFileName: pdfFile.originalname || `${contractNumber}.pdf`,
-        pdfMimeType: pdfFile.mimetype,
-        pdfSize: pdfFile.size || pdfFile.buffer.length,
+        pdfFileName: `${contractNumber}.pdf`,
+        pdfMimeType: "application/pdf",
+        pdfSize: pdfBuffer.length,
+        htmlObjectKey: htmlKey,
         documents: {
           create: uploadedDocuments.map((doc) => ({
             kind: null,
@@ -828,12 +842,14 @@ export class ContractsService {
       },
     });
 
+    const pdfUrl = await this.buildSignedObjectUrl(pdfKey, 900);
     return {
       id: archived.id,
       contractNumber: archived.contractNumber,
       status: archived.status,
       documentCount: archived.documents.length,
       createdAt: archived.createdAt,
+      pdfUrl,
     };
   }
 
@@ -903,18 +919,13 @@ export class ContractsService {
   async finalizeContractSignatureByToken(
     token: string,
     signedByName: string,
-    signedPdfFile: {
-      buffer: Buffer;
-      mimetype: string;
-      originalname: string;
-      size: number;
-    },
+    signatureImageBase64: string,
     signedClientIp: string | null,
     signedUserAgent: string | null,
   ) {
     const parsed = this.parseSigningToken(token);
-    if (!signedPdfFile?.buffer?.length || signedPdfFile.mimetype !== "application/pdf") {
-      throw new BadRequestException("Debes adjuntar un PDF firmado valido.");
+    if (!signatureImageBase64?.trim()) {
+      throw new BadRequestException("Se requiere la imagen de la firma en base64.");
     }
 
     const contract = await (this.prisma as any).contract.findUnique({
@@ -949,12 +960,26 @@ export class ContractsService {
     const keyRoot = String(contract.pdfObjectKey || "").replace(/\/contract\.pdf$/i, "");
     const fallbackKeyRoot = `contracts/signed/${this.sanitizeSegment(contract.contractNumber)}`;
     const baseFolder = keyRoot || fallbackKeyRoot;
-    const signedObjectKey = `${baseFolder}/signed/contract-signed.pdf`;
 
+    // For multi-signer: build on top of existing signed PDF if available
+    const basePdfObjectKey = contract.signedPdfObjectKey || contract.pdfObjectKey;
+    const basePdfBuffer = await this.downloadObjectBuffer(basePdfObjectKey);
+    const pngBuffer = Buffer.from(signatureImageBase64.trim(), "base64");
+    const signerAnchor = this.getSignatureAnchorForSigner(payload, signer.key);
+    const signedPdfBuffer = await this.embedSignatureInPdf(basePdfBuffer, pngBuffer, signerAnchor);
+
+    const signedObjectKey = `${baseFolder}/signed/contract-signed.pdf`;
     await this.uploadToSpaces({
       objectKey: signedObjectKey,
       contentType: "application/pdf",
-      body: signedPdfFile.buffer,
+      body: signedPdfBuffer,
+    });
+
+    const sigPngKey = `${baseFolder}/signatures/${this.sanitizeSegment(signer.key)}.png`;
+    await this.uploadToSpaces({
+      objectKey: sigPngKey,
+      contentType: "image/png",
+      body: pngBuffer,
     });
 
     const now = new Date();
@@ -980,11 +1005,12 @@ export class ContractsService {
     const updated = await (this.prisma as any).contract.update({
       where: { id: contract.id },
       data: {
-        status: allCompleted ? CONTRACT_STATUS_SIGNED : CONTRACT_STATUS_PENDING_SIGNATURE,
+        status: allCompleted ? CONTRACT_STATUS_SIGNED : (contract.status || CONTRACT_STATUS_PENDING_SIGNATURE),
         signedPdfObjectKey: signedObjectKey,
-        signedPdfFileName: signedPdfFile.originalname || `${contract.contractNumber}-signed.pdf`,
-        signedPdfMimeType: signedPdfFile.mimetype,
-        signedPdfSize: signedPdfFile.size || signedPdfFile.buffer.length,
+        signedPdfFileName: `${contract.contractNumber}-signed.pdf`,
+        signedPdfMimeType: "application/pdf",
+        signedPdfSize: signedPdfBuffer.length,
+        signaturePngObjectKey: sigPngKey,
         signedByName: signerName,
         signedAt: now,
         signedClientIp,
@@ -1015,6 +1041,55 @@ export class ContractsService {
           signerEmail: item.email,
         })),
     };
+  }
+
+  async markContractViewed(token: string) {
+    const parsed = this.parseSigningToken(token);
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: parsed.contractId },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    const currentStatus = String(contract.status || "").toUpperCase();
+    if (currentStatus === CONTRACT_STATUS_SIGNED) {
+      return { ok: true, status: contract.status };
+    }
+
+    const updated = await (this.prisma as any).contract.update({
+      where: { id: contract.id },
+      data: {
+        status: CONTRACT_STATUS_VIEWED,
+        viewedAt: contract.viewedAt ?? new Date(),
+      },
+    });
+
+    return { ok: true, status: updated.status };
+  }
+
+  private async embedSignatureInPdf(
+    pdfBuffer: Buffer,
+    pngBuffer: Buffer,
+    anchor: { pageIndex: number; box: { x: number; y: number; width: number; height: number } } | null,
+  ): Promise<Buffer> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PDFDocument } = require("pdf-lib") as typeof import("pdf-lib");
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pages = pdfDoc.getPages();
+    const pageIndex = anchor?.pageIndex ?? pages.length - 1;
+    const targetPage = pages[Math.min(pageIndex, pages.length - 1)];
+    const pngImage = await pdfDoc.embedPng(pngBuffer);
+    const { width: imgW, height: imgH } = pngImage.size();
+    const box = anchor?.box ?? { x: 42, y: 50, width: 150, height: 60 };
+    const scale = Math.min(box.width / imgW, box.height / imgH);
+    const drawWidth = imgW * scale;
+    const drawHeight = imgH * scale;
+    const drawX = box.x + (box.width - drawWidth) / 2;
+    const drawY = box.y + (box.height - drawHeight) / 2;
+    targetPage.drawImage(pngImage, { x: drawX, y: drawY, width: drawWidth, height: drawHeight });
+    return Buffer.from(await pdfDoc.save());
   }
 
   async getPublicSigningSession(token: string) {
@@ -1078,6 +1153,10 @@ export class ContractsService {
         ? signatureAnchorCandidate
         : null;
 
+    const contractHtmlUrl = contract.htmlObjectKey
+      ? await this.buildSignedObjectUrl(contract.htmlObjectKey, 1200)
+      : null;
+
     return {
       contractId: contract.id,
       contractNumber: contract.contractNumber,
@@ -1090,6 +1169,7 @@ export class ContractsService {
       pdfUrl: basePdfUrl,
       signedPdfUrl,
       signatureAnchor,
+      contractHtmlUrl,
       expiresAt: parsed.expiresAt,
     };
   }

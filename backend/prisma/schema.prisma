@@ -51,11 +51,15 @@ model Contract {
   signedPdfFileName  String?
   signedPdfMimeType  String?
   signedPdfSize      Int?
-  signedByName       String?
-  signedAt           DateTime?
-  signedClientIp     String?
-  signedUserAgent    String?
-  createdAt         DateTime           @default(now())
+  signedByName          String?
+  signedAt              DateTime?
+  signedClientIp        String?
+  signedUserAgent       String?
+  htmlObjectKey         String?
+  viewedAt              DateTime?
+  cancelledAt           DateTime?
+  signaturePngObjectKey String?
+  createdAt             DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
   documents         ContractDocument[]

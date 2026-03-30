@@ -10,4 +10,8 @@ export class FinalizeContractSignaturePublicDto {
   @IsNotEmpty()
   @MaxLength(120)
   signedByName!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  signatureImageBase64!: string;
 }
