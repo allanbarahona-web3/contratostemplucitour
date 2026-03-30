@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -33,6 +34,7 @@ type SigningParticipant = {
 
 @Injectable()
 export class ContractsService {
+  private readonly logger = new Logger(ContractsService.name);
   private s3Client: S3Client | null = null;
   private readonly maxDocumentCount = 20;
   private readonly maxDocumentSizeBytes = 5 * 1024 * 1024;
@@ -178,10 +180,15 @@ export class ContractsService {
     return `${payloadB64}.${signature}`;
   }
 
-  private parseSigningToken(token: string) {
+  private parseSigningToken(token: string, callerIp?: string | null) {
     const normalized = String(token || "").trim();
+    // Log using only first 12 chars of token — enough to correlate without leaking full HMAC
+    const tokenHint = normalized.slice(0, 12) + "…";
+    const ipHint = callerIp || "unknown";
+
     const [payloadB64, signature] = normalized.split(".");
     if (!payloadB64 || !signature) {
+      this.logger.warn(`[signing] Malformed token structure ip=${ipHint} hint=${tokenHint}`);
       throw new BadRequestException("Token de firma invalido.");
     }
 
@@ -190,6 +197,7 @@ export class ContractsService {
     const expectedBuf = Buffer.from(expected, "utf8");
 
     if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+      this.logger.warn(`[signing] HMAC mismatch ip=${ipHint} hint=${tokenHint}`);
       throw new BadRequestException("Token de firma invalido.");
     }
 
@@ -204,15 +212,18 @@ export class ContractsService {
     try {
       payload = JSON.parse(this.fromBase64Url(payloadB64));
     } catch {
+      this.logger.warn(`[signing] Payload decode error ip=${ipHint} hint=${tokenHint}`);
       throw new BadRequestException("Token de firma invalido.");
     }
 
     if (payload.v !== SIGNING_TOKEN_VERSION || !payload.contractId || !payload.exp) {
+      this.logger.warn(`[signing] Invalid payload shape ip=${ipHint} hint=${tokenHint}`);
       throw new BadRequestException("Token de firma invalido.");
     }
 
     const expDate = new Date(payload.exp);
     if (Number.isNaN(expDate.getTime()) || expDate.getTime() <= Date.now()) {
+      this.logger.warn(`[signing] Expired token ip=${ipHint} contractId=${payload.contractId} hint=${tokenHint}`);
       throw new BadRequestException("El enlace de firma expiro.");
     }
 
@@ -923,7 +934,7 @@ export class ContractsService {
     signedClientIp: string | null,
     signedUserAgent: string | null,
   ) {
-    const parsed = this.parseSigningToken(token);
+    const parsed = this.parseSigningToken(token, signedClientIp);
     if (!signatureImageBase64?.trim()) {
       throw new BadRequestException("Se requiere la imagen de la firma en base64.");
     }
@@ -1070,6 +1081,11 @@ export class ContractsService {
       }),
     ]);
 
+    this.logger.log(
+      `[signing] Signature recorded contractId=${contract.id} signerKey=${signer.key} ` +
+      `allCompleted=${allCompleted} ip=${signedClientIp || "unknown"} sha256=${signedPdfHash.slice(0, 16)}…`,
+    );
+
     return {
       id: updated.id,
       contractNumber: updated.contractNumber,
@@ -1090,8 +1106,8 @@ export class ContractsService {
     };
   }
 
-  async markContractViewed(token: string) {
-    const parsed = this.parseSigningToken(token);
+  async markContractViewed(token: string, callerIp?: string | null) {
+    const parsed = this.parseSigningToken(token, callerIp);
     const contract = await (this.prisma as any).contract.findUnique({
       where: { id: parsed.contractId },
     });
@@ -1139,8 +1155,8 @@ export class ContractsService {
     return Buffer.from(await pdfDoc.save());
   }
 
-  async getPublicSigningSession(token: string) {
-    const parsed = this.parseSigningToken(token);
+  async getPublicSigningSession(token: string, callerIp?: string | null) {
+    const parsed = this.parseSigningToken(token, callerIp);
     const contract = await (this.prisma as any).contract.findUnique({
       where: { id: parsed.contractId },
       include: {
@@ -1221,8 +1237,8 @@ export class ContractsService {
     };
   }
 
-  async getPublicSigningPdf(token: string) {
-    const parsed = this.parseSigningToken(token);
+  async getPublicSigningPdf(token: string, callerIp?: string | null) {
+    const parsed = this.parseSigningToken(token, callerIp);
     const contract = await (this.prisma as any).contract.findUnique({
       where: { id: parsed.contractId },
       select: {

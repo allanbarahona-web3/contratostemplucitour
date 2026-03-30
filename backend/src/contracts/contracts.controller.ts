@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { Response } from "express";
+import { Throttle } from "@nestjs/throttler";
 import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
@@ -203,32 +204,43 @@ export class ContractsController {
     return this.contractsService.resendSignedContractEmailToParties(req.user, contractId);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Get("public/signing-session")
-  getPublicSigningSession(@Query() query: PublicSigningSessionDto) {
-    return this.contractsService.getPublicSigningSession(query.token);
+  getPublicSigningSession(
+    @Req() req: { ip?: string },
+    @Query() query: PublicSigningSessionDto,
+  ) {
+    return this.contractsService.getPublicSigningSession(query.token, req.ip || null);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @Get("public/signing-pdf")
   async getPublicSigningPdf(
+    @Req() req: { ip?: string },
     @Query() query: PublicSigningSessionDto,
     @Res() res: Response,
   ) {
-    const file = await this.contractsService.getPublicSigningPdf(query.token);
+    const file = await this.contractsService.getPublicSigningPdf(query.token, req.ip || null);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
     res.setHeader("Content-Length", String(file.buffer.length));
     res.status(200).send(file.buffer);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Post("public/mark-viewed")
-  markContractViewed(@Body() body: { token?: string }) {
+  markContractViewed(
+    @Req() req: { ip?: string },
+    @Body() body: { token?: string },
+  ) {
     const token = String(body?.token || "").trim();
     if (!token) {
       throw new BadRequestException("Se requiere el token.");
     }
-    return this.contractsService.markContractViewed(token);
+    return this.contractsService.markContractViewed(token, req.ip || null);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post("public/finalize-signature")
   finalizePublicContractSignature(
     @Req()
