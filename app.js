@@ -749,15 +749,6 @@ const setupAuth = async () => {
   }
 };
 
-const loadImage = (src) =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`No se pudo cargar imagen: ${src}`));
-    image.src = src;
-  });
-
 const NATIONALITY_OPTIONS = [
   "Costa Rica",
   "Guatemala",
@@ -1570,45 +1561,6 @@ const renderPreview = () => {
   return data;
 };
 
-const buildPdfHtmlDocument = (contractBodyHtml) => {
-  const baseUrl = window.location.origin;
-  // Convert relative ./assets/ references to absolute URLs so Puppeteer can load them
-  const body = contractBodyHtml.replace(/src="\.\/assets\//g, `src="${baseUrl}/assets/`);
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8" />
-<style>
-*,*::before,*::after{box-sizing:border-box;}
-body{margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:13.5px;color:#0f172a;background:#fff;line-height:1.45;}
-.contract-paper{width:100%;margin:0;padding:0;}
-.contract-paper h3{margin:14px 0 8px;font-size:1rem;letter-spacing:-.015em;}
-.contract-paper p,.contract-paper li{margin:5px 0;font-size:.895rem;line-height:1.48;overflow-wrap:anywhere;word-break:break-word;}
-.contract-paper p>strong:first-child{display:block;margin-bottom:2px;}
-.contract-var{font-weight:700;color:#0f172a;}
-.contract-paper ul{margin:8px 0 8px 20px;padding:0;}
-.annex-block{border:1px dashed rgba(15,23,42,.24);border-radius:8px;padding:10px;margin:10px 0;}
-.annex-signatures{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
-.annex-sign-box p{margin:4px 0;}
-.signatures{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-top:28px;}
-.signature-box{padding-top:4px;}
-.signature-sign-area{height:96px;border-bottom:1px solid rgba(15,23,42,.32);margin-bottom:8px;position:relative;}
-.signature-box--person .signature-sign-area{height:96px;}
-.signature-box--client .signature-sign-area{height:106px;border:1.5px solid rgba(15,23,42,.48);border-radius:8px;margin-bottom:8px;background:#fff;}
-.signature-sign-label{position:absolute;top:-10px;left:10px;padding:0 6px;font-size:10px;line-height:1.2;letter-spacing:.03em;text-transform:uppercase;color:#31496a;background:#fff;}
-.signature-sign-area--erick{display:flex;align-items:flex-end;justify-content:center;padding:0 8px;}
-.signature-box img{width:auto;max-width:220px;max-height:90px;height:auto;object-fit:contain;transform:translateY(5px);}
-@media(max-width:520px){.signatures{grid-template-columns:1fr;}.annex-signatures{grid-template-columns:1fr;}}
-</style>
-</head>
-<body>
-<section class="contract-paper">
-${body}
-</section>
-</body>
-</html>`;
-};
-
 const buildContractPdfHtml = (data) => {
   const baseUrl = window.location.origin;
   const signatureDate = formatDate(new Date().toISOString().slice(0, 10));
@@ -2271,18 +2223,6 @@ ${minorAnnexPages}
 
 </body>
 </html>`;
-};
-
-const downloadBlob = (blob, fileName) => {
-  debugLog("Disparando descarga", { fileName, size: blob.size });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
 };
 
 const apiFetchMultipart = async (path, formData, token) => {
