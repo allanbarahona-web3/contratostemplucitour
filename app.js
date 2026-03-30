@@ -1723,9 +1723,9 @@ const generatePdfBlob = async (onProgress = () => {}) => {
     };
     return acc;
   }, {});
-  const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, .signature-box")).map((el) => {
-    const start = Math.max(0, el.offsetTop - 6);
-    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 6);
+  const textBlockRangesCssPx = Array.from(captureNode.querySelectorAll("h3, p, li, table, .signature-box")).map((el) => {
+    const start = Math.max(0, el.offsetTop - 4);
+    const end = Math.min(captureHeightCssPx, el.offsetTop + el.offsetHeight + 4);
     return { start, end };
   });
 
