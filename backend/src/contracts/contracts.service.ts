@@ -928,7 +928,7 @@ export class ContractsService {
       throw new BadRequestException("Se requiere la imagen de la firma en base64.");
     }
 
-    // Hash the raw token — used as a one-time-use receipt stored in payload
+    // SHA-256 of the raw token — stored in ContractUsedToken for atomic replay guard
     const tokenHash = createHash("sha256").update(token).digest("hex");
 
     const contract = await (this.prisma as any).contract.findUnique({
@@ -961,11 +961,12 @@ export class ContractsService {
       throw new BadRequestException("Este firmante ya completo su firma.");
     }
 
-    // Guard 2: this exact token was already spent (replay protection)
-    const usedTokenHashes: string[] = Array.isArray(payload.usedSigningTokens)
-      ? (payload.usedSigningTokens as string[])
-      : [];
-    if (usedTokenHashes.includes(tokenHash)) {
+    // Guard 2: DB-level atomic replay check — unique constraint on tokenHash
+    // prevents two concurrent requests from both succeeding
+    const tokenAlreadyUsed = await (this.prisma as any).contractUsedToken.findUnique({
+      where: { tokenHash },
+    });
+    if (tokenAlreadyUsed) {
       throw new BadRequestException("Este enlace de firma ya fue utilizado.");
     }
 
@@ -1000,26 +1001,17 @@ export class ContractsService {
     const now = new Date();
     const signerName = String(signer.name || signedByName || "").trim();
 
-    // Structured evidence entry — one per signer event
-    const evidenceEntry = {
-      signerKey: signer.key,
-      signerRole: signer.role,
-      signerName,
-      signedAt: now.toISOString(),
-      signedClientIp: signedClientIp || null,
-      signedUserAgent: signedUserAgent || null,
-      signedPdfObjectKey: signedObjectKey,
-      signedPdfSizeBytes: signedPdfBuffer.length,
-      signedPdfSha256: signedPdfHash,
-      tokenHash,
-    };
-
-    const nextSignedParticipants = [...signedParticipants, evidenceEntry];
-    const nextUsedTokenHashes = [...usedTokenHashes, tokenHash];
-
-    const signatureEvidence: unknown[] = Array.isArray(payload.signatureEvidence)
-      ? payload.signatureEvidence
-      : [];
+    const nextSignedParticipants = [
+      ...signedParticipants,
+      {
+        signerKey: signer.key,
+        signerRole: signer.role,
+        signerName,
+        signedAt: now.toISOString(),
+        signedClientIp: signedClientIp || null,
+        signedUserAgent: signedUserAgent || null,
+      },
+    ];
 
     const requiredSignerKeys = participants.map((item) => item.key);
     const completedKeys = new Set(
@@ -1027,28 +1019,56 @@ export class ContractsService {
     );
     const allCompleted = requiredSignerKeys.every((key) => completedKeys.has(key));
 
-    const updated = await (this.prisma as any).contract.update({
-      where: { id: contract.id },
-      data: {
-        status: allCompleted ? CONTRACT_STATUS_SIGNED : (contract.status || CONTRACT_STATUS_PENDING_SIGNATURE),
-        signedPdfObjectKey: signedObjectKey,
-        signedPdfFileName: `${contract.contractNumber}-signed.pdf`,
-        signedPdfMimeType: "application/pdf",
-        signedPdfSize: signedPdfBuffer.length,
-        signaturePngObjectKey: sigPngKey,
-        signedByName: signerName,
-        signedAt: now,
-        signedClientIp,
-        signedUserAgent,
-        payload: {
-          ...payload,
-          requiredSignerKeys,
-          signedParticipants: nextSignedParticipants,
-          usedSigningTokens: nextUsedTokenHashes,
-          signatureEvidence: [...signatureEvidence, evidenceEntry],
+    // Atomic DB write: mark token spent + record evidence + update contract
+    const [, , updated] = await (this.prisma as any).$transaction([
+      // Spend the token — unique constraint aborts the transaction on duplicate
+      (this.prisma as any).contractUsedToken.create({
+        data: {
+          contractId: contract.id,
+          tokenHash,
+          signerKey: signer.key,
+          usedAt: now,
         },
-      },
-    });
+      }),
+      // Immutable audit row
+      (this.prisma as any).contractSignatureEvent.create({
+        data: {
+          contractId: contract.id,
+          signerKey: signer.key,
+          signerRole: signer.role,
+          signerName,
+          signedAt: now,
+          signedClientIp: signedClientIp || null,
+          signedUserAgent: signedUserAgent || null,
+          signaturePngKey: sigPngKey,
+          signedPdfKey: signedObjectKey,
+          signedPdfBytes: signedPdfBuffer.length,
+          signedPdfSha256: signedPdfHash,
+          tokenHash,
+        },
+      }),
+      // Update contract record
+      (this.prisma as any).contract.update({
+        where: { id: contract.id },
+        data: {
+          status: allCompleted ? CONTRACT_STATUS_SIGNED : (contract.status || CONTRACT_STATUS_PENDING_SIGNATURE),
+          signedPdfObjectKey: signedObjectKey,
+          signedPdfFileName: `${contract.contractNumber}-signed.pdf`,
+          signedPdfMimeType: "application/pdf",
+          signedPdfSize: signedPdfBuffer.length,
+          signaturePngObjectKey: sigPngKey,
+          signedByName: signerName,
+          signedAt: now,
+          signedClientIp,
+          signedUserAgent,
+          payload: {
+            ...payload,
+            requiredSignerKeys,
+            signedParticipants: nextSignedParticipants,
+          },
+        },
+      }),
+    ]);
 
     return {
       id: updated.id,

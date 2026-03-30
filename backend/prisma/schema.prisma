@@ -63,6 +63,8 @@ model Contract {
   updatedAt         DateTime           @updatedAt
   client            Client             @relation(fields: [clientId], references: [id], onDelete: Restrict)
   documents         ContractDocument[]
+  signatureEvents   ContractSignatureEvent[]
+  usedTokens        ContractUsedToken[]
 
   @@index([clientId])
   @@index([createdAt])
@@ -97,4 +99,41 @@ model ContractDocument {
 
   @@index([contractId])
   @@index([createdAt])
+}
+
+// One row per completed signature event — immutable audit log.
+// Captures who signed, when, from where, and the resulting PDF state.
+model ContractSignatureEvent {
+  id              String   @id @default(cuid())
+  contractId      String
+  signerKey       String   // "client" | "companion-0" etc.
+  signerRole      String   // "CLIENTE" | "ACOMPANANTE"
+  signerName      String
+  signedAt        DateTime
+  signedClientIp  String?
+  signedUserAgent String?
+  signaturePngKey String?  // Spaces object key of the captured PNG
+  signedPdfKey    String?  // Spaces object key of the PDF after this signer
+  signedPdfBytes  Int?
+  signedPdfSha256 String?  // hex SHA-256 of the signed PDF at this step
+  tokenHash       String?  // SHA-256 of the token used (for cross-reference)
+  createdAt       DateTime @default(now())
+  contract        Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([signedAt])
+}
+
+// One row per spent signing token — tokenHash has a UNIQUE constraint so
+// the DB enforces atomicity; two concurrent requests for the same token
+// cannot both succeed.
+model ContractUsedToken {
+  id         String   @id @default(cuid())
+  contractId String
+  tokenHash  String   @unique  // SHA-256 of the raw token string
+  signerKey  String
+  usedAt     DateTime @default(now())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
 }
