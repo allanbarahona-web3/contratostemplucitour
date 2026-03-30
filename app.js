@@ -1609,6 +1609,670 @@ ${body}
 </html>`;
 };
 
+const buildContractPdfHtml = (data) => {
+  const baseUrl = window.location.origin;
+  const signatureDate = formatDate(new Date().toISOString().slice(0, 10));
+  const contractDestinationUpper = String(data.destination || "").trim().toLocaleUpperCase("es-CR");
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  const v = (val) =>
+    `<span class="cv">${escapeHtml(String(val ?? "___"))}</span>`;
+
+  const clause = (title, body) =>
+    `<section class="clause"><p><strong>${title}</strong></p>${body}</section>`;
+
+  // ── parties ───────────────────────────────────────────────────────────────
+  const companionsIntro = data.companions.length
+    ? `<section class="clause">
+        <p>Adicionalmente, comparecen como acompañantes del Tour:</p>
+        <ul>${data.companions
+          .map(
+            (p) =>
+              `<li>${v(p.fullName)}, mayor de edad, ${v(p.civilStatus)}, ${v(p.profession)}, portador de ${v(p.idType)} número ${v(p.idNumber)}, vecino de ${v(p.address)}, correo electrónico ${v(p.email)}, teléfono ${v(p.phone)}, contacto de emergencia ${v(p.emergencyContactName)}, teléfono de emergencia ${v(p.emergencyContactPhone)}.</li>`,
+          )
+          .join("")}</ul>
+      </section>`
+    : "";
+
+  const minorsIntro = data.minors.length
+    ? `<section class="clause">
+        <p>El Cliente declara que viaja con menor(es) de edad:</p>
+        <ul>${data.minors
+          .map(
+            (m) =>
+              `<li>${v(m.name)}, documento de menor número ${v(m.idNumber)}, en calidad de representado por ${v(m.tutorName)}.</li>`,
+          )
+          .join("")}</ul>
+        <p>La autorización y consentimiento de representación de menor de edad se incorpora como anexo obligatorio de este Contrato.</p>
+      </section>`
+    : "";
+
+  // ── itinerary ─────────────────────────────────────────────────────────────
+  const itineraryHtml = data.itineraryItems.length
+    ? `<ul>${data.itineraryItems
+        .map(
+          (item) =>
+            `<li>Fecha: ${v(formatDate(item.date))} | Actividad: ${v(item.detail)}</li>`,
+        )
+        .join("")}</ul>`
+    : "<p>Sin actividades registradas.</p>";
+
+  // ── signature blocks ──────────────────────────────────────────────────────
+  const signerBlocks = [
+    {
+      signerKey: "client",
+      name: data.clientFullName,
+      idType: data.clientIdType,
+      idNumber: data.clientIdNumber,
+      role: "Cliente",
+      isClient: true,
+      imageBase64: data.clientSignatureBase64 || null,
+    },
+    ...data.companions.map((p, i) => ({
+      signerKey: `companion-${i}`,
+      name: p.fullName,
+      idType: p.idType,
+      idNumber: p.idNumber,
+      role: "Acompañante",
+      isClient: false,
+      imageBase64: null,
+    })),
+  ]
+    .map(
+      (person) => `
+      <div class="sig-box">
+        <div class="sig-area${person.isClient ? " sig-area--client" : ""}"
+             data-signer-key="${escapeAttr(person.signerKey)}">
+          <span class="sig-label">${person.isClient ? "Firma del cliente" : "Firma del acompañante"}</span>
+          ${
+            person.imageBase64
+              ? `<img class="sig-img" src="${escapeAttr(person.imageBase64)}" alt="Firma de ${escapeAttr(person.name)}" />`
+              : ""
+          }
+        </div>
+        <p class="sig-name">${v(person.name)}</p>
+        <p>${v(person.idType)}: ${v(person.idNumber)}</p>
+        <p>${v(person.role)}</p>
+        <p>Fecha: ${v(signatureDate)}</p>
+      </div>`,
+    )
+    .join("");
+
+  const erickImgSrc = `${baseUrl}/assets/firmaerick.png`;
+  const erickBlock = `
+    <div class="sig-box">
+      <div class="sig-area sig-area--company" data-signer-key="company">
+        <span class="sig-label">Firma del representante</span>
+        <img class="sig-img sig-img--company"
+             src="${escapeAttr(erickImgSrc)}"
+             alt="Firma de Erick Bonilla" />
+      </div>
+      <p class="sig-name">ERICK JOSUE BONILLA PEREIRA</p>
+      <p>Cédula: 1-1597-0559</p>
+      <p>Representante legal de Lucitours</p>
+      <p>Fecha: ${v(signatureDate)}</p>
+    </div>`;
+
+  // ── minors annex pages ────────────────────────────────────────────────────
+  const minorAnnexPages =
+    data.hasMinorCompanion && data.minors.length > 0
+      ? data.minors
+          .map((minor, index) => {
+            const adult = getResponsibleAdultIdentity(data, minor.travelingWith);
+            return `
+          <section class="annex-page">
+            <h2>ANEXO DE AUTORIZACIÓN PARA VIAJE DE MENOR DE EDAD ${index + 1}</h2>
+            <p><strong>Número de anexo:</strong> ANX-MEN-${escapeHtml(data.contractNumber)}-${String(index + 1).padStart(2, "0")}</p>
+            <p><strong>Contrato Número:</strong> ${escapeHtml(data.contractNumber)}</p>
+            <p>Este anexo complementa el CONTRATO GENERAL DE VIAJE TURÍSTICO N. ${escapeHtml(data.contractNumber)} y documenta la autorización del tutor/patria potestad para el menor indicado.</p>
+
+            <section class="annex-clause">
+              <p><strong>PRIMERO: DATOS DEL MENOR</strong></p>
+              <ul>
+                <li>Menor: ${escapeHtml(minor.name)}</li>
+                <li>Identificación: ${escapeHtml(minor.idNumber)}</li>
+                <li>Destino del Tour: ${escapeHtml(data.destination)}</li>
+                <li>Fechas del Tour: ${formatDate(data.startDate)} a ${formatDate(data.endDate)}</li>
+              </ul>
+            </section>
+
+            <section class="annex-clause">
+              <p><strong>SEGUNDO: DATOS DE QUIEN EJERCE PATRIA POTESTAD / TUTOR LEGAL</strong></p>
+              <ul>
+                <li>Nombre completo: ${escapeHtml(minor.tutorName)}</li>
+                <li>Identificación: ${escapeHtml(minor.tutorIdType || "ID")} ${escapeHtml(minor.tutorId)}</li>
+                <li>Teléfono de contacto: —</li>
+              </ul>
+            </section>
+
+            <section class="annex-clause">
+              <p><strong>TERCERO: ADULTO RESPONSABLE QUE ACOMPAÑA AL MENOR</strong></p>
+              <ul>
+                <li>Nombre completo: ${escapeHtml(minor.travelingWith)}</li>
+                <li>Identificación: ${escapeHtml(adult.idType)} ${escapeHtml(adult.idNumber)}</li>
+                <li>Teléfono de contacto: —</li>
+              </ul>
+            </section>
+
+            <section class="annex-clause">
+              <p><strong>CUARTO: DECLARACIÓN DE AUTORIZACIÓN</strong></p>
+              <p>La persona firmante, en su condición de tutor legal y/o quien ejerce la patria potestad, declara bajo fe de juramento que cuenta con facultades legales suficientes para autorizar el viaje del menor e identifica expresamente a ${escapeHtml(minor.travelingWith)} como el adulto responsable que acompañará al menor durante el viaje. Asimismo, exonera a Lucitours de responsabilidad por información inexacta o documentación insuficiente aportada por el representante.</p>
+            </section>
+
+            <section class="annex-clause">
+              <p><strong>QUINTO: DOCUMENTO DE RESPALDO</strong></p>
+              <p>Este anexo debe estar acompañado por el permiso notarial, judicial o documento equivalente exigido por la normativa migratoria aplicable.</p>
+            </section>
+
+            <section class="annex-sigs">
+              <div class="annex-sig-col">
+                <p class="annex-sig-line">______________________________</p>
+                <p><strong>1) Tutor legal / Patria potestad</strong></p>
+                <p>${escapeHtml(minor.tutorName)}</p>
+                <p>${escapeHtml(minor.tutorIdType || "ID")}: ${escapeHtml(minor.tutorId)}</p>
+              </div>
+              <div class="annex-sig-col">
+                <p class="annex-sig-line">______________________________</p>
+                <p><strong>2) Adulto autorizado que acompaña al menor</strong></p>
+                <p>${escapeHtml(minor.travelingWith)}</p>
+                <p>${escapeHtml(adult.idType)}: ${escapeHtml(adult.idNumber)}</p>
+              </div>
+            </section>
+            <p><strong>Fecha de emisión:</strong> ${formatDate(data.issuedAt)}</p>
+          </section>`;
+          })
+          .join("")
+      : "";
+
+  // ── full HTML document ────────────────────────────────────────────────────
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Contrato ${escapeHtml(data.contractNumber)} — Lucitours</title>
+<style>
+/* ── reset & page ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@page {
+  size: A4 portrait;
+  margin: 22mm 18mm 24mm 20mm;
+}
+
+html, body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 11pt;
+  color: #0a0a0a;
+  background: #fff;
+  line-height: 1.55;
+}
+
+/* ── document header ────────────────────────────────────────────── */
+.doc-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16pt;
+  padding-bottom: 10pt;
+  border-bottom: 1.5pt solid #0a0a0a;
+  margin-bottom: 14pt;
+}
+
+.doc-header-logo {
+  width: 60pt;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.doc-header-text { flex: 1; }
+
+.doc-header-text h1 {
+  font-size: 11.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3pt;
+}
+
+.doc-header-text .doc-meta {
+  font-size: 9.5pt;
+  color: #222;
+  line-height: 1.4;
+}
+
+/* ── contract title ─────────────────────────────────────────────── */
+.contract-title {
+  font-size: 11pt;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 12pt 0 8pt;
+}
+
+/* ── contract meta table ────────────────────────────────────────── */
+.contract-meta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+  margin-bottom: 10pt;
+}
+
+.contract-meta td {
+  padding: 2pt 6pt;
+  vertical-align: top;
+}
+
+.contract-meta td:first-child {
+  font-weight: 700;
+  white-space: nowrap;
+  width: 44mm;
+}
+
+/* ── section headings ───────────────────────────────────────────── */
+.section-heading {
+  font-size: 10pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 14pt 0 6pt;
+  border-bottom: 0.75pt solid #555;
+  padding-bottom: 2pt;
+}
+
+/* ── clause blocks ──────────────────────────────────────────────── */
+.clause {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-bottom: 6pt;
+}
+
+.clause p, .clause li {
+  font-size: 10.5pt;
+  line-height: 1.55;
+  margin-bottom: 3pt;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: justify;
+}
+
+.clause ul, .clause ol {
+  margin: 4pt 0 4pt 16pt;
+  padding: 0;
+}
+
+.clause li { margin-bottom: 2pt; }
+
+/* ── contract variable highlight ────────────────────────────────── */
+.cv { font-weight: 700; color: #0a0a0a; }
+
+/* ── signature page ─────────────────────────────────────────────── */
+.sig-page {
+  page-break-before: always;
+  break-before: page;
+  padding-top: 10pt;
+}
+
+.sig-page-title {
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 18pt;
+  letter-spacing: 0.04em;
+}
+
+.sig-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20pt;
+  align-items: start;
+}
+
+.sig-box {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.sig-area {
+  height: 70pt;
+  border-bottom: 1pt solid #0a0a0a;
+  margin-bottom: 6pt;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 4pt;
+}
+
+.sig-area--client {
+  height: 78pt;
+  border: 1.5pt solid #0a0a0a;
+  border-radius: 4pt;
+  margin-bottom: 6pt;
+}
+
+.sig-area--company {
+  border: none;
+  border-bottom: 1pt solid #0a0a0a;
+  justify-content: center;
+}
+
+.sig-label {
+  position: absolute;
+  top: -8pt;
+  left: 8pt;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #333;
+  background: #fff;
+  padding: 0 4pt;
+}
+
+.sig-img {
+  max-width: 100%;
+  max-height: 62pt;
+  object-fit: contain;
+  display: block;
+}
+
+.sig-img--company {
+  max-width: 160pt;
+  max-height: 62pt;
+  margin: 0 auto;
+}
+
+.sig-name {
+  font-weight: 700;
+  font-size: 10pt;
+  margin-bottom: 2pt;
+}
+
+.sig-box p {
+  font-size: 9.5pt;
+  line-height: 1.45;
+  margin: 1pt 0;
+}
+
+/* ── minor annex pages ──────────────────────────────────────────── */
+.annex-page {
+  page-break-before: always;
+  break-before: page;
+  padding-top: 10pt;
+}
+
+.annex-page h2 {
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: 12pt;
+}
+
+.annex-page p {
+  font-size: 10.5pt;
+  line-height: 1.55;
+  margin-bottom: 3pt;
+  text-align: justify;
+}
+
+.annex-page ul {
+  margin: 4pt 0 4pt 16pt;
+  padding: 0;
+}
+
+.annex-page li {
+  font-size: 10.5pt;
+  line-height: 1.5;
+  margin-bottom: 2pt;
+}
+
+.annex-clause {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-bottom: 6pt;
+}
+
+.annex-sigs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20pt;
+  margin-top: 24pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.annex-sig-col p {
+  font-size: 9.5pt;
+  line-height: 1.45;
+  margin: 2pt 0;
+}
+
+.annex-sig-line {
+  font-size: 10pt;
+  margin-bottom: 3pt !important;
+}
+
+/* ── print tweaks ───────────────────────────────────────────────── */
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Document header ── -->
+<header class="doc-header">
+  <img class="doc-header-logo"
+       src="${escapeAttr(baseUrl)}/assets/logo_lucitours.png"
+       alt="Lucitours" />
+  <div class="doc-header-text">
+    <h1>Viajes Lucitours Turismo Internacional S.A.</h1>
+    <p class="doc-meta">
+      Cédula jurídica: 3-101-874546 &nbsp;|&nbsp;
+      contratos@lucitour.com &nbsp;|&nbsp; Tel. 6015-9906<br />
+      Contrato N.° <strong>${escapeHtml(data.contractNumber)}</strong> &nbsp;|&nbsp;
+      Emitido: ${escapeHtml(formatDate(data.issuedAt || new Date().toISOString().slice(0, 10)))} &nbsp;|&nbsp;
+      Agente: ${escapeHtml(data.generatedByAgentName || "")}
+    </p>
+  </div>
+</header>
+
+<!-- ── Title ── -->
+<h2 class="contract-title">Contrato General de Viaje Turístico a ${escapeHtml(contractDestinationUpper)}</h2>
+
+<!-- ── Contract meta ── -->
+<table class="contract-meta">
+  <tr><td>Número de contrato:</td><td>${escapeHtml(data.contractNumber)}</td></tr>
+  <tr><td>Destino:</td><td>${escapeHtml(data.destination)}</td></tr>
+  <tr><td>Fechas del Tour:</td><td>${escapeHtml(formatDate(data.startDate))} al ${escapeHtml(formatDate(data.endDate))}</td></tr>
+  <tr><td>Emitido el:</td><td>${escapeHtml(formatDate(data.issuedAt || new Date().toISOString().slice(0, 10)))}</td></tr>
+</table>
+
+<!-- ── Parties ── -->
+<h3 class="section-heading">Partes</h3>
+
+<section class="clause">
+  <p>(a) <strong>ERICK JOSUE BONILLA PEREIRA</strong>, mayor, soltero, administrador de agencia de viajes, portador de la cédula de identidad número <strong>1-1597-0559</strong>, vecino de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES LUCITOURS TURISMO INTERNACIONAL SOCIEDAD ANONIMA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Lucitours"</strong>; y</p>
+</section>
+
+<section class="clause">
+  <p>(b) ${v(data.clientFullName)}, mayor de edad, ${v(data.civilStatus)}, ${v(data.profession)}, portador de ${v(data.clientIdType)} número ${v(data.clientIdNumber)}, vecino de ${v(data.clientAddress)}, correo electrónico ${v(data.clientEmail)}, teléfono ${v(data.clientPhone)}, contacto de emergencia ${v(data.emergencyContactName)}, teléfono de emergencia ${v(data.emergencyContactPhone)}, en adelante denominado como el <strong>"Cliente"</strong>.</p>
+</section>
+
+${companionsIntro}
+${minorsIntro}
+
+<section class="clause">
+  <p>Haciendo mención a los comparecientes en conjunto, denominados como las <strong>"Partes"</strong>, hemos convenido en celebrar el presente <strong>CONTRATO GENERAL DE VIAJE TURÍSTICO</strong>, el cual se regirá por las siguientes cláusulas:</p>
+</section>
+
+<!-- ── Clauses ── -->
+<h3 class="section-heading">Cláusulas</h3>
+
+${clause(
+  "PRIMERO: OBJETO.",
+  `<p>El presente Contrato será el documento base para regular las cláusulas y condiciones referentes a la contratación del paquete turístico internacional acordado entre las Partes.</p>`,
+)}
+
+${clause(
+  "SEGUNDO: DESTINO.",
+  `<p>El país a visitar por parte del Cliente es ${v(data.destination)}, y manifiesta expresamente que dicho destino fue elegido y reservado de forma voluntaria para la realización del Tour.</p>`,
+)}
+
+${clause(
+  "TERCERO: FECHAS DEL TOUR Y PLAZO.",
+  `<p>Las fechas de ejecución del Tour serán del ${v(formatDate(data.startDate))} al ${v(formatDate(data.endDate))}, mismas que se entenderán como plazo del presente Contrato.</p>`,
+)}
+
+${clause(
+  "CUARTO: PRECIO, FORMA DE PAGO Y MEDIOS DE PAGO.",
+  `<ul>
+    <li>Precio total del Tour: USD ${v(formatMoney(data.totalAmount))}</li>
+    <li>Pago inicial (reserva): USD ${v(formatMoney(data.reservationAmount))}</li>
+    <li>Saldo pendiente: USD ${v(formatMoney(data.balanceAmount))}</li>
+    <li>Saldo dividido en ${v(data.installmentCount)} cuota(s) mensual(es) de USD ${v(formatMoney(data.monthlyInstallmentAmount))}</li>
+    <li>Fecha límite de pago total: ${v(formatDate(data.paymentDueDate))}</li>
+  </ul>
+  <p>Los medios de pago para realizar los pagos son los siguientes:</p>
+  <ul>
+    <li>Cuenta bancaria (IBAN): CR25011610400074756807, Banco Promerica.</li>
+    <li>Sinpe Móvil: 7296-9551.</li>
+    <li>Pagos en efectivo o tarjeta en oficinas de Lucitours.</li>
+  </ul>`,
+)}
+
+${clause(
+  "QUINTO: DEPÓSITO DE RESERVA.",
+  `<p>La cuota de reserva inicial se utiliza como depósito mínimo para reservar y garantizar el espacio del Cliente en el Tour y los operadores turísticos, por lo que dicho depósito no será transferible, reutilizable ni reembolsable.</p>
+  <p>En caso de incumplimiento en pagos, Lucitours podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Lucitours podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>`,
+)}
+
+${clause(
+  "SEXTO: ALOJAMIENTOS Y HOSPEDAJES.",
+  `<p>Como parte del Tour, el Cliente será alojado en establecimientos tipo hostel, hotel u otros similares, conforme a la logística del viaje, disponibilidad y condiciones operativas del proveedor.</p>
+  <p>Como referencia de preferencia del Cliente, se registra tipo de hospedaje ${v(data.lodgingType)} y acomodación solicitada ${v(data.accommodationType)}. Esta preferencia no constituye garantía absoluta y estará sujeta a disponibilidad y criterios operativos del Tour.</p>
+  <p>La asignación final de habitaciones y tipo de acomodación será determinada por Lucitours según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
+  <p>El Cliente reconoce y acepta expresamente que la acomodación podrá implicar el uso de habitaciones compartidas con otros participantes del Tour, ya sean conocidos o no, así como el uso de baños privados o compartidos, según disponibilidad del hospedaje.</p>
+  <p>Lucitours podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
+  <p>Todo lo anterior estará sujeto a disponibilidad, necesidades operativas del Tour, así como a casos fortuitos o de fuerza mayor.</p>`,
+)}
+
+${clause(
+  "SÉPTIMO: CHECK IN Y ASIGNACIÓN DE ASIENTOS.",
+  `<p>Lucitours realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
+  <p>Equipaje permitido: ${v(data.luggageClause)}</p>`,
+)}
+
+${clause(
+  "OCTAVO: SEGURO DE VIAJE.",
+  `<p>Lucitours podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
+  <p>El Cliente acepta que, en caso de no contratar seguro con Lucitours o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Lucitours de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
+  <p>Asimismo, el Cliente declara que exime a Lucitours, en este mismo acto y en la medida permitida por ley, de responsabilidad por gastos médicos, hospitalarios, emergencias, cancelaciones, retrasos, pérdida de equipaje u otras contingencias cubribles por el seguro de viaje.</p>`,
+)}
+
+${clause(
+  "NOVENO: PERSONAL DE ACOMPAÑAMIENTO.",
+  `<p>Dependiendo del Tour, Lucitours podrá asignar personal de acompañamiento desde Costa Rica.</p>
+  <p>El Cliente debe presentarse con al menos 3 horas de anticipación al aeropuerto y con toda la documentación requerida para viajar. Lucitours no será responsable por llegada tardía, documentos vencidos o documentación incompleta del Cliente.</p>`,
+)}
+
+${clause(
+  "DÉCIMO: FICHA DE ACTIVIDADES E ITINERARIO.",
+  `${itineraryHtml}
+  <p>Lucitours podrá modificar itinerario, ruta, hospedajes u orden del Tour cuando sea necesario para seguridad, resguardo y ejecución efectiva del servicio.</p>`,
+)}
+
+${clause(
+  "DÉCIMO PRIMERO: TRANSPORTES.",
+  `<p>Lucitours brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>`,
+)}
+
+${clause(
+  "DÉCIMO SEGUNDO: ALIMENTACIÓN.",
+  `<p>El Tour no incluye alimentación, salvo indicación expresa en la publicación del tour o bien que el hospedaje indique que se incluye el desayuno con el hospedaje; por lo tanto, el Cliente debe asumir sus costos de alimentación durante el tour.</p>`,
+)}
+
+${clause(
+  "DÉCIMO TERCERO: CANCELACIÓN DEL TOUR.",
+  `<p>La cancelación del Tour podrá darse por: enfermedad/muerte debidamente justificadas; imposibilidad de prestación por parte del operador; fuerza mayor o caso fortuito; y causas no previstas que imposibiliten la ejecución del Tour.</p>
+  <p>En los supuestos que correspondan, Lucitours gestionará reintegros ante terceros operadores y podrá aplicar penalidades conforme políticas de proveedores.</p>`,
+)}
+
+${clause(
+  "DÉCIMO CUARTO: DERECHOS Y OBLIGACIONES DEL CLIENTE.",
+  `<p>El Cliente se obliga, entre otros, a pagar montos económicos según contrato; brindar documentación veraz y vigente; respetar horarios, itinerarios y normas de proveedores; resguardar pertenencias personales; asumir gastos no incluidos; y gestionar correctamente documentación de menor(es), cuando aplique.</p>`,
+)}
+
+${clause(
+  "DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE LUCITOURS.",
+  `<p>Lucitours se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>`,
+)}
+
+${clause(
+  "DÉCIMO SEXTO: EXONERACIÓN DE RESPONSABILIDAD.",
+  `<p>El Cliente exonera a Lucitours por eventos no atribuibles directamente a su gestión, incluyendo, entre otros: enfermedades, accidentes, robos o pérdidas durante el Tour; atrasos, desvío o pérdida de vuelos; cierre de atracciones o condiciones climáticas adversas; eventualidades de terceros proveedores; y problemas por documentación dudosa, falsa, vencida o insuficiente.</p>`,
+)}
+
+${clause(
+  "DÉCIMO SÉPTIMO BIS: EMISIÓN DE TIQUETES AÉREOS.",
+  `<p>El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
+  <p>En ese sentido, la emisión de los tiquetes aéreos no necesariamente se realizará de forma inmediata al momento del pago de la reserva, pagos parciales o incluso la cancelación total del Tour, pudiendo efectuarse en cualquier momento hasta un plazo máximo de cuarenta y ocho (48) horas previas al inicio del viaje.</p>
+  <p>El Cliente entiende y acepta que la confirmación de su espacio dentro del Tour es independiente del momento de emisión de los tiquetes aéreos, y que estos podrán ser adquiridos en una fecha posterior según condiciones operativas y comerciales.</p>
+  <p>Lucitours garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>`,
+)}
+
+${clause(
+  "DÉCIMO SÉPTIMO: MODIFICACIONES AL CONTRATO.",
+  `<p>Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>`,
+)}
+
+${clause(
+  "DÉCIMO OCTAVO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.",
+  `<p>Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>`,
+)}
+
+${clause(
+  "DÉCIMO NOVENO: CONFIDENCIALIDAD.",
+  `<p>Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>`,
+)}
+
+${clause(
+  "VIGÉSIMO: NOTIFICACIONES Y COMUNICACIONES.",
+  `<ul>
+    <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
+    <li><strong>Cliente:</strong> Dirección ${v(data.clientAddress)}, correo ${v(data.clientEmail)} y teléfono ${v(data.clientPhone)}.</li>
+  </ul>`,
+)}
+
+${clause(
+  "VIGÉSIMO PRIMERO: INTEGRIDAD CONTRACTUAL.",
+  `<p>Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>`,
+)}
+
+<section class="clause">
+  <p>En fe de lo anterior, las Partes declaran haber leído y comprendido integralmente el presente Contrato, aceptándolo en todas sus cláusulas.</p>
+</section>
+
+<!-- ── Signature page ── -->
+<section class="sig-page">
+  <h2 class="sig-page-title">Firmas — Contrato N.° ${escapeHtml(data.contractNumber)}</h2>
+  <div class="sig-grid">
+    ${signerBlocks}
+    ${erickBlock}
+  </div>
+</section>
+
+<!-- ── Minor annex pages (one per minor, each on its own page) ── -->
+${minorAnnexPages}
+
+</body>
+</html>`;
+};
+
 const downloadBlob = (blob, fileName) => {
   debugLog("Disparando descarga", { fileName, size: blob.size });
   const url = URL.createObjectURL(blob);
@@ -1678,7 +2342,7 @@ if (sendAndDownloadButton) {
 
         statusText.textContent = "Construyendo contrato...";
         const data = renderPreview();
-        const contractHtml = buildPdfHtmlDocument(buildContractHtml(data));
+        const contractHtml = buildContractPdfHtml(data);
         const payloadData = { ...data };
 
         statusText.textContent = "Guardando contrato en base de datos...";
