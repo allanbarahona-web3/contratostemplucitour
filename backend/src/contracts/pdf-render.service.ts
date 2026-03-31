@@ -40,7 +40,6 @@ export class PdfRenderService {
       "--disable-gpu",
       "--no-first-run",
       "--no-zygote",
-      "--single-process",
     ];
     if (disableSandbox) {
       args.push("--no-sandbox", "--disable-setuid-sandbox");
@@ -55,7 +54,7 @@ export class PdfRenderService {
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 794, height: 1123 });
-      await page.setContent(standaloneHtml, { waitUntil: "networkidle0" });
+      await page.setContent(standaloneHtml, { waitUntil: "networkidle0", timeout: 30_000 });
       await page.emulateMediaType("print");
 
       const signatureAnchors = await page.evaluate(

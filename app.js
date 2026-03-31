@@ -1561,7 +1561,29 @@ const renderPreview = () => {
   return data;
 };
 
-const buildContractPdfHtml = (data) => {
+// Cache for asset data URIs so Puppeteer never needs to fetch external URLs.
+const _assetDataCache = {};
+const loadAssetDataUri = async (path) => {
+  if (_assetDataCache[path]) return _assetDataCache[path];
+  try {
+    const res = await fetch(path);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        _assetDataCache[path] = reader.result;
+        resolve(reader.result);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+const buildContractPdfHtml = (data, assets = {}) => {
   const baseUrl = window.location.origin;
   const signatureDate = formatDate(new Date().toISOString().slice(0, 10));
   const contractDestinationUpper = String(data.destination || "").trim().toLocaleUpperCase("es-CR");
@@ -1650,7 +1672,7 @@ const buildContractPdfHtml = (data) => {
     )
     .join("");
 
-  const erickImgSrc = `${baseUrl}/assets/firmaerick.png`;
+  const erickImgSrc = assets.erickSrc || `${baseUrl}/assets/firmaerick.png`;
   const erickBlock = `
     <div class="sig-box">
       <div class="sig-area sig-area--company" data-signer-key="company">
@@ -2019,7 +2041,7 @@ html, body {
 <!-- ── Document header ── -->
 <header class="doc-header">
   <img class="doc-header-logo"
-       src="${escapeAttr(baseUrl)}/assets/logo_lucitours.png"
+       src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/logo-lucitour.png`)}"
        alt="Lucitours" />
   <div class="doc-header-text">
     <h1>Viajes Lucitours Turismo Internacional S.A.</h1>
@@ -2282,7 +2304,11 @@ if (sendAndDownloadButton) {
 
         statusText.textContent = "Construyendo contrato...";
         const data = renderPreview();
-        const contractHtml = buildContractPdfHtml(data);
+        const [_logoSrc, _erickSrc] = await Promise.all([
+          loadAssetDataUri("./assets/logo-lucitour.png"),
+          loadAssetDataUri("./assets/firmaerick.png"),
+        ]);
+        const contractHtml = buildContractPdfHtml(data, { logoSrc: _logoSrc, erickSrc: _erickSrc });
         const payloadData = { ...data };
 
         statusText.textContent = "Guardando contrato en base de datos...";
