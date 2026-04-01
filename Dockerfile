@@ -42,10 +42,10 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_DISABLE_SANDBOX=true
 
-COPY backend/package*.json ./
+COPY package*.json ./
 RUN npm ci --include=dev
 
-COPY backend .
+COPY . .
 RUN npx prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
