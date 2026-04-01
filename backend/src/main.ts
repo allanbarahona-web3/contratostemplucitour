@@ -67,6 +67,10 @@ async function bootstrap() {
 
   const port = Number(configService.get<string>("PORT", "3001"));
   await app.listen(port);
+  console.log(`[bootstrap] Server listening on port ${port}`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error("[bootstrap] FATAL - server failed to start:", error);
+  process.exit(1);
+});
