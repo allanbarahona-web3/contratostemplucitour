@@ -1,0 +1,8 @@
+{
+  "contractNumber": "LUC-TEST-001",
+  "contractHtml": "<html><head><style>body{font-family:Arial;padding:40px}</style></head><body><h1>CONTRATO DE PRUEBA LOCAL</h1><p><strong>Cliente:</strong> Juan Pérez García</p><p><strong>Cédula:</strong> 12345678</p><p><strong>Email:</strong> juan@example.com</p><h2>Términos</h2><p>Este es un contrato de prueba local para validar la generación de PDFs.</p><div data-signer-key=\"client\" style=\"border:1px dashed #ccc;padding:20px;margin:30px 0;min-height:80px\"><p><strong>Firma del Cliente</strong></p><p style=\"margin-top:50px;border-top:1px solid #000;padding-top:10px\">Firmado: _______________</p></div><p><em>Generado: test local</em></body></html>",
+  "payloadJson": "{\"clientFullName\":\"Juan Pérez García\",\"clientEmail\":\"juan@example.com\"}",
+  "clientIdNumber": "12345678",
+  "clientFullName": "Juan Pérez García",
+  "clientEmail": "juan@example.com"
+}

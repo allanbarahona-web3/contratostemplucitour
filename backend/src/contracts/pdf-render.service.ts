@@ -35,6 +35,8 @@ export class PdfRenderService {
       process.env["PUPPETEER_EXECUTABLE_PATH"] ?? "/usr/bin/chromium";
     const disableSandbox = process.env["PUPPETEER_DISABLE_SANDBOX"] === "true";
 
+    this.logger.log(`[pdf] executablePath=${executablePath} disableSandbox=${disableSandbox}`);
+
     const args = [
       "--disable-dev-shm-usage",
       "--disable-gpu",
@@ -45,16 +47,21 @@ export class PdfRenderService {
       args.push("--no-sandbox", "--disable-setuid-sandbox");
     }
 
+    this.logger.log(`[pdf] launching browser with args: ${args.join(" ")}`);
+
     const browser = await puppeteer.launch({
       executablePath,
       args,
       headless: true,
     });
+    this.logger.log("[pdf] browser launched");
 
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 794, height: 1123 });
+      this.logger.log("[pdf] setContent start");
       await page.setContent(standaloneHtml, { waitUntil: "networkidle0", timeout: 30_000 });
+      this.logger.log("[pdf] setContent done, emulating print");
       await page.emulateMediaType("print");
 
       const signatureAnchors = await page.evaluate(
@@ -93,16 +100,18 @@ export class PdfRenderService {
         printBackground: true,
         preferCSSPageSize: true,
       });
+      this.logger.log(`[pdf] pdf generated, size=${pdfBytes.length} bytes`);
 
       return {
         pdfBuffer: Buffer.from(pdfBytes),
         signatureAnchors: signatureAnchors as Record<string, SignatureAnchor>,
       };
     } catch (error) {
-      this.logger.error("PDF render failed", error);
+      this.logger.error("[pdf] render failed", error instanceof Error ? error.stack : String(error));
       throw new InternalServerErrorException("No se pudo generar el PDF del contrato.");
     } finally {
       await browser.close();
+      this.logger.log("[pdf] browser closed");
     }
   }
 }
