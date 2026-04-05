@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma || prisma generate --schema=./prisma/schema.prisma",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
