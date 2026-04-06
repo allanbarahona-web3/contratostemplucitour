@@ -1,3 +1,5 @@
+console.log("[SignContract] JS loaded - version 2.0");
+
 // ─── DOM references ──────────────────────────────────────────────────────────
 const loadingStateEl   = document.getElementById("loadingState");
 const errorStateEl     = document.getElementById("errorState");
@@ -35,8 +37,14 @@ let isDrawing = false;
 let lastPoint = null;
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
-const showEl  = (el) => el?.classList.remove("hidden");
-const hideEl  = (el) => el?.classList.add("hidden");
+const showEl  = (el) => {
+  console.log("[UI] showing element:", el?.id);
+  el?.classList.remove("hidden");
+};
+const hideEl  = (el) => {
+  console.log("[UI] hiding element:", el?.id);
+  el?.classList.add("hidden");
+};
 
 const setReadStatus = (msg, type = "") => {
   if (!readStatusEl) return;
@@ -227,6 +235,7 @@ const canvasToPngBase64 = (canvas) =>
 
 // ─── Session ──────────────────────────────────────────────────────────────────
 const loadSigningSession = async () => {
+  console.log("[Session] Loading signing session...");
   sessionToken = getTokenFromUrl();
   if (!sessionToken) throw new Error("El enlace de firma no contiene token.");
 
@@ -235,6 +244,7 @@ const loadSigningSession = async () => {
     { method: "GET" },
   );
 
+  console.log("[Session] Received data:", {contractNumber: data.contractNumber, status: data.status});
   sessionData = data;
 
   if (contractNumberEl) contractNumberEl.textContent = data.contractNumber || "–";

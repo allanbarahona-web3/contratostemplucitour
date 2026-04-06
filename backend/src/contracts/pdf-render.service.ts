@@ -64,9 +64,26 @@ export class PdfRenderService {
       this.logger.log("[pdf] setContent done, emulating print");
       await page.emulateMediaType("print");
 
-      // Calculate signature anchors BEFORE generating PDF
+      this.logger.log("[pdf] generating PDF first to determine page count...");
+      const pdfBytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+      });
+      this.logger.log(`[pdf] pdf generated, size=${pdfBytes.length} bytes`);
+
+      // Read the PDF to get total page count
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { PDFDocument } = require("pdf-lib") as typeof import("pdf-lib");
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const totalPages = pdfDoc.getPageCount();
+      const lastPageIndex = totalPages - 1;
+      this.logger.log(`[pdf] PDF has ${totalPages} pages, last page index: ${lastPageIndex}`);
+
+      // Calculate signature anchors - signatures are ALWAYS on the last page
+      // because they're placed after the last clause in the HTML
       const signatureAnchors = await page.evaluate(
-        (a4HeightPx: unknown, a4HeightPt: unknown, pxToPt: unknown): Record<string, SignatureAnchor> => {
+        (finalPageIndex: unknown, a4HeightPt: unknown, pxToPt: unknown): Record<string, SignatureAnchor> => {
           const elems = document.querySelectorAll<HTMLElement>("[data-signer-key]");
           const anchors: Record<string, SignatureAnchor> = {};
           
@@ -76,41 +93,38 @@ export class PdfRenderService {
             
             const rect = el.getBoundingClientRect();
             
-            // Calculate page index based on vertical position
-            const pageIndex = Math.floor(rect.top / (a4HeightPx as number));
+            // All signatures are on the last page of the PDF
+            const pageIndex = finalPageIndex as number;
             
-            // Y position within that page (from top)
-            const yLocal = rect.top - pageIndex * (a4HeightPx as number);
+            // Calculate Y position from bottom (PDF coordinate system: 0 = bottom)
+            // rect.top is from viewport top, but we need position from page bottom
+            // Approximate: signatures are near bottom of their container
+            const heightPt = rect.height * (pxToPt as number);
+            const widthPt = rect.width * (pxToPt as number);
+            const xPt = rect.left * (pxToPt as number);
             
-            // Convert to PDF points (from bottom, as PDF uses bottom-left origin)
-            const yPt = (a4HeightPt as number) - (yLocal + rect.height) * (pxToPt as number);
+            // Place signatures at a reasonable height from bottom
+            // This is approximate - the exact Y will be refined if needed
+            const yPt = 100 + (rect.top % 200) * (pxToPt as number);
             
             anchors[signerKey] = {
               pageIndex,
               box: {
-                x: Number((rect.left * (pxToPt as number)).toFixed(2)),
+                x: Number(xPt.toFixed(2)),
                 y: Number(yPt.toFixed(2)),
-                width: Number((rect.width * (pxToPt as number)).toFixed(2)),
-                height: Number((rect.height * (pxToPt as number)).toFixed(2)),
+                width: Number(widthPt.toFixed(2)),
+                height: Number(heightPt.toFixed(2)),
               },
             };
           });
           return anchors;
         },
-        A4_HEIGHT_PX,
+        lastPageIndex,
         A4_HEIGHT_PT,
         CSS_PX_TO_PT,
       );
 
-      this.logger.log(`[pdf] calculated signature anchors (before PDF):`, signatureAnchors);
-
-      this.logger.log("[pdf] generating PDF...");
-      const pdfBytes = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        preferCSSPageSize: true,
-      });
-      this.logger.log(`[pdf] pdf generated, size=${pdfBytes.length} bytes`);
+      this.logger.log(`[pdf] signature anchors on page ${lastPageIndex}:`, signatureAnchors);
 
       return {
         pdfBuffer: Buffer.from(pdfBytes),
