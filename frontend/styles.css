@@ -663,7 +663,7 @@ button.ghost:hover {
 .history-shell {
   position: relative;
   z-index: 1;
-  width: min(1480px, 98vw);
+  width: min(1700px, 99vw);
   margin: 22px auto;
 }
 
@@ -703,12 +703,12 @@ button.ghost:hover {
 .history-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .history-table th:nth-child(6),
 .history-table td:nth-child(6) {
-  width: 260px;
+  width: 380px;
 }
 
 .history-table th,
@@ -735,9 +735,9 @@ button.ghost:hover {
 
 .history-actions {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .history-actions button {
@@ -1267,15 +1267,6 @@ button.ghost:hover {
   height: 102px;
 }
 
-.signature-box--client .signature-sign-area {
-  height: 112px;
-  border: 1.5px solid rgba(15, 23, 42, 0.48);
-  border-radius: 8px;
-  margin-bottom: 10px;
-  position: relative;
-  background: #fff;
-}
-
 .signature-sign-label {
   position: absolute;
   top: -10px;
@@ -1523,6 +1514,15 @@ button.ghost:hover {
   display: flex;
   flex-direction: column;
   padding: 0;
+}
+
+/* Keep hidden state reliable even when component display rules appear later */
+.sign-page .hidden,
+.sign-page.hidden,
+.sign-step.hidden,
+.sign-loading.hidden,
+.sign-error.hidden {
+  display: none !important;
 }
 
 .sign-header {

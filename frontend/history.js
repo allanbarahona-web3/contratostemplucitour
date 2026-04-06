@@ -95,6 +95,7 @@ const renderHistory = (items = []) => {
   historyTableBody.innerHTML = items
     .map((item) => {
       const state = statusLabel(item.status);
+      const isSigned = String(item?.status || "").trim().toUpperCase() === STATUS_SIGNED;
       return `
         <tr>
           <td>
@@ -110,6 +111,11 @@ const renderHistory = (items = []) => {
               <button type="button" class="ghost" data-action="contract" data-contract-id="${escapeAttr(item.id)}">Contrato</button>
               <button type="button" class="ghost" data-action="cedula" data-contract-id="${escapeAttr(item.id)}">Cedula</button>
               <button type="button" class="ghost" data-action="passport" data-contract-id="${escapeAttr(item.id)}">Pasaporte</button>
+              ${
+                isSigned
+                  ? `<button type="button" class="ghost" data-action="resend-signed" data-contract-id="${escapeAttr(item.id)}">Reenviar firmado</button>`
+                  : ""
+              }
             </div>
           </td>
         </tr>
@@ -248,6 +254,68 @@ historyTableBody.addEventListener("click", (event) => {
     }
 
     const action = target.getAttribute("data-action");
+
+    if (action === "resend-signed") {
+      const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+      if (!token) {
+        window.location.href = "./index.html";
+        return;
+      }
+
+      const oldLabel = target.textContent;
+      target.setAttribute("disabled", "true");
+      target.textContent = "Enviando...";
+
+      void apiFetch(`/contracts/${contractId}/resend-signed-email`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((result) => {
+          const sentCount = Number(result?.sentCount || 0);
+          const failedCount = Number(result?.failedCount || 0);
+          const sentTo = Array.isArray(result?.sentTo) ? result.sentTo : [];
+          const failedTo = Array.isArray(result?.failedTo) ? result.failedTo : [];
+          const loggedAtRaw = String(result?.dispatchLogEntry?.createdAt || "").trim();
+          const loggedAt = loggedAtRaw ? formatDateTime(loggedAtRaw) : "-";
+
+          const sentList = sentTo.length
+            ? `<p><strong>Enviado a:</strong> ${escapeHtml(sentTo.join(", "))}</p>`
+            : "";
+          const failedList = failedTo.length
+            ? `<p><strong>No enviado:</strong> ${escapeHtml(failedTo.join(", "))}</p>`
+            : "";
+
+          viewerTitle.textContent = "Reenvio de contrato firmado";
+          viewerBody.innerHTML = `
+            <article class="viewer-doc">
+              <p class="viewer-doc-title">Resultado</p>
+              <p>Se enviaron <strong>${sentCount}</strong> correos.</p>
+              <p>Fallaron <strong>${failedCount}</strong> correos.</p>
+              <p><strong>Registro guardado:</strong> ${escapeHtml(loggedAt)}</p>
+              ${sentList}
+              ${failedList}
+            </article>
+          `;
+          viewerModal.classList.remove("hidden");
+          viewerModal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("viewer-open");
+        })
+        .catch((error) => {
+          viewerTitle.textContent = "Error reenviando contrato";
+          viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudo reenviar el contrato firmado.")}</p>`;
+          viewerModal.classList.remove("hidden");
+          viewerModal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("viewer-open");
+        })
+        .finally(() => {
+          target.removeAttribute("disabled");
+          target.textContent = oldLabel;
+        });
+
+      return;
+    }
 
     const oldLabel = target.textContent;
     target.setAttribute("disabled", "true");

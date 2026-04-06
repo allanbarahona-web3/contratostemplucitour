@@ -1,25 +1,25 @@
 // ─── DOM references ──────────────────────────────────────────────────────────
-const loadingStateEl   = document.getElementById("loadingState");
-const errorStateEl     = document.getElementById("errorState");
-const errorMessageEl   = document.getElementById("errorMessage");
-const readStepEl       = document.getElementById("readStep");
-const signStepEl       = document.getElementById("signStep");
-const successStepEl    = document.getElementById("successStep");
+const loadingStateEl = document.getElementById("loadingState");
+const errorStateEl = document.getElementById("errorState");
+const errorMessageEl = document.getElementById("errorMessage");
+const readStepEl = document.getElementById("readStep");
+const signStepEl = document.getElementById("signStep");
+const successStepEl = document.getElementById("successStep");
 const successMessageEl = document.getElementById("successMessage");
 
-const contractNumberEl  = document.getElementById("publicContractNumber");
-const clientNameEl      = document.getElementById("publicClientName");
-const contractStateEl   = document.getElementById("publicContractState");
-const contractFrameEl   = document.getElementById("publicContractFrame");
-const readStatusEl      = document.getElementById("publicSignStatus");
+const contractNumberEl = document.getElementById("publicContractNumber");
+const clientNameEl = document.getElementById("publicClientName");
+const contractStateEl = document.getElementById("publicContractState");
+const contractFrameEl = document.getElementById("publicContractFrame");
+const readStatusEl = document.getElementById("publicSignStatus");
 
-const goToSignButton  = document.getElementById("goToSignButton");
+const goToSignButton = document.getElementById("goToSignButton");
 const backToReadButton = document.getElementById("backToReadButton");
 
 const signatureCanvas = document.getElementById("publicSignatureCanvas");
-const clearButton     = document.getElementById("publicSignatureClear");
-const submitButton    = document.getElementById("publicSignatureSubmit");
-const signStatusEl    = document.getElementById("signStepStatus");
+const clearButton = document.getElementById("publicSignatureClear");
+const submitButton = document.getElementById("publicSignatureSubmit");
+const signStatusEl = document.getElementById("signStepStatus");
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const normalizeBase = (v) => String(v || "").trim().replace(/\/+$/, "");
@@ -29,19 +29,20 @@ const API_BASE = configuredApiBase || (isLocal ? "http://localhost:3001" : "");
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let sessionToken = null;
-let sessionData  = null;
+let sessionData = null;
 let signatureDirty = false;
 let isDrawing = false;
 let lastPoint = null;
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
-const showEl  = (el) => {
+const showEl = (el) => {
   if (!el) return;
   el.classList.remove("hidden");
   el.style.display = "";
   el.setAttribute("aria-hidden", "false");
 };
-const hideEl  = (el) => {
+
+const hideEl = (el) => {
   if (!el) return;
   el.classList.add("hidden");
   el.style.display = "none";
@@ -110,7 +111,9 @@ const getTokenFromUrl = () => {
 
 // ─── API fetch ────────────────────────────────────────────────────────────────
 const apiFetch = async (path, options = {}) => {
-  if (!API_BASE) throw new Error("No hay API configurada. Define APP_CONFIG.API_BASE en config.js.");
+  if (!API_BASE) {
+    throw new Error("No hay API configurada. Define APP_CONFIG.API_BASE en config.js.");
+  }
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -128,11 +131,11 @@ const resizeSignatureCanvas = () => {
   if (!(signatureCanvas instanceof HTMLCanvasElement)) return;
   const wrap = signatureCanvas.parentElement;
   const w = wrap ? wrap.clientWidth || wrap.offsetWidth : 320;
-  signatureCanvas.width  = Math.max(w - 2, 280);
+  signatureCanvas.width = Math.max(w - 2, 280);
   signatureCanvas.height = 200;
   const ctx = signatureCanvas.getContext("2d");
   if (ctx) {
-    ctx.lineCap  = "round";
+    ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#123f79";
@@ -148,7 +151,9 @@ const clearCanvas = () => {
 
 const getCanvasPoint = (e) => {
   const rect = signatureCanvas.getBoundingClientRect();
-  const src  = e.touches ? e.touches[0] : e;
+  const src = e.touches ? e.touches[0] : e;
+  // Map viewport coordinates to canvas internal pixel coordinates.
+  // This keeps drawing aligned even when CSS size differs from canvas buffer size.
   const scaleX = rect.width > 0 ? signatureCanvas.width / rect.width : 1;
   const scaleY = rect.height > 0 ? signatureCanvas.height / rect.height : 1;
   return {
@@ -197,10 +202,13 @@ const findInkBounds = (canvas) => {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-  let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+  let minX = canvas.width;
+  let minY = canvas.height;
+  let maxX = 0;
+  let maxY = 0;
   let found = false;
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
+  for (let y = 0; y < canvas.height; y += 1) {
+    for (let x = 0; x < canvas.width; x += 1) {
       if (data[(y * canvas.width + x) * 4 + 3] > 12) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
@@ -215,7 +223,7 @@ const findInkBounds = (canvas) => {
   return {
     x: Math.max(0, minX - pad),
     y: Math.max(0, minY - pad),
-    w: Math.min(canvas.width,  maxX + pad + 1) - Math.max(0, minX - pad),
+    w: Math.min(canvas.width, maxX + pad + 1) - Math.max(0, minX - pad),
     h: Math.min(canvas.height, maxY + pad + 1) - Math.max(0, minY - pad),
   };
 };
@@ -228,15 +236,20 @@ const canvasToPngBase64 = (canvas) =>
       return;
     }
     const out = document.createElement("canvas");
-    out.width  = bounds.w;
+    out.width = bounds.w;
     out.height = bounds.h;
     const ctx = out.getContext("2d");
-    if (!ctx) { reject(new Error("No se pudo preparar la firma.")); return; }
+    if (!ctx) {
+      reject(new Error("No se pudo preparar la firma."));
+      return;
+    }
     ctx.drawImage(canvas, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
     const dataUrl = out.toDataURL("image/png");
-    // strip data:image/png;base64, prefix
     const base64 = dataUrl.split(",")[1];
-    if (!base64) { reject(new Error("No se pudo exportar la firma.")); return; }
+    if (!base64) {
+      reject(new Error("No se pudo exportar la firma."));
+      return;
+    }
     resolve(base64);
   });
 
@@ -252,9 +265,9 @@ const loadSigningSession = async () => {
 
   sessionData = data;
 
-  if (contractNumberEl) contractNumberEl.textContent = data.contractNumber || "–";
-  if (clientNameEl)     clientNameEl.textContent     = data.signerName || data.clientName || "–";
-  if (contractStateEl)  contractStateEl.textContent  = data.status || "–";
+  if (contractNumberEl) contractNumberEl.textContent = data.contractNumber || "-";
+  if (clientNameEl) clientNameEl.textContent = data.signerName || data.clientName || "-";
+  if (contractStateEl) contractStateEl.textContent = data.status || "-";
 
   const statusUp = String(data.status || "").toUpperCase();
   if (statusUp === "SIGNED") {
@@ -271,14 +284,17 @@ const loadSigningSession = async () => {
 
   contractFrameEl.src = data.contractHtmlUrl;
 
-  // Enable sign button once iframe loads
-  contractFrameEl.addEventListener("load", () => {
-    if (goToSignButton) goToSignButton.removeAttribute("disabled");
-    setReadStatus("Contrato cargado. Revísalo y presiona Firmar cuando estés listo.");
-  }, { once: true });
+  contractFrameEl.addEventListener(
+    "load",
+    () => {
+      if (goToSignButton) goToSignButton.removeAttribute("disabled");
+      setReadStatus("Contrato cargado. Revisalo y presiona Firmar cuando estes listo.");
+    },
+    { once: true },
+  );
 
   showReadStep();
-  setReadStatus("Cargando contrato…");
+  setReadStatus("Cargando contrato...");
 };
 
 // ─── Mark viewed ─────────────────────────────────────────────────────────────
@@ -289,7 +305,9 @@ const markViewed = async () => {
       method: "POST",
       body: JSON.stringify({ token: sessionToken }),
     });
-  } catch { /* non-blocking */ }
+  } catch {
+    // non-blocking
+  }
 };
 
 // ─── Submit signature ────────────────────────────────────────────────────────
@@ -298,10 +316,10 @@ const submitSignature = async () => {
   const signer = String(sessionData?.signerName || sessionData?.clientName || "").trim();
   if (!signer) throw new Error("No se pudo resolver el nombre del firmante.");
 
-  setSignStatus("Exportando firma…");
+  setSignStatus("Exportando firma...");
   const signatureImageBase64 = await canvasToPngBase64(signatureCanvas);
 
-  setSignStatus("Enviando firma…");
+  setSignStatus("Enviando firma...");
   const result = await apiFetch("/contracts/public/finalize-signature", {
     method: "POST",
     body: JSON.stringify({
@@ -312,14 +330,14 @@ const submitSignature = async () => {
   });
 
   const nextStatus = String(result?.status || "").toUpperCase();
-  if (contractStateEl) contractStateEl.textContent = nextStatus || "–";
+  if (contractStateEl) contractStateEl.textContent = nextStatus || "-";
 
   let msg = "Tu firma fue registrada correctamente.";
   if (nextStatus === "SIGNED") {
-    msg = "¡Contrato firmado! Todas las partes han completado el proceso.";
+    msg = "Contrato firmado. Todas las partes han completado el proceso.";
   } else {
     const signed = Number(result?.signedCount || 0);
-    const total  = Number(result?.totalSigners || 0);
+    const total = Number(result?.totalSigners || 0);
     if (signed && total) msg = `Firma registrada (${signed}/${total} firmantes completados).`;
   }
 
@@ -354,7 +372,7 @@ if (submitButton) {
   submitButton.addEventListener("click", () => {
     const label = submitButton.textContent;
     submitButton.disabled = true;
-    submitButton.textContent = "Enviando…";
+    submitButton.textContent = "Enviando...";
     void submitSignature()
       .catch((err) => {
         setSignStatus(err.message || "No se pudo enviar la firma.", "error");
@@ -369,11 +387,11 @@ if (submitButton) {
 }
 
 if (signatureCanvas instanceof HTMLCanvasElement) {
-  signatureCanvas.addEventListener("pointerdown",  beginDraw);
-  signatureCanvas.addEventListener("pointermove",  moveDraw);
-  signatureCanvas.addEventListener("pointerup",    endDraw);
+  signatureCanvas.addEventListener("pointerdown", beginDraw);
+  signatureCanvas.addEventListener("pointermove", moveDraw);
+  signatureCanvas.addEventListener("pointerup", endDraw);
   signatureCanvas.addEventListener("pointerleave", endDraw);
-  signatureCanvas.addEventListener("pointercancel",endDraw);
+  signatureCanvas.addEventListener("pointercancel", endDraw);
 }
 
 window.addEventListener("resize", () => {

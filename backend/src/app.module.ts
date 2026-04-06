@@ -10,7 +10,10 @@ import { PrismaModule } from "./prisma/prisma.module";
 @Module({
   controllers: [AppController],
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [".env.local", ".env"],
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: Number(process.env.RATE_LIMIT_TTL_MS || 60000),

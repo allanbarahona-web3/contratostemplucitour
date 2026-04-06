@@ -607,6 +607,35 @@ export class ContractsService {
       }
     }
 
+    const existingDispatchLog = Array.isArray(payload?.emailDispatchLog)
+      ? payload.emailDispatchLog.filter((item: any) => item && typeof item === "object")
+      : [];
+    const dispatchLogEntry = {
+      type: "SIGNED_RESEND_MANUAL",
+      createdAt: new Date().toISOString(),
+      contractId: contract.id,
+      contractNumber: contract.contractNumber,
+      requestedBy: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+      },
+      sentCount: sentTo.length,
+      failedCount: failedTo.length,
+      sentTo,
+      failedTo,
+    };
+
+    await (this.prisma as any).contract.update({
+      where: { id: contract.id },
+      data: {
+        payload: {
+          ...payload,
+          emailDispatchLog: [...existingDispatchLog, dispatchLogEntry],
+        },
+      },
+    });
+
     if (!sentTo.length) {
       throw new InternalServerErrorException("No se pudo reenviar el contrato firmado a ningun destinatario.");
     }
@@ -625,6 +654,7 @@ export class ContractsService {
         fullName: user.fullName,
       },
       signedAt: contract.signedAt || null,
+      dispatchLogEntry,
       signerSummary: Array.isArray(payload?.signedParticipants)
         ? payload.signedParticipants
         : null,
@@ -922,12 +952,34 @@ export class ContractsService {
     const fallbackKeyRoot = `contracts/signed/${this.sanitizeSegment(contract.contractNumber)}`;
     const baseFolder = keyRoot || fallbackKeyRoot;
 
-    // For multi-signer: build on top of existing signed PDF if available
-    const basePdfObjectKey = contract.signedPdfObjectKey || contract.pdfObjectKey;
-    const basePdfBuffer = await this.downloadObjectBuffer(basePdfObjectKey);
     const pngBuffer = Buffer.from(signatureImageBase64.trim(), "base64");
-    const signerAnchor = this.getSignatureAnchorForSigner(payload, signer.key);
-    const signedPdfBuffer = await this.embedSignatureInPdf(basePdfBuffer, pngBuffer, signerAnchor);
+
+    const normalizedSignature = signatureImageBase64.trim();
+    const signatureDataUrl = normalizedSignature.startsWith("data:")
+      ? normalizedSignature
+      : `data:image/png;base64,${normalizedSignature}`;
+
+    const existingSignatureImages =
+      payload.signatureImagesBySigner &&
+      typeof payload.signatureImagesBySigner === "object" &&
+      !Array.isArray(payload.signatureImagesBySigner)
+        ? (payload.signatureImagesBySigner as Record<string, string>)
+        : {};
+
+    const nextSignatureImagesBySigner: Record<string, string> = {
+      ...existingSignatureImages,
+      [signer.key]: signatureDataUrl,
+    };
+
+    if (!contract.htmlObjectKey) {
+      throw new InternalServerErrorException("El contrato no tiene HTML fuente para regenerar PDF firmado.");
+    }
+    const contractHtmlBuffer = await this.downloadObjectBuffer(contract.htmlObjectKey);
+    const contractHtml = contractHtmlBuffer.toString("utf8");
+    const signedPdfBuffer = await this.pdfRenderService.renderSignedContractToBuffer(
+      contractHtml,
+      nextSignatureImagesBySigner,
+    );
 
     // SHA-256 of the final signed PDF bytes
     const signedPdfHash = createHash("sha256").update(signedPdfBuffer).digest("hex");
@@ -1013,6 +1065,7 @@ export class ContractsService {
             ...payload,
             requiredSignerKeys,
             signedParticipants: nextSignedParticipants,
+            signatureImagesBySigner: nextSignatureImagesBySigner,
           },
         },
       }),

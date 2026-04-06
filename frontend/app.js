@@ -157,8 +157,12 @@ const showSigningLinkActions = (signingUrl, signingLinks = []) => {
           return `
             <article class="companion-signing-item">
               <p><strong>${signerName}</strong> (${role})</p>
+              <label class="full">Link de firma
+                <input type="text" readonly value="${escapeAttr(url)}" />
+              </label>
               <div class="sign-link-buttons">
                 <a class="agent-nav-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">Ver contrato</a>
+                <button type="button" class="ghost" data-action="copy-companion-link" data-signing-url="${escapeAttr(url)}">Copiar link</button>
                 <a class="agent-nav-link" href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>
               </div>
             </article>
@@ -1350,8 +1354,8 @@ const buildContractHtml = (data) => {
   ]
     .map(
       (person) => `
-      <div class="signature-box signature-box--person${person.isClient ? " signature-box--client" : ""}">
-        <div class="signature-sign-area${person.isClient ? " signature-sign-area--client" : ""}" data-signer-key="${escapeAttr(
+      <div class="signature-box signature-box--person">
+        <div class="signature-sign-area" data-signer-key="${escapeAttr(
           person.signerKey,
         )}" aria-hidden="true">
           <span class="signature-sign-label">${person.isClient ? "Firma del cliente" : "Firma del acompa\u00f1ante"}</span>
@@ -1458,8 +1462,14 @@ const buildContractHtml = (data) => {
     <p><strong>DÉCIMO PRIMERO: TRANSPORTES.</strong> Lucitours brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>
     <p><strong>DÉCIMO SEGUNDO: ALIMENTACIÓN.</strong> El Tour no incluye alimentación, salvo indicación expresa en la publicación del tour o bien que el hospedaje indique que se incluye el desayuno con el hospedaje; por lo tanto, el Cliente debe asumir sus costos de alimentación durante el tour.</p>
 
-    <p><strong>DÉCIMO TERCERO: CANCELACIÓN DEL TOUR.</strong> La cancelación del Tour podrá darse por: enfermedad/muerte debidamente justificadas; imposibilidad de prestación por parte del operador; fuerza mayor o caso fortuito; y causas no previstas que imposibiliten la ejecución del Tour.</p>
-    <p>En los supuestos que correspondan, Lucitours gestionará reintegros ante terceros operadores y podrá aplicar penalidades conforme políticas de proveedores.</p>
+    <p><strong>DÉCIMO TERCERO: CANCELACIONES, REEMBOLSOS, CRÉDITOS Y FUERZA MAYOR.</strong></p>
+    <p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Lucitours dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Lucitours confirme formalmente la procedencia del reembolso.</p>
+    <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Lucitours. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
+    <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Lucitours podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Lucitours. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
+    <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Lucitours actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Lucitours no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
+    <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Lucitours no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
+    <p><strong>13.5 Fuerza Mayor.</strong> Lucitours no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Lucitours podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
+    <p><strong>13.6 Aceptación de Condiciones.</strong> Al contratar los servicios, el Cliente declara haber leído, entendido y aceptado todas las condiciones de esta cláusula, incluyendo tiempos de reembolso, políticas de crédito y limitaciones de responsabilidad.</p>
 
     <p><strong>DÉCIMO CUARTO: DERECHOS Y OBLIGACIONES DEL CLIENTE.</strong> El Cliente se obliga, entre otros, a pagar montos económicos según contrato; brindar documentación veraz y vigente; respetar horarios, itinerarios y normas de proveedores; resguardar pertenencias personales; asumir gastos no incluidos; y gestionar correctamente documentación de menor(es), cuando aplique.</p>
 
@@ -1655,7 +1665,7 @@ const buildContractPdfHtml = (data, assets = {}) => {
     .map(
       (person) => `
       <div class="sig-box">
-        <div class="sig-area${person.isClient ? " sig-area--client" : ""}"
+        <div class="sig-area"
              data-signer-key="${escapeAttr(person.signerKey)}">
           <span class="sig-label">${person.isClient ? "Firma del cliente" : "Firma del acompañante"}</span>
           ${
@@ -1919,13 +1929,6 @@ html, body {
   padding: 4pt;
 }
 
-.sig-area--client {
-  height: 78pt;
-  border: 1.5pt solid #0a0a0a;
-  border-radius: 4pt;
-  margin-bottom: 6pt;
-}
-
 .sig-area--company {
   border: none;
   border-bottom: 1pt solid #0a0a0a;
@@ -2171,9 +2174,14 @@ ${clause(
 )}
 
 ${clause(
-  "DÉCIMO TERCERO: CANCELACIÓN DEL TOUR.",
-  `<p>La cancelación del Tour podrá darse por: enfermedad/muerte debidamente justificadas; imposibilidad de prestación por parte del operador; fuerza mayor o caso fortuito; y causas no previstas que imposibiliten la ejecución del Tour.</p>
-  <p>En los supuestos que correspondan, Lucitours gestionará reintegros ante terceros operadores y podrá aplicar penalidades conforme políticas de proveedores.</p>`,
+  "DÉCIMO TERCERO: CANCELACIONES, REEMBOLSOS, CRÉDITOS Y FUERZA MAYOR.",
+  `<p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Lucitours dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Lucitours confirme formalmente la procedencia del reembolso.</p>
+  <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Lucitours. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
+  <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Lucitours podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Lucitours. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
+  <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Lucitours actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Lucitours no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
+  <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Lucitours no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
+  <p><strong>13.5 Fuerza Mayor.</strong> Lucitours no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Lucitours podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
+  <p><strong>13.6 Aceptación de Condiciones.</strong> Al contratar los servicios, el Cliente declara haber leído, entendido y aceptado todas las condiciones de esta cláusula, incluyendo tiempos de reembolso, políticas de crédito y limitaciones de responsabilidad.</p>`,
 )}
 
 ${clause(
@@ -2445,6 +2453,40 @@ if (copySigningLinkButton) {
       statusText.textContent = "Enlace de firma copiado al portapapeles.";
     } catch {
       statusText.textContent = "No se pudo copiar automaticamente. Copialo desde Abrir link de firma.";
+    }
+  });
+}
+
+if (companionSigningLinksEl) {
+  companionSigningLinksEl.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (!target.matches('[data-action="copy-companion-link"]')) {
+      return;
+    }
+
+    const signingUrl = String(target.getAttribute("data-signing-url") || "").trim();
+    if (!signingUrl) {
+      statusText.textContent = "No hay link para copiar.";
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(signingUrl);
+      } else {
+        const tmp = document.createElement("textarea");
+        tmp.value = signingUrl;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        tmp.remove();
+      }
+      statusText.textContent = "Link del acompanante copiado al portapapeles.";
+    } catch {
+      statusText.textContent = "No se pudo copiar automaticamente el link del acompanante.";
     }
   });
 }
