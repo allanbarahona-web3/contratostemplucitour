@@ -1157,6 +1157,8 @@ export class ContractsService {
       ? await this.buildSignedObjectUrl(contract.htmlObjectKey, 1200)
       : null;
 
+    this.logger.log(`[signing-session] Contract ${contract.contractNumber} status: ${contract.status}, signerKey: ${resolvedSigner.key}`);
+
     return {
       contractId: contract.id,
       contractNumber: contract.contractNumber,

@@ -64,25 +64,9 @@ export class PdfRenderService {
       this.logger.log("[pdf] setContent done, emulating print");
       await page.emulateMediaType("print");
 
-      this.logger.log("[pdf] generating PDF...");
-      const pdfBytes = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        preferCSSPageSize: true,
-      });
-      this.logger.log(`[pdf] pdf generated, size=${pdfBytes.length} bytes`);
-
-      // Read the PDF to get total page count
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { PDFDocument } = require("pdf-lib") as typeof import("pdf-lib");
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const totalPages = pdfDoc.getPageCount();
-      this.logger.log(`[pdf] PDF has ${totalPages} pages`);
-
-      // Calculate signature anchors: the boxes are after the last clause in HTML,
-      // so they end up on the last page(s) of the PDF
+      // Calculate signature anchors BEFORE generating PDF
       const signatureAnchors = await page.evaluate(
-        (totalPgs: unknown, a4HeightPx: unknown, a4HeightPt: unknown, pxToPt: unknown): Record<string, SignatureAnchor> => {
+        (a4HeightPx: unknown, a4HeightPt: unknown, pxToPt: unknown): Record<string, SignatureAnchor> => {
           const elems = document.querySelectorAll<HTMLElement>("[data-signer-key]");
           const anchors: Record<string, SignatureAnchor> = {};
           
@@ -92,21 +76,13 @@ export class PdfRenderService {
             
             const rect = el.getBoundingClientRect();
             
-            // rect.top is distance from top of the full rendered document (all pages stacked)
-            // Calculate which page this element is on
-            const absolutePageIndex = Math.floor(rect.top / (a4HeightPx as number));
+            // Calculate page index based on vertical position
+            const pageIndex = Math.floor(rect.top / (a4HeightPx as number));
             
-            // The rendered document might be N pages, but the PDF is totalPgs pages
-            // The signature boxes are at the END, so they map to the last page(s) of the PDF
-            // Calculate offset: if rendered shows page 3 but PDF has 5 pages, offset is +2
-            const renderedTotalPages = Math.ceil(document.body.scrollHeight / (a4HeightPx as number));
-            const pageOffset = (totalPgs as number) - renderedTotalPages;
+            // Y position within that page (from top)
+            const yLocal = rect.top - pageIndex * (a4HeightPx as number);
             
-            // Actual page in the PDF
-            const pageIndex = absolutePageIndex + pageOffset;
-            
-            // Y position within that page
-            const yLocal = rect.top - absolutePageIndex * (a4HeightPx as number);
+            // Convert to PDF points (from bottom, as PDF uses bottom-left origin)
             const yPt = (a4HeightPt as number) - (yLocal + rect.height) * (pxToPt as number);
             
             anchors[signerKey] = {
@@ -121,13 +97,20 @@ export class PdfRenderService {
           });
           return anchors;
         },
-        totalPages,
         A4_HEIGHT_PX,
         A4_HEIGHT_PT,
         CSS_PX_TO_PT,
       );
 
-      this.logger.log(`[pdf] calculated signature anchors:`, signatureAnchors);
+      this.logger.log(`[pdf] calculated signature anchors (before PDF):`, signatureAnchors);
+
+      this.logger.log("[pdf] generating PDF...");
+      const pdfBytes = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        preferCSSPageSize: true,
+      });
+      this.logger.log(`[pdf] pdf generated, size=${pdfBytes.length} bytes`);
 
       return {
         pdfBuffer: Buffer.from(pdfBytes),
