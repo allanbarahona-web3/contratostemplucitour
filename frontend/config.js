@@ -1,7 +1,7 @@
 window.APP_CONFIG = {
   API_BASE: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:3001"
-    : "https://contratostempapi-h5ppc.ondigitalocean.app",
+    : "https://contractstemporal-f8too.ondigitalocean.app",
   DEBUG: false,
   SIGNATURE_PLACEMENT: {
     ANCHOR_OFFSET_X: 8,
