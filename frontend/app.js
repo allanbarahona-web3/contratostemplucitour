@@ -1882,8 +1882,8 @@ html, body {
 
 /* ── signature page ─────────────────────────────────────────────── */
 .sig-page {
-  page-break-before: always;
-  break-before: page;
+  page-break-inside: avoid;
+  break-inside: avoid;
   padding-top: 10pt;
 }
 
