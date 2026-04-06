@@ -53,6 +53,7 @@ fi
 
 # Start Frontend
 echo -e "${BLUE}🚀 Iniciando Frontend...${NC}"
+cd frontend
 http-server -p 5179 -c-1
 
 # Cleanup on exit

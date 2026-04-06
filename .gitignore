@@ -1,11 +1,17 @@
+# Dependencies
 node_modules/
-.DS_Store
+
+# Build outputs
+backend/dist/
+
+# Environment variables
 .env
 .env.*
 !.env.example
 
-backend/node_modules/
-backend/dist/
-backend/.env
-backend/.env.*
-!backend/.env.example
+# Sistema
+.DS_Store
+
+# Logs
+*.log
+/tmp/

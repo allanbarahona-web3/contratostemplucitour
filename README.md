@@ -1,58 +1,51 @@
-# Contratos Temp Lucitour
+# Contratos Lucitour
 
-Repositorio independiente para la mini app de contratos y su backend de autenticacion.
+Sistema de gestión y firma de contratos.
 
 ## Estructura
-- Frontend estatico: raiz del repo (`index.html`, `app.js`, `styles.css`).
-- Backend NestJS + PostgreSQL: `backend/`.
-
-## Frontend local
-```bash
-cd /home/allanb/contratostemplucitour
-python3 -m http.server 5179
+```
+frontend/    # App web estática (HTML/CSS/JS)
+backend/     # API NestJS + PostgreSQL
 ```
 
-Abrir: `http://localhost:5179`
+## 🚀 Desarrollo Local
 
-## Backend local (Nest + PostgreSQL)
-1. Configurar variables de entorno:
+**Opción 1 - Automático:**
 ```bash
-cd /home/allanb/contratostemplucitour/backend
-cp .env.example .env
+./start-dev.sh
 ```
 
-2. Instalar dependencias:
+**Opción 2 - Manual:**
 ```bash
+# Terminal 1 - Backend
+cd backend && npm run start:dev
+
+# Terminal 2 - Frontend  
+cd frontend && npx http-server -p 5179 -c-1
+```
+
+URLs:
+- Frontend: http://localhost:5179
+- Backend API: http://localhost:3001
+
+## 🌐 Producción
+
+**Frontend (Vercel):**
+- https://contratos.lucitour.com
+- Config: `vercel.json` apunta a `/frontend`
+
+**Backend (DigitalOcean App):**
+- https://contratostempapi-h5ppc.ondigitalocean.app
+- **IMPORTANTE**: Configurar "Root Directory" = `backend` en DO App Console
+
+## ⚙️ Setup Backend
+
+```bash
+cd backend
 npm install
-```
-
-3. Crear esquema en PostgreSQL:
-```bash
 npm run prisma:generate
-npm run prisma:migrate -- --name init
-```
-
-4. Crear usuario admin inicial:
-```bash
+npm run prisma:migrate
 npm run prisma:seed
 ```
 
-5. Levantar API:
-```bash
-npm run start:dev
-```
-
-API por defecto: `http://localhost:3001`
-
-## Login rapido
-- El frontend solicita correo/contrasena contra `POST /auth/login`.
-- Guarda JWT en `localStorage` y valida sesion con `GET /auth/me`.
-
-## Deploy en Vercel (solo frontend)
-1. Importar este repo en Vercel.
-2. `Root Directory`: `./`
-3. `Framework Preset`: `Other`
-4. Deploy.
-
-## Deploy del backend
-El backend Nest puede desplegarse en Railway/Render/Fly, y el frontend debe apuntar al dominio del backend en la clave `contractsApiBase` del `localStorage`.
+Ver `backend/.env.example` para variables requeridas.
