@@ -21,9 +21,20 @@
     <main class="history-shell">
       <section class="panel history-main-panel">
         <header class="panel-header">
+          <div id="sessionControls" class="session-controls hidden">
+            <div class="session-top">
+              <p id="agentBadge" class="agent-badge"></p>
+              <button id="logoutButton" type="button" class="agent-logout">Cerrar sesion</button>
+            </div>
+            <nav class="nav-tabs">
+              <a href="./index.html" class="nav-tab">📋 Crear Contrato</a>
+              <a href="./history.html" class="nav-tab active">📜 Historial</a>
+              <a href="./clientes.html" class="nav-tab">👥 CRM Clientes</a>
+            </nav>
+            <p id="sessionLiveBadge" class="session-live-badge state-off" aria-live="polite">Sin enlace en vivo</p>
+          </div>
           <div class="history-top-row">
             <p class="kicker">Control de contratos</p>
-            <a href="./index.html" class="agent-nav-link">Volver al formulario</a>
           </div>
           <h1>Historial de Contratos</h1>
           <p>Consulta global para agentes por nombre, identificacion, numero de contrato o correo.</p>

@@ -714,6 +714,19 @@ const setAuthenticatedUi = (user) => {
   loginGate.style.setProperty("display", "none", "important");
   if (sessionControlsEl) {
     sessionControlsEl.classList.remove("hidden");
+    
+    // Mark active tab based on current page
+    const navTabs = sessionControlsEl.querySelectorAll(".nav-tab");
+    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    navTabs.forEach((tab) => {
+      const href = tab.getAttribute("href");
+      const tabPage = href ? href.split("/").pop() : "index.html";
+      if (tabPage === currentPage || (currentPage === "" && tabPage === "index.html")) {
+        tab.classList.add("active");
+      } else {
+        tab.classList.remove("active");
+      }
+    });
   }
   if (badgeEl) {
     badgeEl.textContent = `Agente activo: ${user.fullName} (${user.email})`;

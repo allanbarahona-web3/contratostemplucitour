@@ -56,10 +56,16 @@
       <section class="panel">
         <header class="panel-header">
           <div id="sessionControls" class="session-controls hidden">
-            <p id="agentBadge" class="agent-badge"></p>
+            <div class="session-top">
+              <p id="agentBadge" class="agent-badge"></p>
+              <button id="logoutButton" type="button" class="agent-logout">Cerrar sesion</button>
+            </div>
+            <nav class="nav-tabs">
+              <a href="./index.html" class="nav-tab active">📋 Crear Contrato</a>
+              <a href="./history.html" class="nav-tab">📜 Historial</a>
+              <a href="./clientes.html" class="nav-tab">👥 CRM Clientes</a>
+            </nav>
             <p id="sessionLiveBadge" class="session-live-badge state-off" aria-live="polite">Sin enlace en vivo</p>
-            <a href="./history.html" class="agent-nav-link">Clientes y contratos</a>
-            <button id="logoutButton" type="button" class="agent-logout">Cerrar sesion</button>
           </div>
           <p class="kicker">Temporal y separada</p>
           <h1>Contratos App Temp</h1>

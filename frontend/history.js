@@ -204,6 +204,9 @@ const loadContractHistory = async (query = "") => {
     return;
   }
 
+  // Mark active navigation tab
+  markActiveNavTab();
+
   historyTableBody.innerHTML = `
     <tr>
       <td colspan="6"><p class="history-empty">Cargando historial...</p></td>
@@ -224,6 +227,39 @@ const loadContractHistory = async (query = "") => {
   });
 
   renderHistory(result.items || []);
+};
+
+const markActiveNavTab = () => {
+  const sessionControls = document.getElementById("sessionControls");
+  if (!sessionControls) return;
+  
+  const navTabs = sessionControls.querySelectorAll(".nav-tab");
+  const currentPage = window.location.pathname.split("/").pop() || "index.html";
+  navTabs.forEach((tab) => {
+    const href = tab.getAttribute("href");
+    const tabPage = href ? href.split("/").pop() : "index.html";
+    if (tabPage === currentPage || (currentPage === "" && tabPage === "index.html")) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
+  
+  // Also show agent badge
+  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    try {
+      const response = fetch(`${API_BASE}/auth/verify`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      response.then(r => r.json()).then(user => {
+        const agentBadge = document.getElementById("agentBadge");
+        if (agentBadge && user.fullName) {
+          agentBadge.textContent = `Agente activo: ${user.fullName}`;
+        }
+      });
+    } catch (_) {}
+  }
 };
 
 const openContractFiles = async (contractId) => {
