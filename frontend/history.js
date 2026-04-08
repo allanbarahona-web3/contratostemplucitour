@@ -74,11 +74,43 @@ const statusLabel = (status) => {
 
 const getDocKind = (doc) => {
   const name = String(doc?.originalFileName || "").toLowerCase();
-  if (name.includes("cedula-frente") || name.includes("cedula_front")) return "cedula-front";
-  if (name.includes("cedula-reverso") || name.includes("cedula_back") || name.includes("cedula-reverso")) {
-    return "cedula-back";
+  
+  // Detectar persona y tipo de documento
+  if (name.includes("titular-")) {
+    if (name.includes("cedula-frente") || name.includes("cedula_front")) return "titular-cedula-front";
+    if (name.includes("cedula-reverso") || name.includes("cedula_back")) return "titular-cedula-back";
+    if (name.includes("pasaporte") || name.includes("passport")) return "titular-passport";
   }
+  
+  // Acompañantes (acompanante1, acompanante2, etc.)
+  const companionMatch = name.match(/acompanante(\d+)/);
+  if (companionMatch) {
+    const num = companionMatch[1];
+    if (name.includes("cedula-frente") || name.includes("cedula_front")) return `companion${num}-cedula-front`;
+    if (name.includes("cedula-reverso") || name.includes("cedula_back")) return `companion${num}-cedula-back`;
+    if (name.includes("pasaporte") || name.includes("passport")) return `companion${num}-passport`;
+  }
+  
+  // Menores y tutores (menor1-tutor-cedula-frente, menor1-cedula-frente, etc.)
+  const minorMatch = name.match(/menor(\d+)/);
+  if (minorMatch) {
+    const num = minorMatch[1];
+    if (name.includes("tutor-")) {
+      if (name.includes("cedula-frente") || name.includes("cedula_front")) return `minor${num}-tutor-cedula-front`;
+      if (name.includes("cedula-reverso") || name.includes("cedula_back")) return `minor${num}-tutor-cedula-back`;
+      if (name.includes("pasaporte") || name.includes("passport")) return `minor${num}-tutor-passport`;
+    } else {
+      if (name.includes("cedula-frente") || name.includes("cedula_front")) return `minor${num}-cedula-front`;
+      if (name.includes("cedula-reverso") || name.includes("cedula_back")) return `minor${num}-cedula-back`;
+      if (name.includes("pasaporte") || name.includes("passport")) return `minor${num}-passport`;
+    }
+  }
+  
+  // Documentos viejos (compatibilidad)
+  if (name.includes("cedula-frente") || name.includes("cedula_front")) return "cedula-front";
+  if (name.includes("cedula-reverso") || name.includes("cedula_back")) return "cedula-back";
   if (name.includes("pasaporte") || name.includes("passport")) return "passport";
+  
   return "other";
 };
 
@@ -109,8 +141,7 @@ const renderHistory = (items = []) => {
           <td>
             <div class="history-actions">
               <button type="button" class="ghost" data-action="contract" data-contract-id="${escapeAttr(item.id)}">Contrato</button>
-              <button type="button" class="ghost" data-action="cedula" data-contract-id="${escapeAttr(item.id)}">Cedula</button>
-              <button type="button" class="ghost" data-action="passport" data-contract-id="${escapeAttr(item.id)}">Pasaporte</button>
+              <button type="button" class="ghost" data-action="documents" data-contract-id="${escapeAttr(item.id)}">Documentos</button>
               ${
                 isSigned
                   ? `<button type="button" class="ghost" data-action="resend-signed" data-contract-id="${escapeAttr(item.id)}">Reenviar firmado</button>`
@@ -241,6 +272,132 @@ historySearchInput.addEventListener("input", () => {
   }, 260);
 });
 
+const openDocumentsByPerson = (docsWithKind) => {
+  // Agrupar documentos por persona
+  const titular = {
+    name: "Titular",
+    docs: docsWithKind.filter((doc) => doc.kind.startsWith("titular-")),
+  };
+  
+  const companions = {};
+  const minors = {};
+  
+  docsWithKind.forEach((doc) => {
+    const companionMatch = doc.kind.match(/^companion(\d+)-/);
+    if (companionMatch) {
+      const num = companionMatch[1];
+      if (!companions[num]) companions[num] = [];
+      companions[num].push(doc);
+    }
+    
+    const minorMatch = doc.kind.match(/^minor(\d+)-/);
+    if (minorMatch) {
+      const num = minorMatch[1];
+      if (!minors[num]) minors[num] = { minor: [], tutor: [] };
+      if (doc.kind.includes("-tutor-")) {
+        minors[num].tutor.push(doc);
+      } else {
+        minors[num].minor.push(doc);
+      }
+    }
+  });
+  
+  // Documentos viejos sin categorizar por persona
+  const otherDocs = docsWithKind.filter((doc) => 
+    doc.kind === "cedula-front" || doc.kind === "cedula-back" || 
+    doc.kind === "passport" || doc.kind === "other"
+  );
+  
+  // Construir HTML
+  let html = "";
+  
+  if (titular.docs.length > 0) {
+    html += `<div class="doc-person-group">
+      <h4>Titular</h4>
+      <div class="doc-grid">
+        ${titular.docs.map((doc) => renderDocumentCard(doc)).join("")}
+      </div>
+    </div>`;
+  }
+  
+  Object.keys(companions).sort().forEach((num) => {
+    html += `<div class="doc-person-group">
+      <h4>Acompañante ${num}</h4>
+      <div class="doc-grid">
+        ${companions[num].map((doc) => renderDocumentCard(doc)).join("")}
+      </div>
+    </div>`;
+  });
+  
+  Object.keys(minors).sort().forEach((num) => {
+    const minor = minors[num];
+    html += `<div class="doc-person-group">
+      <h4>Menor ${num}</h4>`;
+    
+    if (minor.minor.length > 0) {
+      html += `<h5>Documentos del menor</h5>
+        <div class="doc-grid">
+          ${minor.minor.map((doc) => renderDocumentCard(doc)).join("")}
+        </div>`;
+    }
+    
+    if (minor.tutor.length > 0) {
+      html += `<h5>Documentos del tutor</h5>
+        <div class="doc-grid">
+          ${minor.tutor.map((doc) => renderDocumentCard(doc)).join("")}
+        </div>`;
+    }
+    
+    html += `</div>`;
+  });
+  
+  if (otherDocs.length > 0) {
+    html += `<div class="doc-person-group">
+      <h4>Otros documentos</h4>
+      <div class="doc-grid">
+        ${otherDocs.map((doc) => renderDocumentCard(doc)).join("")}
+      </div>
+    </div>`;
+  }
+  
+  if (!html) {
+    html = '<p class="history-empty">No hay documentos disponibles.</p>';
+  }
+  
+  viewerTitle.textContent = "Documentos del contrato";
+  viewerBody.innerHTML = html;
+  viewerModal.classList.remove("hidden");
+  viewerModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("viewer-open");
+};
+
+const renderDocumentCard = (doc) => {
+  const mime = String(doc.mimeType || "").toLowerCase();
+  const label = escapeHtml(doc.originalFileName || "Documento");
+  
+  if (mime.startsWith("image/")) {
+    return `
+      <article class="viewer-doc-card">
+        <p class="viewer-doc-card-title">${label}</p>
+        <img src="${escapeAttr(doc.url)}" alt="${label}" loading="lazy" />
+      </article>`;
+  }
+  
+  if (mime === "application/pdf") {
+    return `
+      <article class="viewer-doc-card">
+        <p class="viewer-doc-card-title">${label}</p>
+        <embed src="${escapeAttr(doc.url)}" type="application/pdf" />
+      </article>`;
+  }
+  
+  return `
+    <article class="viewer-doc-card">
+      <p class="viewer-doc-card-title">${label}</p>
+      <a href="${escapeAttr(doc.url)}" target="_blank" rel="noopener noreferrer">Ver documento</a>
+    </article>`;
+};
+
 historyTableBody.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
@@ -335,6 +492,12 @@ historyTableBody.addEventListener("click", (event) => {
           return;
         }
 
+        if (action === "documents") {
+          openDocumentsByPerson(docsWithKind);
+          return;
+        }
+
+        // Mantener compatibilidad con botones viejos
         if (action === "cedula") {
           const idDocs = docsWithKind.filter((doc) => doc.kind === "cedula-front" || doc.kind === "cedula-back");
           openViewer("Cedula (frente y reverso)", idDocs);

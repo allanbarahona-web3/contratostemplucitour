@@ -578,6 +578,21 @@ textarea {
   gap: 10px;
 }
 
+.card-subsection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.card-subsection h5 {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .itinerary-grid {
   grid-template-columns: 180px 1fr auto;
   align-items: end;
@@ -909,6 +924,87 @@ button.ghost:hover {
 
 .viewer-doc iframe {
   height: 72vh;
+}
+
+.doc-person-group {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(18, 63, 147, 0.12);
+}
+
+.doc-person-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.doc-person-group > h4 {
+  margin: 0 0 12px 0;
+  font-size: 1.05rem;
+  color: #123f93;
+  font-weight: 700;
+}
+
+.doc-person-group > h5 {
+  margin: 16px 0 8px 0;
+  font-size: 0.92rem;
+  color: #34588d;
+  font-weight: 600;
+}
+
+.doc-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.viewer-doc-card {
+  border: 1px solid rgba(18, 63, 147, 0.18);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.viewer-doc-card-title {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #34588d;
+  font-weight: 700;
+}
+
+.viewer-doc-card img {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: #f0f5ff;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.viewer-doc-card embed {
+  width: 100%;
+  height: 500px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0f5ff;
+}
+
+.viewer-doc-card a {
+  color: #123f93;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px;
+  background: #f0f5ff;
+  border-radius: 6px;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+.viewer-doc-card a:hover {
+  background: #e1ecff;
 }
 
 .signature-panel {
