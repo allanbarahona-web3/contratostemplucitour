@@ -33,25 +33,27 @@
     </div>
   </div>
 
-  <main class="layout hidden">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <img src="./assets/logo-lucitour.png" alt="Lucitour" class="sidebar-logo" />
-      </div>
-      <nav class="nav-menu">
-        <a href="./index.html" class="nav-item">📋 Crear Contrato</a>
-        <a href="./history.html" class="nav-item">📜 Historial</a>
-        <a href="./clientes.html" class="nav-item active">👥 CRM Clientes</a>
-      </nav>
-      <div id="sessionControls" class="session-controls">
-        <p id="sessionUserName" class="session-user"></p>
-        <button id="logoutButton" class="btn btn-secondary btn-small">Salir</button>
-      </div>
-    </aside>
+  <main class="main-container hidden">
+    <header class="container-header">
+      <img src="./assets/logo-lucitour.png" alt="Lucitour" class="header-logo" />
+      <h1 class="page-title">Contratos Lucitour</h1>
+    </header>
 
-    <section class="main-content">
+    <div id="sessionControls" class="session-controls hidden">
+      <div class="session-top">
+        <p id="agentBadge" class="agent-badge"></p>
+        <button id="logoutButton" class="agent-logout">Cerrar sesion</button>
+      </div>
+      <nav class="nav-tabs">
+        <a href="./index.html" class="nav-tab">📋 Crear Contrato</a>
+        <a href="./history.html" class="nav-tab">📜 Historial</a>
+        <a href="./clientes.html" class="nav-tab active">👥 CRM Clientes</a>
+      </nav>
+    </div>
+
+    <section class="form-container">
       <header class="content-header">
-        <h1>Mini CRM - Base de Clientes</h1>
+        <h2>Mini CRM - Base de Clientes</h2>
         <p class="subtitle">Gestiona y visualiza la información de todos tus clientes</p>
       </header>
 

@@ -16,8 +16,10 @@ const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const loginPasswordInput = document.getElementById("loginPassword");
 const toggleLoginPasswordButton = document.getElementById("toggleLoginPassword");
-const layoutEl = document.querySelector("main.layout");
+const layoutEl = document.querySelector("main.main-container");
 const sessionControlsEl = document.getElementById("sessionControls");
+const badgeEl = document.getElementById("agentBadge");
+const logoutButton = document.getElementById("logoutButton");
 const clientsTableBody = document.getElementById("clientsTableBody");
 const clientSearch = document.getElementById("clientSearch");
 const clientSearchButton = document.getElementById("clientSearchButton");
@@ -79,12 +81,33 @@ const setupAuth = async () => {
 const setUnauthenticatedUi = () => {
   loginGate.classList.remove("hidden");
   layoutEl.classList.add("hidden");
+  if (sessionControlsEl) {
+    sessionControlsEl.classList.add("hidden");
+  }
 };
 
 const setAuthenticatedUi = (user) => {
-  document.getElementById("sessionUserName").textContent = `👤 ${escapeHtml(user.fullName || user.email)}`;
   loginGate.classList.add("hidden");
   layoutEl.classList.remove("hidden");
+  if (sessionControlsEl) {
+    sessionControlsEl.classList.remove("hidden");
+    
+    // Mark active tab based on current page
+    const navTabs = sessionControlsEl.querySelectorAll(".nav-tab");
+    const currentPage = window.location.pathname.split("/").pop() || "clientes.html";
+    navTabs.forEach((tab) => {
+      const href = tab.getAttribute("href");
+      const tabPage = href ? href.split("/").pop() : "clientes.html";
+      if (tabPage === currentPage || (currentPage === "" && tabPage === "clientes.html")) {
+        tab.classList.add("active");
+      } else {
+        tab.classList.remove("active");
+      }
+    });
+  }
+  if (badgeEl) {
+    badgeEl.textContent = `Agente activo: ${user.fullName} (${user.email})`;
+  }
 };
 
 const handleLogout = () => {
