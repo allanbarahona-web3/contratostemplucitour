@@ -1324,4 +1324,61 @@ export class ContractsService {
       documents,
     };
   }
+
+  async getAllClientsWithContracts(_user: { id: string; email: string; fullName: string }) {
+    // Obtener todos los clientes únicos con sus contratos
+    const clients = await (this.prisma as any).client.findMany({
+      include: {
+        contracts: {
+          select: {
+            id: true,
+            contractNumber: true,
+            status: true,
+            destination: true,
+            createdAt: true,
+            signedAt: true,
+            documents: {
+              select: {
+                id: true,
+                kind: true,
+                originalFileName: true,
+                mimeType: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+      orderBy: { fullName: "asc" },
+    });
+
+    // Enriquecer con URLs de documentos
+    const enrichedClients = await Promise.all(
+      clients.map(async (client: any) => ({
+        id: client.id,
+        fullName: client.fullName,
+        idNumber: client.idNumber,
+        email: client.email,
+        phone: client.phone,
+        emergencyContactName: client.emergencyContactName,
+        emergencyContactPhone: client.emergencyContactPhone,
+        createdAt: client.createdAt,
+        contracts: client.contracts.map((contract: any) => ({
+          id: contract.id,
+          contractNumber: contract.contractNumber,
+          status: contract.status || CONTRACT_STATUS_PENDING_SIGNATURE,
+          destination: contract.destination,
+          createdAt: contract.createdAt,
+          signedAt: contract.signedAt,
+          documentCount: contract.documents.length,
+          documents: contract.documents,
+        })),
+      })),
+    );
+
+    return {
+      items: enrichedClients,
+      total: enrichedClients.length,
+    };
+  }
 }

@@ -493,24 +493,91 @@ const prepareDocumentAttachments = async (fileList) => {
 };
 
 const collectAllContractDocuments = async () => {
-  const groups = [
-    {
-      prefix: "cedula-frente",
-      files: idFrontDocumentInput?.files ? [idFrontDocumentInput.files[0]].filter(Boolean) : [],
-    },
-    {
-      prefix: "cedula-reverso",
-      files: idBackDocumentInput?.files ? [idBackDocumentInput.files[0]].filter(Boolean) : [],
-    },
-    {
-      prefix: "pasaporte",
-      files: passportDocumentInput?.files ? [passportDocumentInput.files[0]].filter(Boolean) : [],
-    },
-    {
-      prefix: "soporte",
-      files: Array.from(contractDocumentsInput?.files || []),
-    },
-  ];
+  const groups = [];
+  
+  // Documentos del titular
+  const clientIdFrontEl = document.getElementById("clientIdFrontDocument");
+  const clientIdBackEl = document.getElementById("clientIdBackDocument");
+  const clientPassportEl = document.getElementById("clientPassportDocument");
+  
+  if (clientIdFrontEl?.files?.[0]) {
+    groups.push({ prefix: "titular-cedula-frente", files: [clientIdFrontEl.files[0]] });
+  }
+  if (clientIdBackEl?.files?.[0]) {
+    groups.push({ prefix: "titular-cedula-reverso", files: [clientIdBackEl.files[0]] });
+  }
+  if (clientPassportEl?.files?.[0]) {
+    groups.push({ prefix: "titular-pasaporte", files: [clientPassportEl.files[0]] });
+  }
+  
+  // Documentos de cada acompañante
+  const companionCards = companionsContainer.querySelectorAll(".dynamic-card");
+  companionCards.forEach((card, index) => {
+    const companionIndex = index + 1;
+    const idFront = card.querySelector('[data-field="idFrontDocument"]');
+    const idBack = card.querySelector('[data-field="idBackDocument"]');
+    const passport = card.querySelector('[data-field="passportDocument"]');
+    
+    if (idFront?.files?.[0]) {
+      groups.push({ prefix: `acompanante${companionIndex}-cedula-frente`, files: [idFront.files[0]] });
+    }
+    if (idBack?.files?.[0]) {
+      groups.push({ prefix: `acompanante${companionIndex}-cedula-reverso`, files: [idBack.files[0]] });
+    }
+    if (passport?.files?.[0]) {
+      groups.push({ prefix: `acompanante${companionIndex}-pasaporte`, files: [passport.files[0]] });
+    }
+  });
+  
+  // Documentos de cada menor y su tutor
+  const minorCards = minorsContainer.querySelectorAll(".dynamic-card");
+  minorCards.forEach((card, index) => {
+    const minorIndex = index + 1;
+    
+    // Documentos del menor
+    const minorIdFront = card.querySelector('[data-field="minorIdFrontDocument"]');
+    const minorIdBack = card.querySelector('[data-field="minorIdBackDocument"]');
+    const minorPassport = card.querySelector('[data-field="minorPassportDocument"]');
+    
+    if (minorIdFront?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-cedula-frente`, files: [minorIdFront.files[0]] });
+    }
+    if (minorIdBack?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-cedula-reverso`, files: [minorIdBack.files[0]] });
+    }
+    if (minorPassport?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-pasaporte`, files: [minorPassport.files[0]] });
+    }
+    
+    // Documentos del tutor
+    const tutorIdFront = card.querySelector('[data-field="tutorIdFrontDocument"]');
+    const tutorIdBack = card.querySelector('[data-field="tutorIdBackDocument"]');
+    const tutorPassport = card.querySelector('[data-field="tutorPassportDocument"]');
+    
+    if (tutorIdFront?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-tutor-cedula-frente`, files: [tutorIdFront.files[0]] });
+    }
+    if (tutorIdBack?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-tutor-cedula-reverso`, files: [tutorIdBack.files[0]] });
+    }
+    if (tutorPassport?.files?.[0]) {
+      groups.push({ prefix: `menor${minorIndex}-tutor-pasaporte`, files: [tutorPassport.files[0]] });
+    }
+  });
+  
+  // Documentos de reserva inicial (mantener los viejos campos por compatibilidad)
+  if (idFrontDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "cedula-frente", files: [idFrontDocumentInput.files[0]] });
+  }
+  if (idBackDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "cedula-reverso", files: [idBackDocumentInput.files[0]] });
+  }
+  if (passportDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "pasaporte", files: [passportDocumentInput.files[0]] });
+  }
+  if (contractDocumentsInput?.files) {
+    groups.push({ prefix: "soporte", files: Array.from(contractDocumentsInput.files) });
+  }
 
   const allPrepared = [];
   for (const group of groups) {
@@ -823,11 +890,12 @@ const buildTutorOptions = (selectedValue = "") => {
 };
 
 const addCompanionRow = (initial = {}) => {
+  const companionIndex = companionsContainer.children.length;
   const row = document.createElement("div");
   row.className = "dynamic-card";
   row.innerHTML = `
     <div class="card-row">
-      <h4>Acompanante</h4>
+      <h4>Acompañante ${companionIndex + 1}</h4>
       <button type="button" class="ghost remove-row">Eliminar</button>
     </div>
     <div class="card-grid">
@@ -864,6 +932,21 @@ const addCompanionRow = (initial = {}) => {
         <input data-field="nationalityOther" value="${escapeHtml(initial.nationalityOther || "")}" />
       </label>
     </div>
+    
+    <div class="card-subsection">
+      <h5>Documentos</h5>
+      <div class="card-grid">
+        <label>Cédula (frente)
+          <input data-field="idFrontDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Cédula (reverso)
+          <input data-field="idBackDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Pasaporte
+          <input data-field="passportDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+      </div>
+    </div>
   `;
 
   const nationalitySelect = row.querySelector('[data-field="nationality"]');
@@ -888,17 +971,19 @@ const addCompanionRow = (initial = {}) => {
   row.querySelector(".remove-row").addEventListener("click", () => {
     row.remove();
     refreshTutorOptions();
+    renumberCompanions();
   });
 
   companionsContainer.appendChild(row);
 };
 
 const addMinorRow = (initial = {}) => {
+  const minorIndex = minorsContainer.children.length;
   const row = document.createElement("div");
   row.className = "dynamic-card";
   row.innerHTML = `
     <div class="card-row">
-      <h4>Menor</h4>
+      <h4>Menor ${minorIndex + 1}</h4>
       <button type="button" class="ghost remove-row">Eliminar</button>
     </div>
     <div class="card-grid">
@@ -919,11 +1004,42 @@ const addMinorRow = (initial = {}) => {
         </select>
       </label>
     </div>
+    
+    <div class="card-subsection">
+      <h5>Documentos del menor</h5>
+      <div class="card-grid">
+        <label>Cédula menor (frente)
+          <input data-field="minorIdFrontDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Cédula menor (reverso)
+          <input data-field="minorIdBackDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Pasaporte menor
+          <input data-field="minorPassportDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+      </div>
+    </div>
+    
+    <div class="card-subsection">
+      <h5>Documentos del tutor legal</h5>
+      <div class="card-grid">
+        <label>Cédula tutor (frente)
+          <input data-field="tutorIdFrontDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Cédula tutor (reverso)
+          <input data-field="tutorIdBackDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+        <label>Pasaporte tutor
+          <input data-field="tutorPassportDocument" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" />
+        </label>
+      </div>
+    </div>
   `;
 
   row.querySelector(".remove-row").addEventListener("click", () => {
     row.remove();
     syncMinorSectionVisibility();
+    renumberMinors();
   });
 
   minorsContainer.appendChild(row);
@@ -1074,6 +1190,26 @@ const refreshTutorOptions = () => {
   selects.forEach((select) => {
     const currentValue = select.value;
     select.innerHTML = buildTutorOptions(currentValue);
+  });
+};
+
+const renumberCompanions = () => {
+  const cards = companionsContainer.querySelectorAll(".dynamic-card");
+  cards.forEach((card, index) => {
+    const h4 = card.querySelector("h4");
+    if (h4) {
+      h4.textContent = `Acompañante ${index + 1}`;
+    }
+  });
+};
+
+const renumberMinors = () => {
+  const cards = minorsContainer.querySelectorAll(".dynamic-card");
+  cards.forEach((card, index) => {
+    const h4 = card.querySelector("h4");
+    if (h4) {
+      h4.textContent = `Menor ${index + 1}`;
+    }
   });
 };
 

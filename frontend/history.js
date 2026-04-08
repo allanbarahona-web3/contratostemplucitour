@@ -144,7 +144,8 @@ const renderHistory = (items = []) => {
               <button type="button" class="ghost" data-action="documents" data-contract-id="${escapeAttr(item.id)}">Documentos</button>
               ${
                 isSigned
-                  ? `<button type="button" class="ghost" data-action="resend-signed" data-contract-id="${escapeAttr(item.id)}">Reenviar firmado</button>`
+                  ? `<button type="button" class="ghost" data-action="resend-signed" data-contract-id="${escapeAttr(item.id)}">Reenviar firmado</button>
+                     <button type="button" class="ghost" data-action="send-billing" data-contract-id="${escapeAttr(item.id)}">📤 Enviar a Facturación</button>`
                   : ""
               }
             </div>
@@ -398,6 +399,85 @@ const renderDocumentCard = (doc) => {
     </article>`;
 };
 
+const prepareContractBillingData = (contractId) => {
+  // Obtener los datos necesarios del localStorage o de la tabla
+  // Para esto, necesitamos tener acceso a los datos del contrato
+  // Vamos a agregar un atributo data- a la fila con los datos necesarios
+  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  
+  return fetch(`${API_BASE}/contracts/${contractId}/files`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error("No se pudo obtener los datos del contrato");
+      return response.json();
+    })
+    .then((contract) => {
+      // Retornar los datos en el formato esperado
+      return {
+        clientName: contract?.clientFullName || "",
+        clientId: contract?.clientIdNumber || "",
+        clientEmail: contract?.clientEmail || "",
+        contractNumber: contract?.contractNumber || "",
+        status: contract?.status || "",
+      };
+    });
+};
+
+const sendContractToBilling = async (contractId) => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    throw new Error("No hay sesión activa");
+  }
+
+  // Obtener datos del contrato desde history
+  const rows = Array.from(historyTableBody.querySelectorAll("tr"));
+  let contractData = null;
+  
+  for (const row of rows) {
+    const button = row.querySelector(`[data-contract-id="${contractId}"]`);
+    if (button) {
+      const cells = row.querySelectorAll("td");
+      if (cells.length >= 5) {
+        // Extraer datos de las celdas
+        const nameCell = cells[0].textContent;
+        const idCell = cells[1].textContent.trim();
+        const emailCell = cells[2].textContent.trim();
+        const contractNumberCell = cells[3].textContent.trim();
+        
+        contractData = {
+          clientName: nameCell,
+          clientId: idCell,
+          clientEmail: emailCell,
+          contractNumber: contractNumberCell,
+          contractId: contractId,
+        };
+      }
+      break;
+    }
+  }
+
+  if (!contractData) {
+    throw new Error("No se pudo obtener los datos del contrato");
+  }
+
+  // Aquí es donde enviarías a tu sistema de facturación
+  // Por ahora, preparamos los datos y los mostramos
+  // En una implementación real, esto se podría enviar a un endpoint del backend
+  // que luego envíe a facturación
+
+  return {
+    success: true,
+    billingUrl: `${window.location.origin}/facturacion?contract=${escapeAttr(contractData.contractNumber)}&client=${escapeAttr(contractData.clientName)}&email=${escapeAttr(contractData.clientEmail)}`,
+    data: contractData,
+  };
+};
+
+
 historyTableBody.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
@@ -462,6 +542,62 @@ historyTableBody.addEventListener("click", (event) => {
         .catch((error) => {
           viewerTitle.textContent = "Error reenviando contrato";
           viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudo reenviar el contrato firmado.")}</p>`;
+          viewerModal.classList.remove("hidden");
+          viewerModal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("viewer-open");
+        })
+        .finally(() => {
+          target.removeAttribute("disabled");
+          target.textContent = oldLabel;
+        });
+
+      return;
+    }
+
+    if (action === "send-billing") {
+      const oldLabel = target.textContent;
+      target.setAttribute("disabled", "true");
+      target.textContent = "Preparando...";
+
+      void sendContractToBilling(contractId)
+        .then((result) => {
+          viewerTitle.textContent = "Envío a Sistema de Facturación";
+          viewerBody.innerHTML = `
+            <article class="viewer-doc">
+              <p class="viewer-doc-title">✅ Datos preparados para facturación</p>
+              <div class="detail-grid" style="margin-top: 16px;">
+                <div class="detail-item">
+                  <label>Cliente:</label>
+                  <p>${escapeHtml(result.data.clientName)}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Identificación:</label>
+                  <p>${escapeHtml(result.data.clientId)}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Correo:</label>
+                  <p>${escapeHtml(result.data.clientEmail)}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Nº Contrato:</label>
+                  <p>${escapeHtml(result.data.contractNumber)}</p>
+                </div>
+              </div>
+              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
+                <p><strong>Próximo paso:</strong> Los datos están listos. Dirígete al sistema de facturación para completar el proceso de pago y generar la factura.</p>
+                <button type="button" class="btn btn-primary" style="margin-top: 16px;" onclick="window.open('${escapeAttr(result.billingUrl)}', '_blank')">
+                  📤 Ir a Facturación
+                </button>
+              </div>
+            </article>
+          `;
+          viewerModal.classList.remove("hidden");
+          viewerModal.setAttribute("aria-hidden", "false");
+          document.body.classList.add("viewer-open");
+        })
+        .catch((error) => {
+          viewerTitle.textContent = "Error al preparar datos";
+          viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudieron preparar los datos para facturación.")}</p>`;
           viewerModal.classList.remove("hidden");
           viewerModal.setAttribute("aria-hidden", "false");
           document.body.classList.add("viewer-open");
