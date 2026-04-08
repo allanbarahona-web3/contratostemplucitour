@@ -434,46 +434,27 @@ const sendContractToBilling = async (contractId) => {
     throw new Error("No hay sesión activa");
   }
 
-  // Obtener datos del contrato desde history
-  const rows = Array.from(historyTableBody.querySelectorAll("tr"));
-  let contractData = null;
-  
-  for (const row of rows) {
-    const button = row.querySelector(`[data-contract-id="${contractId}"]`);
-    if (button) {
-      const cells = row.querySelectorAll("td");
-      if (cells.length >= 5) {
-        // Extraer datos de las celdas
-        const nameCell = cells[0].textContent;
-        const idCell = cells[1].textContent.trim();
-        const emailCell = cells[2].textContent.trim();
-        const contractNumberCell = cells[3].textContent.trim();
-        
-        contractData = {
-          clientName: nameCell,
-          clientId: idCell,
-          clientEmail: emailCell,
-          contractNumber: contractNumberCell,
-          contractId: contractId,
-        };
-      }
-      break;
-    }
+  // Llamar al endpoint del backend que prepara los datos para facturación
+  const response = await fetch(`${API_BASE}/contracts/${contractId}/send-to-billing`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || "No se pudieron obtener los datos del contrato");
   }
 
-  if (!contractData) {
-    throw new Error("No se pudo obtener los datos del contrato");
-  }
-
-  // Aquí es donde enviarías a tu sistema de facturación
-  // Por ahora, preparamos los datos y los mostramos
-  // En una implementación real, esto se podría enviar a un endpoint del backend
-  // que luego envíe a facturación
+  const billingData = await response.json();
 
   return {
     success: true,
-    billingUrl: `${window.location.origin}/facturacion?contract=${escapeAttr(contractData.contractNumber)}&client=${escapeAttr(contractData.clientName)}&email=${escapeAttr(contractData.clientEmail)}`,
-    data: contractData,
+    data: billingData,
+    // URL parametrizada para integración con sistema externo
+    billingUrl: `${window.location.origin}/facturacion?contract=${escapeAttr(billingData.contract.number)}&client=${escapeAttr(billingData.client.fullName)}&email=${escapeAttr(billingData.client.email)}`,
   };
 };
 
@@ -561,36 +542,107 @@ historyTableBody.addEventListener("click", (event) => {
 
       void sendContractToBilling(contractId)
         .then((result) => {
-          viewerTitle.textContent = "Envío a Sistema de Facturación";
-          viewerBody.innerHTML = `
+          const billing = result.data.billing || {};
+          const client = result.data.client || {};
+          const travel = result.data.travel || {};
+          const companions = result.data.companions || [];
+          const minors = result.data.minors || [];
+
+          let html = `
             <article class="viewer-doc">
               <p class="viewer-doc-title">✅ Datos preparados para facturación</p>
-              <div class="detail-grid" style="margin-top: 16px;">
-                <div class="detail-item">
-                  <label>Cliente:</label>
-                  <p>${escapeHtml(result.data.clientName)}</p>
-                </div>
-                <div class="detail-item">
-                  <label>Identificación:</label>
-                  <p>${escapeHtml(result.data.clientId)}</p>
-                </div>
-                <div class="detail-item">
-                  <label>Correo:</label>
-                  <p>${escapeHtml(result.data.clientEmail)}</p>
-                </div>
-                <div class="detail-item">
-                  <label>Nº Contrato:</label>
-                  <p>${escapeHtml(result.data.contractNumber)}</p>
+              
+              <div class="detail-section" style="margin-top: 20px;">
+                <h4 style="margin-top: 0; color: var(--accent-strong);">Cliente</h4>
+                <div class="detail-grid">
+                  <div class="detail-item">
+                    <label>Nombre:</label>
+                    <p>${escapeHtml(client.fullName)}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Identificación:</label>
+                    <p>${escapeHtml(client.idNumber)} (${escapeHtml(client.idType)})</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Correo:</label>
+                    <p>${escapeHtml(client.email)}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Teléfono:</label>
+                    <p>${escapeHtml(client.phone || "-")}</p>
+                  </div>
                 </div>
               </div>
+
+              <div class="detail-section">
+                <h4 style="margin-top: 0; color: var(--accent-strong);">Contrato</h4>
+                <div class="detail-grid">
+                  <div class="detail-item">
+                    <label>Número:</label>
+                    <p>${escapeHtml(result.data.contract.number)}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Destino:</label>
+                    <p>${escapeHtml(result.data.contract.destination)}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Fechas:</label>
+                    <p>${formatDateTime(travel.startDate)} a ${formatDateTime(travel.endDate)}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Agente:</label>
+                    <p>${escapeHtml(result.data.contract.generatedByName)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <h4 style="margin-top: 0; color: var(--accent-strong);">Facturación</h4>
+                <div class="detail-grid">
+                  <div class="detail-item">
+                    <label>Monto Total:</label>
+                    <p style="font-size: 1.1rem; font-weight: 600; color: var(--accent-strong);">₡${escapeHtml(String(Math.round(billing.totalAmount * 100) / 100))}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Reserva Inicial:</label>
+                    <p style="font-size: 1rem; color: #10b981;">₡${escapeHtml(String(Math.round(billing.reservationAmount * 100) / 100))}</p>
+                  </div>
+                  <div class="detail-item">
+                    <label>Saldo Pendiente:</label>
+                    <p style="font-size: 1rem; color: #be6d09;">₡${escapeHtml(String(Math.round(billing.balanceAmount * 100) / 100))}</p>
+                  </div>
+                </div>
+              </div>
+
+              ${companions.length > 0 ? `
+                <div class="detail-section">
+                  <h4 style="margin-top: 0; color: var(--accent-strong);">Acompañantes (${companions.length})</h4>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${companions.map((c) => `<li>${escapeHtml(c.fullName)} - ${escapeHtml(c.idNumber)}</li>`).join("")}
+                  </ul>
+                </div>
+              ` : ""}
+
+              ${minors.length > 0 ? `
+                <div class="detail-section">
+                  <h4 style="margin-top: 0; color: var(--accent-strong);">Menores de Edad (${minors.length})</h4>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    ${minors.map((m) => `<li>${escapeHtml(m.name)} (Tutor: ${escapeHtml(m.tutorName)})</li>`).join("")}
+                  </ul>
+                </div>
+              ` : ""}
+
               <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
-                <p><strong>Próximo paso:</strong> Los datos están listos. Dirígete al sistema de facturación para completar el proceso de pago y generar la factura.</p>
+                <p><strong>Próximo paso:</strong> Los datos están listos para procesar la factura. Dirígete al sistema de facturación para completar el proceso.</p>
                 <button type="button" class="btn btn-primary" style="margin-top: 16px;" onclick="window.open('${escapeAttr(result.billingUrl)}', '_blank')">
                   📤 Ir a Facturación
                 </button>
               </div>
             </article>
           `;
+
+          viewerTitle.textContent = "Envío a Sistema de Facturación";
+          viewerBody.innerHTML = html;
           viewerModal.classList.remove("hidden");
           viewerModal.setAttribute("aria-hidden", "false");
           document.body.classList.add("viewer-open");

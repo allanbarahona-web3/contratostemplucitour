@@ -101,6 +101,18 @@ export class ContractsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post(":contractId/send-to-billing")
+  sendContractToBilling(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("contractId") contractId: string,
+  ) {
+    return this.contractsService.sendContractToBillingSystem(req.user, contractId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get("crm/clients")
   getAllClients(
     @Req()

@@ -1381,4 +1381,129 @@ export class ContractsService {
       total: enrichedClients.length,
     };
   }
+
+  async sendContractToBillingSystem(
+    _user: { id: string; email: string; fullName: string },
+    contractId: string,
+  ) {
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: contractId },
+      include: { client: true },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    if (contract.status !== CONTRACT_STATUS_SIGNED) {
+      throw new BadRequestException("Solo se pueden enviar contratos firmados a facturación.");
+    }
+
+    // Preparar los datos completos del contrato para enviar a facturación
+    const payload = contract.payload || {};
+    
+    const billingData = {
+      // Información del sistema
+      sourceSystem: "contratos-system",
+      sourceSystemVersion: "1.0",
+      
+      // Información del contrato
+      contract: {
+        id: contract.id,
+        number: contract.contractNumber,
+        status: contract.status,
+        destination: contract.destination,
+        createdAt: contract.createdAt,
+        signedAt: contract.signedAt,
+        generatedByUserId: contract.generatedByUserId,
+        generatedByEmail: contract.generatedByEmail,
+        generatedByName: contract.generatedByName,
+      },
+      
+      // Información del cliente
+      client: {
+        id: contract.client.id,
+        fullName: contract.client.fullName,
+        idNumber: contract.client.idNumber,
+        idType: payload?.clientIdType || "CEDULA",
+        email: contract.client.email,
+        phone: contract.client.phone,
+        address: payload?.clientAddress || null,
+        nationality: payload?.clientNationality || null,
+        civilStatus: payload?.civilStatus || null,
+        profession: payload?.profession || null,
+        emergencyContactName: contract.client.emergencyContactName,
+        emergencyContactPhone: contract.client.emergencyContactPhone,
+      },
+      
+      // Información de montos
+      billing: {
+        totalAmount: payload?.totalAmount || 0,
+        reservationAmount: payload?.reservationAmount || 0,
+        balanceAmount: payload?.balanceAmount || 0,
+        installmentCount: payload?.installmentCount || 1,
+        monthlyInstallmentAmount: payload?.monthlyInstallmentAmount || 0,
+        paymentDueDate: payload?.paymentDueDate || null,
+        currency: "CRC",
+      },
+      
+      // Información del viaje
+      travel: {
+        destination: contract.destination,
+        issuedAt: contract.issuedAt,
+        startDate: contract.startDate,
+        endDate: contract.endDate,
+        accommodationType: payload?.accommodationType || null,
+        lodgingType: payload?.lodgingType || null,
+      },
+      
+      // Acompañantes
+      companions: Array.isArray(payload?.companions) 
+        ? payload.companions.map((p: any) => ({
+            fullName: p.fullName,
+            idNumber: p.idNumber,
+            idType: p.idType,
+            email: p.email,
+            phone: p.phone,
+            address: p.address,
+            civilStatus: p.civilStatus,
+            profession: p.profession,
+            emergencyContactName: p.emergencyContactName,
+            emergencyContactPhone: p.emergencyContactPhone,
+          }))
+        : [],
+      
+      // Menores de edad
+      minors: Array.isArray(payload?.minors)
+        ? payload.minors.map((m: any) => ({
+            name: m.name,
+            idNumber: m.idNumber,
+            tutorName: m.tutorName,
+            tutorIdNumber: m.tutorIdNumber,
+            tutorRelationship: m.tutorRelationship,
+            tutorEmail: m.tutorEmail,
+            tutorPhone: m.tutorPhone,
+            travelingWith: m.travelingWith,
+          }))
+        : [],
+      
+      // Itinerario
+      itinerary: Array.isArray(payload?.itineraryItems)
+        ? payload.itineraryItems.map((item: any) => ({
+            date: item.date,
+            detail: item.detail,
+          }))
+        : [],
+      
+      // Metadata
+      generatedAt: new Date().toISOString(),
+      agent: {
+        id: _user.id,
+        name: _user.fullName,
+        email: _user.email,
+      },
+    };
+
+    return billingData;
+  }
 }
