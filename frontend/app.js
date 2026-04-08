@@ -1473,24 +1473,41 @@ const buildContractHtml = (data) => {
 
     <p><strong>DÉCIMO CUARTO: DERECHOS Y OBLIGACIONES DEL CLIENTE.</strong> El Cliente se obliga, entre otros, a pagar montos económicos según contrato; brindar documentación veraz y vigente; respetar horarios, itinerarios y normas de proveedores; resguardar pertenencias personales; asumir gastos no incluidos; y gestionar correctamente documentación de menor(es), cuando aplique.</p>
 
+    <p><strong>DÉCIMO CUARTO BIS: CONDUCTA Y NORMAS DEL CLIENTE.</strong> El Cliente se compromete a mantener una conducta respetuosa, adecuada y alineada con las normas de convivencia durante todo el desarrollo del tour, tanto con el personal de la Agencia como con otros participantes, proveedores y terceros.</p>
+    <p>Queda estrictamente prohibido cualquier comportamiento que implique agresión verbal o física, discriminación, acoso, consumo excesivo de sustancias que afecten la convivencia, incumplimiento de normas locales o cualquier acción que ponga en riesgo la operación del tour o la experiencia del grupo.</p>
+    <p>LUCI TOURS TURISMO INTERNACIONAL S.A. se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
+    <p>Asimismo, cualquier gasto adicional derivado de dicha exclusión será asumido en su totalidad por el Cliente.</p>
+
     <p><strong>DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE LUCITOURS.</strong> Lucitours se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>
 
-    <p><strong>DÉCIMO SEXTO: EXONERACIÓN DE RESPONSABILIDAD.</strong> El Cliente exonera a Lucitours por eventos no atribuibles directamente a su gestión, incluyendo, entre otros: enfermedades, accidentes, robos o pérdidas durante el Tour; atrasos, desvío o pérdida de vuelos; cierre de atracciones o condiciones climáticas adversas; eventualidades de terceros proveedores; y problemas por documentación dudosa, falsa, vencida o insuficiente.</p>
+    <p><strong>DÉCIMO SEXTO: EXONERACIÓN Y LIMITACIÓN DE RESPONSABILIDAD.</strong> El Cliente reconoce y acepta que la participación en el tour implica riesgos inherentes propios de los viajes nacionales e internacionales, incluyendo, pero no limitado a, condiciones climáticas adversas, retrasos, cancelaciones, accidentes, enfermedades, situaciones políticas, sociales o sanitarias, y cualquier otro evento fuera del control razonable de la Agencia.</p>
+    <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a LUCI TOURS TURISMO INTERNACIONAL S.A. de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
+    <p>Asimismo, el Cliente acepta que la Agencia no garantiza resultados subjetivos del viaje, tales como satisfacción personal, experiencias individuales, condiciones climáticas específicas, calidad percibida de servicios de terceros, ni expectativas personales no estipuladas expresamente en el presente contrato.</p>
+    <p>La responsabilidad total de la Agencia, en cualquier caso comprobado, se limitará exclusivamente al monto efectivamente pagado por el Cliente por los servicios contratados.</p>
 
-    <p><strong>DÉCIMO SÉPTIMO BIS: EMISIÓN DE TIQUETES AÉREOS.</strong> El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
+    <p><strong>DÉCIMO SÉPTIMO: INTERMEDIACIÓN Y RESPONSABILIDAD DE TERCEROS.</strong> El Cliente reconoce que LUCI TOURS TURISMO INTERNACIONAL S.A. actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
+    <p>En consecuencia, la Agencia no será responsable por actos, omisiones, incumplimientos, retrasos, cancelaciones, sobreventas, cambios de itinerario, pérdidas, daños o cualquier otra situación atribuible a dichos proveedores.</p>
+    <p>El Cliente acepta que cualquier reclamación derivada de servicios prestados por terceros deberá dirigirse directamente contra el proveedor correspondiente, conforme a sus propias políticas, términos y condiciones.</p>
+
+    <p><strong>DÉCIMO OCTAVO: EMISIÓN DE TIQUETES AÉREOS.</strong> El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
     <p>En ese sentido, la emisión de los tiquetes aéreos no necesariamente se realizará de forma inmediata al momento del pago de la reserva, pagos parciales o incluso la cancelación total del Tour, pudiendo efectuarse en cualquier momento hasta un plazo máximo de cuarenta y ocho (48) horas previas al inicio del viaje.</p>
     <p>El Cliente entiende y acepta que la confirmación de su espacio dentro del Tour es independiente del momento de emisión de los tiquetes aéreos, y que estos podrán ser adquiridos en una fecha posterior según condiciones operativas y comerciales.</p>
     <p>Lucitours garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>
 
-    <p><strong>DÉCIMO SÉPTIMO: MODIFICACIONES AL CONTRATO.</strong> Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>
-    <p><strong>DÉCIMO OCTAVO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.</strong> Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>
-    <p><strong>DÉCIMO NOVENO: CONFIDENCIALIDAD.</strong> Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>
-      <p><strong>VIGÉSIMO: NOTIFICACIONES Y COMUNICACIONES.</strong></p>
+    <p><strong>DÉCIMO NOVENO: MODIFICACIONES AL CONTRATO.</strong> Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>
+    <p><strong>VIGÉSIMO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.</strong> Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>
+    <p><strong>VIGÉSIMO PRIMERO: CONFIDENCIALIDAD.</strong> Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>
+      <p><strong>VIGÉSIMO SEGUNDO: NOTIFICACIONES Y COMUNICACIONES.</strong></p>
       <ul>
         <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
         <li><strong>Cliente:</strong> Dirección ${contractVar(data.clientAddress)}, correo ${contractVar(data.clientEmail)} y teléfono ${contractVar(data.clientPhone)}.</li>
       </ul>
-    <p><strong>VIGÉSIMO PRIMERO: INTEGRIDAD CONTRACTUAL.</strong> Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>
+    <p><strong>VIGÉSIMO TERCERO: INTEGRIDAD CONTRACTUAL.</strong> Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>
+
+    <p><strong>VIGÉSIMO CUARTO: AUTORIZACIÓN DE USO DE IMAGEN.</strong> El Cliente autoriza de forma expresa, voluntaria y gratuita a LUCI TOURS TURISMO INTERNACIONAL S.A. para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
+    <p>Dicho material podrá ser utilizado con fines comerciales, publicitarios y promocionales en redes sociales, sitios web, campañas de marketing y cualquier otro medio de difusión de la Agencia, sin limitación territorial ni temporal.</p>
+    <p>El Cliente renuncia a cualquier compensación económica derivada del uso de su imagen en los términos aquí establecidos.</p>
+    <p>En caso de no estar de acuerdo, el Cliente deberá manifestarlo por escrito previo al inicio del tour.</p>
 
     <p>En fe de lo anterior, las Partes declaran haber leído y comprendido integralmente el presente Contrato, aceptándolo en todas sus cláusulas.</p>
 
@@ -2190,17 +2207,35 @@ ${clause(
 )}
 
 ${clause(
+  "DÉCIMO CUARTO BIS: CONDUCTA Y NORMAS DEL CLIENTE.",
+  `<p>El Cliente se compromete a mantener una conducta respetuosa, adecuada y alineada con las normas de convivencia durante todo el desarrollo del tour, tanto con el personal de la Agencia como con otros participantes, proveedores y terceros.</p>
+  <p>Queda estrictamente prohibido cualquier comportamiento que implique agresión verbal o física, discriminación, acoso, consumo excesivo de sustancias que afecten la convivencia, incumplimiento de normas locales o cualquier acción que ponga en riesgo la operación del tour o la experiencia del grupo.</p>
+  <p>LUCI TOURS TURISMO INTERNACIONAL S.A. se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
+  <p>Asimismo, cualquier gasto adicional derivado de dicha exclusión será asumido en su totalidad por el Cliente.</p>`,
+)}
+
+${clause(
   "DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE LUCITOURS.",
   `<p>Lucitours se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>`,
 )}
 
 ${clause(
-  "DÉCIMO SEXTO: EXONERACIÓN DE RESPONSABILIDAD.",
-  `<p>El Cliente exonera a Lucitours por eventos no atribuibles directamente a su gestión, incluyendo, entre otros: enfermedades, accidentes, robos o pérdidas durante el Tour; atrasos, desvío o pérdida de vuelos; cierre de atracciones o condiciones climáticas adversas; eventualidades de terceros proveedores; y problemas por documentación dudosa, falsa, vencida o insuficiente.</p>`,
+  "DÉCIMO SEXTO: EXONERACIÓN Y LIMITACIÓN DE RESPONSABILIDAD.",
+  `<p>El Cliente reconoce y acepta que la participación en el tour implica riesgos inherentes propios de los viajes nacionales e internacionales, incluyendo, pero no limitado a, condiciones climáticas adversas, retrasos, cancelaciones, accidentes, enfermedades, situaciones políticas, sociales o sanitarias, y cualquier otro evento fuera del control razonable de la Agencia.</p>
+  <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a LUCI TOURS TURISMO INTERNACIONAL S.A. de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
+  <p>Asimismo, el Cliente acepta que la Agencia no garantiza resultados subjetivos del viaje, tales como satisfacción personal, experiencias individuales, condiciones climáticas específicas, calidad percibida de servicios de terceros, ni expectativas personales no estipuladas expresamente en el presente contrato.</p>
+  <p>La responsabilidad total de la Agencia, en cualquier caso comprobado, se limitará exclusivamente al monto efectivamente pagado por el Cliente por los servicios contratados.</p>`,
 )}
 
 ${clause(
-  "DÉCIMO SÉPTIMO BIS: EMISIÓN DE TIQUETES AÉREOS.",
+  "DÉCIMO SÉPTIMO: INTERMEDIACIÓN Y RESPONSABILIDAD DE TERCEROS.",
+  `<p>El Cliente reconoce que LUCI TOURS TURISMO INTERNACIONAL S.A. actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
+  <p>En consecuencia, la Agencia no será responsable por actos, omisiones, incumplimientos, retrasos, cancelaciones, sobreventas, cambios de itinerario, pérdidas, daños o cualquier otra situación atribuible a dichos proveedores.</p>
+  <p>El Cliente acepta que cualquier reclamación derivada de servicios prestados por terceros deberá dirigirse directamente contra el proveedor correspondiente, conforme a sus propias políticas, términos y condiciones.</p>`,
+)}
+
+${clause(
+  "DÉCIMO OCTAVO: EMISIÓN DE TIQUETES AÉREOS.",
   `<p>El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
   <p>En ese sentido, la emisión de los tiquetes aéreos no necesariamente se realizará de forma inmediata al momento del pago de la reserva, pagos parciales o incluso la cancelación total del Tour, pudiendo efectuarse en cualquier momento hasta un plazo máximo de cuarenta y ocho (48) horas previas al inicio del viaje.</p>
   <p>El Cliente entiende y acepta que la confirmación de su espacio dentro del Tour es independiente del momento de emisión de los tiquetes aéreos, y que estos podrán ser adquiridos en una fecha posterior según condiciones operativas y comerciales.</p>
@@ -2208,22 +2243,22 @@ ${clause(
 )}
 
 ${clause(
-  "DÉCIMO SÉPTIMO: MODIFICACIONES AL CONTRATO.",
+  "DÉCIMO NOVENO: MODIFICACIONES AL CONTRATO.",
   `<p>Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>`,
 )}
 
 ${clause(
-  "DÉCIMO OCTAVO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.",
+  "VIGÉSIMO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.",
   `<p>Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>`,
 )}
 
 ${clause(
-  "DÉCIMO NOVENO: CONFIDENCIALIDAD.",
+  "VIGÉSIMO PRIMERO: CONFIDENCIALIDAD.",
   `<p>Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>`,
 )}
 
 ${clause(
-  "VIGÉSIMO: NOTIFICACIONES Y COMUNICACIONES.",
+  "VIGÉSIMO SEGUNDO: NOTIFICACIONES Y COMUNICACIONES.",
   `<ul>
     <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
     <li><strong>Cliente:</strong> Dirección ${v(data.clientAddress)}, correo ${v(data.clientEmail)} y teléfono ${v(data.clientPhone)}.</li>
@@ -2231,8 +2266,16 @@ ${clause(
 )}
 
 ${clause(
-  "VIGÉSIMO PRIMERO: INTEGRIDAD CONTRACTUAL.",
+  "VIGÉSIMO TERCERO: INTEGRIDAD CONTRACTUAL.",
   `<p>Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>`,
+)}
+
+${clause(
+  "VIGÉSIMO CUARTO: AUTORIZACIÓN DE USO DE IMAGEN.",
+  `<p>El Cliente autoriza de forma expresa, voluntaria y gratuita a LUCI TOURS TURISMO INTERNACIONAL S.A. para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
+  <p>Dicho material podrá ser utilizado con fines comerciales, publicitarios y promocionales en redes sociales, sitios web, campañas de marketing y cualquier otro medio de difusión de la Agencia, sin limitación territorial ni temporal.</p>
+  <p>El Cliente renuncia a cualquier compensación económica derivada del uso de su imagen en los términos aquí establecidos.</p>
+  <p>En caso de no estar de acuerdo, el Cliente deberá manifestarlo por escrito previo al inicio del tour.</p>`,
 )}
 
 <section class="clause">
