@@ -495,19 +495,15 @@ const prepareDocumentAttachments = async (fileList) => {
 const collectAllContractDocuments = async () => {
   const groups = [];
   
-  // Documentos del titular
-  const clientIdFrontEl = document.getElementById("clientIdFrontDocument");
-  const clientIdBackEl = document.getElementById("clientIdBackDocument");
-  const clientPassportEl = document.getElementById("clientPassportDocument");
-  
-  if (clientIdFrontEl?.files?.[0]) {
-    groups.push({ prefix: "titular-cedula-frente", files: [clientIdFrontEl.files[0]] });
+  // Documentos del titular (de la sección "Adjuntos del contrato")
+  if (idFrontDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "titular-cedula-frente", files: [idFrontDocumentInput.files[0]] });
   }
-  if (clientIdBackEl?.files?.[0]) {
-    groups.push({ prefix: "titular-cedula-reverso", files: [clientIdBackEl.files[0]] });
+  if (idBackDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "titular-cedula-reverso", files: [idBackDocumentInput.files[0]] });
   }
-  if (clientPassportEl?.files?.[0]) {
-    groups.push({ prefix: "titular-pasaporte", files: [clientPassportEl.files[0]] });
+  if (passportDocumentInput?.files?.[0]) {
+    groups.push({ prefix: "titular-pasaporte", files: [passportDocumentInput.files[0]] });
   }
   
   // Documentos de cada acompañante
