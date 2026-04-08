@@ -647,6 +647,8 @@ const setLoginStatus = (message, isError = false) => {
 const setAuthenticatedUi = (user) => {
   loginGate.style.display = "none";
   layoutEl.style.display = "grid";
+  layoutEl.style.setProperty("display", "grid", "important");
+  loginGate.style.setProperty("display", "none", "important");
   if (sessionControlsEl) {
     sessionControlsEl.classList.remove("hidden");
   }
@@ -658,6 +660,8 @@ const setAuthenticatedUi = (user) => {
 const setUnauthenticatedUi = (message = "Ingresa tus credenciales.") => {
   loginGate.style.display = "grid";
   layoutEl.style.display = "none";
+  loginGate.style.setProperty("display", "grid", "important");
+  layoutEl.style.setProperty("display", "none", "important");
   if (sessionControlsEl) {
     sessionControlsEl.classList.add("hidden");
   }
@@ -729,14 +733,15 @@ const reserveContractNumber = async (token) => {
 };
 
 const setupAuth = async () => {
-  setUnauthenticatedUi("Verificando sesion...");
-
+  // No mostrar UI de login hasta verificar si hay token válido
   const existingToken = window.localStorage.getItem(AUTH_TOKEN_KEY);
+  
   if (!existingToken) {
     setUnauthenticatedUi("Ingresa tus credenciales.");
     return;
   }
 
+  // Si hay token, verificar su validez ANTES de cambiar UI
   try {
     const user = await validateSession(existingToken);
     currentAuthenticatedUser = user;

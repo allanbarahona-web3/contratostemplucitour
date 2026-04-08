@@ -36,9 +36,14 @@ body {
     linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 46%, var(--bg-2) 100%);
 }
 
+/* Ocultar todo hasta que setupAuth decida qué mostrar - evita flash de login */
+.login-gate,
+.layout {
+  display: none !important;
+}
+
 .login-gate {
   min-height: 100vh;
-  display: grid;
   place-items: center;
   padding: 20px;
   animation: page-in 380ms ease-out both;
