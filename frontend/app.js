@@ -2777,15 +2777,42 @@ if (historyList) {
               ? `Contrato reenviado a ${sent} destinatario(s). ${failed} fallo(aron).`
               : `Contrato reenviado correctamente a ${sent} destinatario(s).`;
           showResendSignedSummary(result);
+          
+          // Cambiar botón a estado "Enviado" en verde
+          if (failed === 0 && sent > 0) {
+            target.textContent = "✓ Enviado";
+            target.style.backgroundColor = "#10b981";
+            target.style.color = "white";
+            target.style.borderColor = "#10b981";
+            
+            // Guardar info de envío para tooltip
+            const now = new Date().toLocaleString("es-CR", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+            const emails = Array.isArray(result?.sentTo) ? result.sentTo.join("\n") : "";
+            const tooltipText = `✓ Enviado exitosamente\n\n📅 ${now}\n\n📧 Correos:\n${emails}`;
+            
+            target.setAttribute("data-tooltip", tooltipText);
+            target.dataset.sent = "true";
+            target.dataset.sentAt = now;
+            target.dataset.sentEmails = emails;
+          }
         })
         .catch((error) => {
           debugError("No se pudo reenviar contrato firmado", error);
           statusText.textContent =
             error?.message || "No se pudo reenviar el contrato firmado.";
-        })
-        .finally(() => {
           target.removeAttribute("disabled");
           target.textContent = oldText;
+        })
+        .finally(() => {
+          if (!target.dataset.sent) {
+            target.removeAttribute("disabled");
+          }
         });
     }
   });

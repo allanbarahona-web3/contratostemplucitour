@@ -1749,3 +1749,60 @@ button.ghost:hover {
   max-width: 340px;
   margin: 0 auto;
 }
+
+/* ── Botón Reenviar firmado - Estado Enviado ──────────────────────── */
+button[data-action="resend-signed"][data-sent="true"] {
+  background-color: #10b981 !important;
+  color: white !important;
+  border-color: #10b981 !important;
+  cursor: default;
+  position: relative;
+}
+
+button[data-action="resend-signed"][data-sent="true"]:hover {
+  background-color: #059669 !important;
+}
+
+/* Tooltip personalizado para botón Enviado */
+button[data-action="resend-signed"][data-sent="true"]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: pre-line;
+  text-align: left;
+  min-width: 280px;
+  max-width: 400px;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+button[data-action="resend-signed"][data-sent="true"]::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(0px);
+  border: 6px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.95);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1001;
+}
+
+button[data-action="resend-signed"][data-sent="true"]:hover::after,
+button[data-action="resend-signed"][data-sent="true"]:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
