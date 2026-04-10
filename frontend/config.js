@@ -6,23 +6,26 @@
     "www.contratos.lucitour.com": "https://contractstemporal-f8too.ondigitalocean.app",
   };
 
-  // Runtime sources (first non-empty wins):
+  // Runtime sources:
   // 1) window.__APP_ENV__.API_BASE (injected at deploy/runtime)
   // 2) <meta name="api-base" content="..."> (optional per-page override)
-  // 3) localStorage CONTRACTS_API_BASE (manual emergency override)
-  // 4) localhost fallback for local dev
+  // 3) localStorage CONTRACTS_API_BASE (localhost only)
+  // 4) production host fallback mapping
+  // 5) localhost fallback for local dev
   const runtimeApiBase = normalizeBase(
     (window.__APP_ENV__ && window.__APP_ENV__.API_BASE) ||
     document.querySelector('meta[name="api-base"]')?.getAttribute("content") ||
-    window.localStorage.getItem("CONTRACTS_API_BASE") ||
     "",
   );
+  const localStorageOverride = isLocalHost
+    ? normalizeBase(window.localStorage.getItem("CONTRACTS_API_BASE") || "")
+    : "";
 
   const hostFallback = normalizeBase(
     productionFallbackByHost[String(window.location.hostname || "").toLowerCase()] || "",
   );
   const localFallback = isLocalHost ? "http://localhost:3001" : "";
-  const apiBase = runtimeApiBase || hostFallback || localFallback;
+  const apiBase = runtimeApiBase || localStorageOverride || hostFallback || localFallback;
 
   window.APP_CONFIG = {
     ...(window.APP_CONFIG || {}),
