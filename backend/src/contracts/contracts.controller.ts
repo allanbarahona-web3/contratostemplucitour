@@ -113,17 +113,6 @@ export class ContractsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get("crm/clients")
-  getAllClients(
-    @Req()
-    req: {
-      user: { id: string; email: string; fullName: string };
-    },
-  ) {
-    return this.contractsService.getAllClientsWithContracts(req.user);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get()
   searchContracts(
     @Req()
