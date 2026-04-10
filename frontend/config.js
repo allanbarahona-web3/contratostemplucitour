@@ -1,6 +1,10 @@
 (() => {
   const normalizeBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const productionFallbackByHost = {
+    "contratos.lucitour.com": "https://contratostempapi-h5ppc.ondigitalocean.app",
+    "www.contratos.lucitour.com": "https://contratostempapi-h5ppc.ondigitalocean.app",
+  };
 
   // Runtime sources (first non-empty wins):
   // 1) window.__APP_ENV__.API_BASE (injected at deploy/runtime)
@@ -14,8 +18,11 @@
     "",
   );
 
+  const hostFallback = normalizeBase(
+    productionFallbackByHost[String(window.location.hostname || "").toLowerCase()] || "",
+  );
   const localFallback = isLocalHost ? "http://localhost:3001" : "";
-  const apiBase = runtimeApiBase || localFallback;
+  const apiBase = runtimeApiBase || hostFallback || localFallback;
 
   window.APP_CONFIG = {
     ...(window.APP_CONFIG || {}),
