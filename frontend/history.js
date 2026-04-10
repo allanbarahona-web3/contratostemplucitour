@@ -118,7 +118,7 @@ const renderHistory = (items = []) => {
   if (!Array.isArray(items) || items.length === 0) {
     historyTableBody.innerHTML = `
       <tr>
-        <td colspan="6"><p class="history-empty">No se encontraron contratos.</p></td>
+        <td colspan="7"><p class="history-empty">No se encontraron contratos.</p></td>
       </tr>
     `;
     return;
@@ -136,6 +136,7 @@ const renderHistory = (items = []) => {
           </td>
           <td>${escapeHtml(item.clientIdNumber)}</td>
           <td>${escapeHtml(item.clientEmail)}</td>
+          <td>${escapeHtml(item.clientPhone || "-")}</td>
           <td>${escapeHtml(item.contractNumber)}</td>
           <td><span class="contract-status ${escapeHtml(state.className)}">${escapeHtml(state.text)}</span></td>
           <td>
@@ -209,7 +210,7 @@ const loadContractHistory = async (query = "") => {
 
   historyTableBody.innerHTML = `
     <tr>
-      <td colspan="6"><p class="history-empty">Cargando historial...</p></td>
+      <td colspan="7"><p class="history-empty">Cargando historial...</p></td>
     </tr>
   `;
 
@@ -288,7 +289,7 @@ historySearchButton.addEventListener("click", () => {
   void loadContractHistory(historySearchInput.value || "").catch((error) => {
     historyTableBody.innerHTML = `
       <tr>
-        <td colspan="6"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
+        <td colspan="7"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
       </tr>
     `;
   });
@@ -302,7 +303,7 @@ historySearchInput.addEventListener("input", () => {
     void loadContractHistory(historySearchInput.value || "").catch((error) => {
       historyTableBody.innerHTML = `
         <tr>
-          <td colspan="6"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
+          <td colspan="7"><p class="history-empty">${escapeHtml(error.message || "Error cargando historial.")}</p></td>
         </tr>
       `;
     });
