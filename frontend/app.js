@@ -42,7 +42,7 @@ const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
-const almanovaLogoPath = "./assets/logo-alma-nova.png";
+const almanovaLogoPath = "./assets/LOGO ALMANOVA NEGRO.png";
 const DEBUG_TAG = "[ContratosTemp]";
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
@@ -2202,7 +2202,7 @@ html, body {
 <!-- ── Document header ── -->
 <header class="doc-header">
   <img class="doc-header-logo"
-       src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/logo-alma-nova.png`)}"
+      src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/LOGO ALMANOVA NEGRO.png`)}"
        alt="Viajes Alma Nova" />
   <div class="doc-header-text">
     <h1>Viajes Alma Nova</h1>
@@ -2497,7 +2497,7 @@ if (sendAndDownloadButton) {
         statusText.textContent = "Construyendo contrato...";
         const data = renderPreview();
         const [_logoSrc, _karenSrc] = await Promise.all([
-          loadAssetDataUri("./assets/logo-alma-nova.png"),
+          loadAssetDataUri("./assets/LOGO ALMANOVA NEGRO.png"),
           loadAssetDataUri("./assets/firmakaren.png"),
         ]);
         const contractHtml = buildContractPdfHtml(data, { logoSrc: _logoSrc, karenSrc: _karenSrc });
