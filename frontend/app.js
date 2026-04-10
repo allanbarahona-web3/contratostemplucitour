@@ -1096,22 +1096,31 @@ const getTourDateRange = () => {
   return { startDate, endDate };
 };
 
-const normalizeTourDateRange = (preferredSide = "start") => {
+const syncTourDateRangeValidity = () => {
   const { startDate, endDate } = getTourDateRange();
+
+  const startInput = form.elements.startDate;
+  const endInput = form.elements.endDate;
+
+  // Keep native pickers constrained without mutating user-selected values.
+  startInput.max = endDate || "";
+  endInput.min = startDate || "";
+
   if (!startDate || !endDate) {
+    startInput.setCustomValidity("");
+    endInput.setCustomValidity("");
     return;
   }
 
   if (startDate <= endDate) {
+    startInput.setCustomValidity("");
+    endInput.setCustomValidity("");
     return;
   }
 
-  if (preferredSide === "end") {
-    form.elements.startDate.value = endDate;
-    return;
-  }
-
-  form.elements.endDate.value = startDate;
+  const message = "La fecha fin debe ser igual o posterior a la fecha inicio.";
+  startInput.setCustomValidity(message);
+  endInput.setCustomValidity(message);
 };
 
 const syncItineraryDateBounds = (autocorrect = false) => {
@@ -2767,7 +2776,7 @@ companionsContainer.addEventListener("input", (event) => {
 });
 
 form.elements.startDate.addEventListener("change", () => {
-  normalizeTourDateRange("start");
+  syncTourDateRangeValidity();
 
   const firstDateInput = itineraryContainer.querySelector('[data-kind="opening"] [data-field="date"]');
   const lastDateInput = itineraryContainer.querySelector('[data-kind="closing"] [data-field="date"]');
@@ -2783,7 +2792,7 @@ form.elements.startDate.addEventListener("change", () => {
 });
 
 form.elements.endDate.addEventListener("change", () => {
-  normalizeTourDateRange("end");
+  syncTourDateRangeValidity();
 
   const firstDateInput = itineraryContainer.querySelector('[data-kind="opening"] [data-field="date"]');
   const lastDateInput = itineraryContainer.querySelector('[data-kind="closing"] [data-field="date"]');
@@ -2826,6 +2835,8 @@ form.elements.reservationAmount.addEventListener("change", () => {
 form.elements.reservationAmount.addEventListener("blur", () => {
   hardClampReservation();
 });
+
+syncTourDateRangeValidity();
 
 form.elements.installmentCount.addEventListener("input", () => {
   recalcBalance();
