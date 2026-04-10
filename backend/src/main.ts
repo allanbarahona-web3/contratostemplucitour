@@ -27,18 +27,32 @@ const normalizeDatabaseUrl = () => {
   process.env.DATABASE_URL = normalized;
 };
 
-const parseAllowedOrigins = (rawValue: string) => {
+const normalizeOrigin = (value: string) => String(value || "").trim().replace(/\/+$/, "");
+
+const parseAllowedOrigins = (rawValue: string, publicAppBaseUrl: string) => {
   const value = String(rawValue || "").trim();
+  const publicOrigin = normalizeOrigin(publicAppBaseUrl || "");
+
   if (!value || value === "*") {
-    return "*";
+    return {
+      mode: "all" as const,
+      list: new Set<string>(publicOrigin ? [publicOrigin] : []),
+    };
   }
 
   const list = value
     .split(",")
-    .map((item) => item.trim())
+    .map((item) => normalizeOrigin(item))
     .filter(Boolean);
 
-  return list.length ? list : "*";
+  if (publicOrigin) {
+    list.push(publicOrigin);
+  }
+
+  return {
+    mode: "list" as const,
+    list: new Set<string>(list),
+  };
 };
 
 async function bootstrap() {
@@ -46,7 +60,10 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const allowedOrigins = parseAllowedOrigins(configService.get<string>("ALLOWED_ORIGIN", "*"));
+  const allowedOrigins = parseAllowedOrigins(
+    configService.get<string>("ALLOWED_ORIGIN", "*"),
+    configService.get<string>("PUBLIC_APP_BASE_URL", ""),
+  );
 
   // Accept larger JSON/form payloads for base64 PDF attachments.
   app.use(json({ limit: "20mb" }));
@@ -54,7 +71,21 @@ async function bootstrap() {
   app.use(helmet());
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Requests without Origin (curl/postman/server-to-server) are allowed.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalized = normalizeOrigin(origin);
+      if (allowedOrigins.mode === "all" || allowedOrigins.list.has(normalized)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${normalized}`), false);
+    },
     credentials: false,
   });
   app.useGlobalPipes(
