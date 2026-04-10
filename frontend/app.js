@@ -1096,16 +1096,35 @@ const getTourDateRange = () => {
   return { startDate, endDate };
 };
 
+const normalizeTourDateRange = (preferredSide = "start") => {
+  const { startDate, endDate } = getTourDateRange();
+  if (!startDate || !endDate) {
+    return;
+  }
+
+  if (startDate <= endDate) {
+    return;
+  }
+
+  if (preferredSide === "end") {
+    form.elements.startDate.value = endDate;
+    return;
+  }
+
+  form.elements.endDate.value = startDate;
+};
+
 const syncItineraryDateBounds = (autocorrect = false) => {
   const { startDate, endDate } = getTourDateRange();
+  const hasValidRange = Boolean(startDate && endDate && startDate <= endDate);
   const dateInputs = itineraryContainer.querySelectorAll('[data-field="date"]');
 
   dateInputs.forEach((input) => {
-    input.min = startDate || "";
-    input.max = endDate || "";
+    input.min = hasValidRange ? startDate : "";
+    input.max = hasValidRange ? endDate : "";
 
     const value = String(input.value || "").trim();
-    if (!value || !startDate || !endDate) {
+    if (!value || !hasValidRange) {
       input.setCustomValidity("");
       return;
     }
@@ -2748,20 +2767,35 @@ companionsContainer.addEventListener("input", (event) => {
 });
 
 form.elements.startDate.addEventListener("change", () => {
+  normalizeTourDateRange("start");
+
   const firstDateInput = itineraryContainer.querySelector('[data-kind="opening"] [data-field="date"]');
+  const lastDateInput = itineraryContainer.querySelector('[data-kind="closing"] [data-field="date"]');
   if (firstDateInput) {
     firstDateInput.value = form.elements.startDate.value;
   }
+  if (lastDateInput) {
+    lastDateInput.value = form.elements.endDate.value;
+  }
+
   syncItineraryDateBounds(true);
   recalcPaymentDueDate();
 });
 
 form.elements.endDate.addEventListener("change", () => {
+  normalizeTourDateRange("end");
+
+  const firstDateInput = itineraryContainer.querySelector('[data-kind="opening"] [data-field="date"]');
   const lastDateInput = itineraryContainer.querySelector('[data-kind="closing"] [data-field="date"]');
+  if (firstDateInput) {
+    firstDateInput.value = form.elements.startDate.value;
+  }
   if (lastDateInput) {
     lastDateInput.value = form.elements.endDate.value;
   }
+
   syncItineraryDateBounds(true);
+  recalcPaymentDueDate();
 });
 
 itineraryContainer.addEventListener("change", (event) => {

@@ -55,7 +55,7 @@ body {
 }
 
 .login-logo {
-  width: 140px;
+  width: clamp(170px, 42vw, 245px);
   height: auto;
   display: block;
   margin: 0 auto 12px;
@@ -1575,11 +1575,11 @@ button.ghost:hover {
   }
 
   .history-table {
-    min-width: 920px;
+    min-width: 760px;
   }
 
-  .history-table th:nth-child(6),
-  .history-table td:nth-child(6) {
+  .history-table th:nth-child(7),
+  .history-table td:nth-child(7) {
     width: 220px;
   }
 
@@ -1655,6 +1655,34 @@ button.ghost:hover {
   .public-pdf-viewer {
     height: 52dvh;
     max-height: 52dvh;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-shell {
+    width: 100vw;
+    margin: 0;
+  }
+
+  .panel-header {
+    padding: 16px 14px 0;
+  }
+
+  .nav-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-tab {
+    min-height: 44px;
+  }
+
+  .history-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .history-actions button {
+    width: 100%;
   }
 }
 
