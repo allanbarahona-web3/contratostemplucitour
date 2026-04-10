@@ -339,11 +339,8 @@ const openDocumentsByPerson = (docsWithKind) => {
     }
   });
   
-  // Documentos viejos sin categorizar por persona
-  const otherDocs = docsWithKind.filter((doc) => 
-    doc.kind === "cedula-front" || doc.kind === "cedula-back" || 
-    doc.kind === "passport" || doc.kind === "other"
-  );
+  // Documentos realmente sin clasificar (solo tipo "other")
+  const otherDocs = docsWithKind.filter((doc) => doc.kind === "other");
   
   // Construir HTML
   let html = "";
@@ -435,35 +432,6 @@ const renderDocumentCard = (doc) => {
     </article>`;
 };
 
-const prepareContractBillingData = (contractId) => {
-  // Obtener los datos necesarios del localStorage o de la tabla
-  // Para esto, necesitamos tener acceso a los datos del contrato
-  // Vamos a agregar un atributo data- a la fila con los datos necesarios
-  const token = window.localStorage.getItem(AUTH_TOKEN_KEY);
-  
-  return fetch(`${API_BASE}/contracts/${contractId}/files`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) throw new Error("No se pudo obtener los datos del contrato");
-      return response.json();
-    })
-    .then((contract) => {
-      // Retornar los datos en el formato esperado
-      return {
-        clientName: contract?.clientFullName || "",
-        clientId: contract?.clientIdNumber || "",
-        clientEmail: contract?.clientEmail || "",
-        contractNumber: contract?.contractNumber || "",
-        status: contract?.status || "",
-      };
-    });
-};
-
 const sendContractToBilling = async (contractId) => {
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
   if (!token) {
@@ -516,9 +484,10 @@ historyTableBody.addEventListener("click", (event) => {
         return;
       }
 
-      const oldLabel = target.textContent;
       target.setAttribute("disabled", "true");
       target.textContent = "Enviando...";
+      target.style.backgroundColor = "#f59e0b";
+      target.style.color = "white";
 
       void apiFetch(`/contracts/${contractId}/resend-signed-email`, {
         method: "POST",
@@ -528,44 +497,39 @@ historyTableBody.addEventListener("click", (event) => {
       })
         .then((result) => {
           const sentCount = Number(result?.sentCount || 0);
-          const failedCount = Number(result?.failedCount || 0);
-          const sentTo = Array.isArray(result?.sentTo) ? result.sentTo : [];
-          const failedTo = Array.isArray(result?.failedTo) ? result.failedTo : [];
-          const loggedAtRaw = String(result?.dispatchLogEntry?.createdAt || "").trim();
-          const loggedAt = loggedAtRaw ? formatDateTime(loggedAtRaw) : "-";
-
-          const sentList = sentTo.length
-            ? `<p><strong>Enviado a:</strong> ${escapeHtml(sentTo.join(", "))}</p>`
-            : "";
-          const failedList = failedTo.length
-            ? `<p><strong>No enviado:</strong> ${escapeHtml(failedTo.join(", "))}</p>`
-            : "";
-
-          viewerTitle.textContent = "Reenvio de contrato firmado";
-          viewerBody.innerHTML = `
-            <article class="viewer-doc">
-              <p class="viewer-doc-title">Resultado</p>
-              <p>Se enviaron <strong>${sentCount}</strong> correos.</p>
-              <p>Fallaron <strong>${failedCount}</strong> correos.</p>
-              <p><strong>Registro guardado:</strong> ${escapeHtml(loggedAt)}</p>
-              ${sentList}
-              ${failedList}
-            </article>
-          `;
-          viewerModal.classList.remove("hidden");
-          viewerModal.setAttribute("aria-hidden", "false");
-          document.body.classList.add("viewer-open");
+          
+          if (sentCount > 0) {
+            // Éxito - cambiar a verde
+            target.textContent = "✅ Contrato reenviado exitosamente";
+            target.style.backgroundColor = "#10b981";
+            target.style.color = "white";
+            target.style.cursor = "default";
+            // Mantener deshabilitado para evitar reenvíos duplicados
+          } else {
+            // Error - cambiar a rojo
+            target.textContent = "❌ Error al reenviar";
+            target.style.backgroundColor = "#ef4444";
+            target.style.color = "white";
+            setTimeout(() => {
+              target.removeAttribute("disabled");
+              target.textContent = "Reenviar firmado";
+              target.style.backgroundColor = "";
+              target.style.color = "";
+              target.style.cursor = "";
+            }, 3000);
+          }
         })
         .catch((error) => {
-          viewerTitle.textContent = "Error reenviando contrato";
-          viewerBody.innerHTML = `<p class="history-empty">${escapeHtml(error.message || "No se pudo reenviar el contrato firmado.")}</p>`;
-          viewerModal.classList.remove("hidden");
-          viewerModal.setAttribute("aria-hidden", "false");
-          document.body.classList.add("viewer-open");
-        })
-        .finally(() => {
-          target.removeAttribute("disabled");
-          target.textContent = oldLabel;
+          target.textContent = "❌ Error al reenviar";
+          target.style.backgroundColor = "#ef4444";
+          target.style.color = "white";
+          setTimeout(() => {
+            target.removeAttribute("disabled");
+            target.textContent = "Reenviar firmado";
+            target.style.backgroundColor = "";
+            target.style.color = "";
+            target.style.cursor = "";
+          }, 3000);
         });
 
       return;
@@ -719,18 +683,6 @@ historyTableBody.addEventListener("click", (event) => {
         if (action === "documents") {
           openDocumentsByPerson(docsWithKind);
           return;
-        }
-
-        // Mantener compatibilidad con botones viejos
-        if (action === "cedula") {
-          const idDocs = docsWithKind.filter((doc) => doc.kind === "cedula-front" || doc.kind === "cedula-back");
-          openViewer("Cedula (frente y reverso)", idDocs);
-          return;
-        }
-
-        if (action === "passport") {
-          const passDocs = docsWithKind.filter((doc) => doc.kind === "passport");
-          openViewer("Pasaporte", passDocs);
         }
       })
       .catch((error) => {

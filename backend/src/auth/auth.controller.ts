@@ -19,6 +19,12 @@ export class AuthController {
     return this.authService.me(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get("verify")
+  verify(@Req() req: { user: { id: string } }) {
+    return this.authService.me(req.user.id);
+  }
+
   @Sse("session-stream")
   sessionStream(@Query("token") token = ""): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {

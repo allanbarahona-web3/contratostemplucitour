@@ -279,7 +279,7 @@ const loadSigningSession = async () => {
   }
 
   if (!data.contractHtmlUrl) {
-    throw new Error("No se encontro el documento del contrato. Contacta a Lucitours.");
+    throw new Error("No se encontro el documento del contrato. Contacta a Viajes Alma Nova.");
   }
 
   contractFrameEl.src = data.contractHtmlUrl;

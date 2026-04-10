@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista Previa - Correos de Firma de Contrato</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #e5e7eb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .preview-header {
+      max-width: 1200px;
+      margin: 0 auto 20px auto;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .preview-header h1 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #1f2937;
+    }
+    .preview-header p {
+      margin: 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .email-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .email-box {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .email-box h2 {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      color: #667eea;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+    @media (max-width: 768px) {
+      .email-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-header">
+    <h1>📧 Vista Previa de Correos de Firma</h1>
+    <p>Estos son los dos tipos de correos que se envían cuando un cliente necesita firmar un contrato</p>
+  </div>
+
+  <div class="email-container">
+    <!-- Correo 1: Con PDF adjunto -->
+    <div class="email-box">
+      <h2>1️⃣ Correo con PDF Adjunto para Firma</h2>
+      
+      <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
+        <tr>
+          <td align="center" style="padding: 20px 10px;">
+            <table role="presentation" style="max-width: 100%; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+                    Viajes Alma Nova
+                  </h1>
+                  <p style="margin: 8px 0 0 0; color: #e9d5ff; font-size: 12px; font-weight: 500;">
+                    Tu destino, nuestra pasión
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Badge -->
+              <tr>
+                <td style="padding: 20px 20px 0 20px; text-align: center;">
+                  <div style="display: inline-block; background-color: #f59e0b; color: #ffffff; padding: 8px 16px; border-radius: 50px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    📄 Documento Adjunto
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Main Content -->
+              <tr>
+                <td style="padding: 20px;">
+                  <h2 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
+                    Hola Allan Barahona,
+                  </h2>
+                  
+                  <p style="margin: 0 0 15px 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                    Te enviamos tu contrato en formato PDF para que puedas revisarlo y firmarlo.
+                  </p>
+
+                  <!-- Contract Info Card -->
+                  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; margin: 15px 0; border: 2px solid #e5e7eb;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                          Número de Contrato
+                        </p>
+                        <p style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace;">
+                          LUC-20260410-130831939-3D73
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 0 0 15px 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                    Encontrarás el contrato adjunto a este correo. Por favor, <strong>revísalo cuidadosamente</strong> antes de proceder con la firma digital.
+                  </p>
+
+                  <!-- Info Box -->
+                  <div style="background-color: #eff6ff; border-left: 3px solid #3b82f6; padding: 12px; border-radius: 4px; margin: 15px 0;">
+                    <p style="margin: 0; color: #1e40af; font-size: 12px; line-height: 1.5;">
+                      💡 <strong>Importante:</strong> Revisa todos los detalles. Si tienes dudas, responde a este correo.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+                  <p style="margin: 0 0 5px 0; color: #1f2937; font-size: 13px; font-weight: 600;">
+                    Atentamente,
+                  </p>
+                  <p style="margin: 0; color: #667eea; font-size: 15px; font-weight: 700;">
+                    Equipo Viajes Alma Nova
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Correo 2: Con link de firma -->
+    <div class="email-box">
+      <h2>2️⃣ Correo con Link de Firma Digital</h2>
+      
+      <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
+        <tr>
+          <td align="center" style="padding: 20px 10px;">
+            <table role="presentation" style="max-width: 100%; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+                    Viajes Alma Nova
+                  </h1>
+                  <p style="margin: 8px 0 0 0; color: #e9d5ff; font-size: 12px; font-weight: 500;">
+                    Tu destino, nuestra pasión
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Badge -->
+              <tr>
+                <td style="padding: 20px 20px 0 20px; text-align: center;">
+                  <div style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 8px 16px; border-radius: 50px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ✍️ Firma Pendiente
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Main Content -->
+              <tr>
+                <td style="padding: 20px;">
+                  <h2 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
+                    Hola Allan Barahona,
+                  </h2>
+                  
+                  <p style="margin: 0 0 15px 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                    Tu contrato está listo para ser firmado. Solo necesitamos tu firma digital para completar el proceso.
+                  </p>
+
+                  <!-- Contract Info Card -->
+                  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; margin: 15px 0; border: 2px solid #e5e7eb;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                          Número de Contrato
+                        </p>
+                        <p style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 700; font-family: 'Courier New', monospace;">
+                          LUC-20260410-130831939-3D73
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                    Haz clic en el botón de abajo para abrir el documento, revisarlo y firmar con tu dedo directamente en la pantalla.
+                  </p>
+
+                  <!-- CTA Button -->
+                  <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="#" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 30px; border-radius: 8px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.4);">
+                          ✍️ Firmar Contrato Ahora
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Info Box -->
+                  <div style="background-color: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; border-radius: 4px; margin: 15px 0;">
+                    <p style="margin: 0; color: #92400e; font-size: 12px; line-height: 1.5;">
+                      ⚡ <strong>Proceso rápido:</strong> Solo toma 2 minutos. Lee el contrato, dibuja tu firma y listo.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+                  <p style="margin: 0 0 5px 0; color: #1f2937; font-size: 13px; font-weight: 600;">
+                    Atentamente,
+                  </p>
+                  <p style="margin: 0; color: #667eea; font-size: 15px; font-weight: 700;">
+                    Equipo Viajes Alma Nova
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="preview-header" style="margin-top: 20px;">
+    <p style="text-align: center;">✅ Ambos correos tienen diseño responsive y se ven perfectos en móviles, tablets y desktop</p>
+  </div>
+
+</body>
+</html>

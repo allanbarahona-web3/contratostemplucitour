@@ -4,9 +4,9 @@ import { hash } from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = (process.env.SEED_ADMIN_EMAIL || "admin@lucitour.com").toLowerCase();
+  const email = (process.env.SEED_ADMIN_EMAIL || "admin@viajesalmanova.com").toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD || "Cambiar123!";
-  const fullName = process.env.SEED_ADMIN_NAME || "Administrador Lucitour";
+  const fullName = process.env.SEED_ADMIN_NAME || "Administrador Viajes Alma Nova";
 
   const passwordHash = await hash(password, 10);
 

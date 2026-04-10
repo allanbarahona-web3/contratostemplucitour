@@ -36,14 +36,9 @@ body {
     linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 46%, var(--bg-2) 100%);
 }
 
-/* Ocultar todo hasta que setupAuth decida qué mostrar - evita flash de login */
-.login-gate,
-.layout {
-  display: none !important;
-}
-
 .login-gate {
   min-height: 100vh;
+  display: grid;
   place-items: center;
   padding: 20px;
   animation: page-in 380ms ease-out both;
@@ -788,6 +783,46 @@ button.ghost:hover {
 
 .history-table tr:last-child td {
   border-bottom: 0;
+}
+
+/* Contract links in CRM table */
+.contract-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.contract-link:hover {
+  background-color: rgba(54, 108, 196, 0.1);
+  text-decoration: underline;
+}
+
+/* Icon button for viewing documents */
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  line-height: 1;
+}
+
+.btn-icon:hover {
+  background-color: rgba(54, 108, 196, 0.15);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
 }
 
 .history-actions {
@@ -2083,7 +2118,18 @@ button[data-action="resend-signed"][data-sent="true"]:hover::before {
   transform: translateY(-2px);
 }
 
-.client-detail-panel {
+.contract-docs-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contract-docs-actions .btn {
+  flex: 0 0 auto;
+}
+
+.client-detail-panel,
+.contract-detail-panel {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -2158,4 +2204,20 @@ button[data-action="resend-signed"][data-sent="true"]:hover::before {
 
 .details-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.contract-docs-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contract-docs-actions .btn {
+  flex: 0 0 auto;
+}
+
+.contract-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }

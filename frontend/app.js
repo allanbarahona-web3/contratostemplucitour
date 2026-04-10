@@ -42,7 +42,7 @@ const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
-const lucitoursLogoPath = "./assets/logo-lucitour.png";
+const almanovaLogoPath = "./assets/logo-alma-nova.png";
 const DEBUG_TAG = "[ContratosTemp]";
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
 const configuredApiBase = normalizeBaseUrl(window.APP_CONFIG?.API_BASE);
@@ -561,16 +561,7 @@ const collectAllContractDocuments = async () => {
     }
   });
   
-  // Documentos de reserva inicial (mantener los viejos campos por compatibilidad)
-  if (idFrontDocumentInput?.files?.[0]) {
-    groups.push({ prefix: "cedula-frente", files: [idFrontDocumentInput.files[0]] });
-  }
-  if (idBackDocumentInput?.files?.[0]) {
-    groups.push({ prefix: "cedula-reverso", files: [idBackDocumentInput.files[0]] });
-  }
-  if (passportDocumentInput?.files?.[0]) {
-    groups.push({ prefix: "pasaporte", files: [passportDocumentInput.files[0]] });
-  }
+  // Documentos de soporte/reserva (primer pago, vouchers, etc.)
   if (contractDocumentsInput?.files) {
     groups.push({ prefix: "soporte", files: Array.from(contractDocumentsInput.files) });
   }
@@ -1401,7 +1392,7 @@ const buildMinorAnnexHtml = (data) => {
         </ul>
 
         <p><strong>CUARTO: DECLARACION DE AUTORIZACION</strong></p>
-        <p>La persona firmante, en su condicion de tutor legal y/o quien ejerce la patria potestad, declara bajo fe de juramento que cuenta con facultades legales suficientes para autorizar el viaje del menor e identifica expresamente a ${escapeHtml(minor.travelingWith)} como el adulto responsable que acompanara al menor durante el viaje. Asimismo, exonera a Lucitours de responsabilidad por informacion inexacta o documentacion insuficiente aportada por el representante.</p>
+        <p>La persona firmante, en su condicion de tutor legal y/o quien ejerce la patria potestad, declara bajo fe de juramento que cuenta con facultades legales suficientes para autorizar el viaje del menor e identifica expresamente a ${escapeHtml(minor.travelingWith)} como el adulto responsable que acompanara al menor durante el viaje. Asimismo, exonera a Viajes Alma Nova de responsabilidad por informacion inexacta o documentacion insuficiente aportada por el representante.</p>
 
         <p><strong>QUINTO: DOCUMENTO DE RESPALDO</strong></p>
         <p>Este anexo debe estar acompanado por el permiso notarial, judicial o documento equivalente exigido por la normativa migratoria aplicable.</p>
@@ -1519,14 +1510,14 @@ const buildContractHtml = (data) => {
     )
     .join("");
 
-  const erickSignatureBlock = `
-    <div class="signature-box signature-box--erick">
-        <div class="signature-sign-area signature-sign-area--erick" aria-hidden="true">
-          <img src="./assets/firmaerick.png" alt="Firma de Erick Bonilla" />
+  const karenSignatureBlock = `
+    <div class="signature-box signature-box--representative">
+        <div class="signature-sign-area signature-sign-area--representative" aria-hidden="true">
+          <img src="./assets/firmakaren.png" alt="Firma de Karen Campos" />
         </div>
-      <p><strong>ERICK JOSUE BONILLA PEREIRA</strong></p>
-      <p>Cédula de identidad: 1-1597-0559</p>
-      <p>Representante legal de Lucitours</p>
+      <p><strong>KAREN KEITLYN CAMPOS CANTILLO</strong></p>
+      <p>Cédula de identidad: 3-0522-0023</p>
+      <p>Representante legal de Viajes Alma Nova</p>
         <p>Fecha: ${contractVar(signatureDate)}</p>
     </div>
   `;
@@ -1538,9 +1529,9 @@ const buildContractHtml = (data) => {
 
     <p><strong>Entre nosotros:</strong></p>
     <p>
-      (a) ERICK JOSUE BONILLA PEREIRA, mayor, soltero, administrador de agencia de viajes, portador de la cédula de identidad número 1-1597-0559,
-      vecino de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de
-      VIAJES LUCITOURS TURISMO INTERNACIONAL SOCIEDAD ANONIMA, cédula jurídica número 3-101-874546, en adelante denominada "Lucitours"; y
+      (a) KAREN KEITLYN CAMPOS CANTILLO, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número 3-0522-0023,
+      vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de
+      VIAJES ALMA NOVA, cédula jurídica número Pendiente, en adelante denominada "Viajes Alma Nova"; y
     </p>
     <p>
         (b) ${contractVar(data.clientFullName)}, mayor de edad, ${contractVar(data.civilStatus)}, ${contractVar(
@@ -1580,45 +1571,45 @@ const buildContractHtml = (data) => {
       <ul>
         <li>Cuenta bancaria (IBAN): CR25011610400074756807, Banco Promerica.</li>
         <li>Sinpe Móvil: 7296-9551.</li>
-        <li>Pagos en efectivo o tarjeta en oficinas de Lucitours.</li>
+        <li>Pagos en efectivo o tarjeta en oficinas de Viajes Alma Nova.</li>
       </ul>
 
     <p><strong>QUINTO: DEPÓSITO DE RESERVA.</strong> La cuota de reserva inicial se utiliza como depósito mínimo para reservar y garantizar el espacio del Cliente en el Tour y los operadores turísticos, por lo que dicho depósito no será transferible, reutilizable ni reembolsable.</p>
-    <p>En caso de incumplimiento en pagos, Lucitours podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Lucitours podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>
+    <p>En caso de incumplimiento en pagos, Viajes Alma Nova podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Viajes Alma Nova podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>
 
       <p><strong>SEXTO: ALOJAMIENTOS Y HOSPEDAJES.</strong> Como parte del Tour, el Cliente será alojado en establecimientos tipo hostel, hotel u otros similares, conforme a la logística del viaje, disponibilidad y condiciones operativas del proveedor.</p>
         <p>Como referencia de preferencia del Cliente, se registra tipo de hospedaje ${contractVar(
         data.lodgingType,
         )} y acomodación solicitada ${contractVar(data.accommodationType)}. Esta preferencia no constituye garantía absoluta y estará sujeta a disponibilidad y criterios operativos del Tour.</p>
-      <p>La asignación final de habitaciones y tipo de acomodación será determinada por Lucitours según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
+      <p>La asignación final de habitaciones y tipo de acomodación será determinada por Viajes Alma Nova según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
       <p>El Cliente reconoce y acepta expresamente que la acomodación podrá implicar el uso de habitaciones compartidas con otros participantes del Tour, ya sean conocidos o no, así como el uso de baños privados o compartidos, según disponibilidad del hospedaje.</p>
-      <p>Lucitours podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
+      <p>Viajes Alma Nova podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
       <p>Todo lo anterior estará sujeto a disponibilidad, necesidades operativas del Tour, así como a casos fortuitos o de fuerza mayor.</p>
 
-    <p><strong>SÉPTIMO: CHECK IN Y ASIGNACIÓN DE ASIENTOS.</strong> Lucitours realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
+    <p><strong>SÉPTIMO: CHECK IN Y ASIGNACIÓN DE ASIENTOS.</strong> Viajes Alma Nova realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
     <p>Equipaje permitido: ${contractVar(data.luggageClause)}</p>
 
-    <p><strong>OCTAVO: SEGURO DE VIAJE.</strong> Lucitours podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
-    <p>El Cliente acepta que, en caso de no contratar seguro con Lucitours o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Lucitours de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
-    <p>Asimismo, el Cliente declara que exime a Lucitours, en este mismo acto y en la medida permitida por ley, de responsabilidad por gastos médicos, hospitalarios, emergencias, cancelaciones, retrasos, pérdida de equipaje u otras contingencias cubribles por el seguro de viaje.</p>
+    <p><strong>OCTAVO: SEGURO DE VIAJE.</strong> Viajes Alma Nova podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
+    <p>El Cliente acepta que, en caso de no contratar seguro con Viajes Alma Nova o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Viajes Alma Nova de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
+    <p>Asimismo, el Cliente declara que exime a Viajes Alma Nova, en este mismo acto y en la medida permitida por ley, de responsabilidad por gastos médicos, hospitalarios, emergencias, cancelaciones, retrasos, pérdida de equipaje u otras contingencias cubribles por el seguro de viaje.</p>
 
-    <p><strong>NOVENO: PERSONAL DE ACOMPAÑAMIENTO.</strong> Dependiendo del Tour, Lucitours podrá asignar personal de acompañamiento desde Costa Rica.</p>
-    <p>El Cliente debe presentarse con al menos 3 horas de anticipación al aeropuerto y con toda la documentación requerida para viajar. Lucitours no será responsable por llegada tardía, documentos vencidos o documentación incompleta del Cliente.</p>
+    <p><strong>NOVENO: PERSONAL DE ACOMPAÑAMIENTO.</strong> Dependiendo del Tour, Viajes Alma Nova podrá asignar personal de acompañamiento desde Costa Rica.</p>
+    <p>El Cliente debe presentarse con al menos 3 horas de anticipación al aeropuerto y con toda la documentación requerida para viajar. Viajes Alma Nova no será responsable por llegada tardía, documentos vencidos o documentación incompleta del Cliente.</p>
 
     <p><strong>DÉCIMO: FICHA DE ACTIVIDADES E ITINERARIO.</strong></p>
     ${itineraryHtml}
-    <p>Lucitours podrá modificar itinerario, ruta, hospedajes u orden del Tour cuando sea necesario para seguridad, resguardo y ejecución efectiva del servicio.</p>
+    <p>Viajes Alma Nova podrá modificar itinerario, ruta, hospedajes u orden del Tour cuando sea necesario para seguridad, resguardo y ejecución efectiva del servicio.</p>
 
-    <p><strong>DÉCIMO PRIMERO: TRANSPORTES.</strong> Lucitours brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>
+    <p><strong>DÉCIMO PRIMERO: TRANSPORTES.</strong> Viajes Alma Nova brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>
     <p><strong>DÉCIMO SEGUNDO: ALIMENTACIÓN.</strong> El Tour no incluye alimentación, salvo indicación expresa en la publicación del tour o bien que el hospedaje indique que se incluye el desayuno con el hospedaje; por lo tanto, el Cliente debe asumir sus costos de alimentación durante el tour.</p>
 
     <p><strong>DÉCIMO TERCERO: CANCELACIONES, REEMBOLSOS, CRÉDITOS Y FUERZA MAYOR.</strong></p>
-    <p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Lucitours dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Lucitours confirme formalmente la procedencia del reembolso.</p>
-    <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Lucitours. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
-    <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Lucitours podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Lucitours. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
-    <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Lucitours actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Lucitours no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
-    <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Lucitours no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
-    <p><strong>13.5 Fuerza Mayor.</strong> Lucitours no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Lucitours podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
+    <p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Viajes Alma Nova dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Viajes Alma Nova confirme formalmente la procedencia del reembolso.</p>
+    <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Viajes Alma Nova. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
+    <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Viajes Alma Nova podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Viajes Alma Nova. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
+    <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Viajes Alma Nova actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Viajes Alma Nova no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
+    <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Viajes Alma Nova no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
+    <p><strong>13.5 Fuerza Mayor.</strong> Viajes Alma Nova no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Viajes Alma Nova podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
     <p><strong>13.6 Aceptación de Condiciones.</strong> Al contratar los servicios, el Cliente declara haber leído, entendido y aceptado todas las condiciones de esta cláusula, incluyendo tiempos de reembolso, políticas de crédito y limitaciones de responsabilidad.</p>
 
     <p><strong>DÉCIMO CUARTO: DERECHOS Y OBLIGACIONES DEL CLIENTE.</strong> El Cliente se obliga, entre otros, a pagar montos económicos según contrato; brindar documentación veraz y vigente; respetar horarios, itinerarios y normas de proveedores; resguardar pertenencias personales; asumir gastos no incluidos; y gestionar correctamente documentación de menor(es), cuando aplique.</p>
@@ -1628,7 +1619,7 @@ const buildContractHtml = (data) => {
     <p>LUCI TOURS TURISMO INTERNACIONAL S.A. se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
     <p>Asimismo, cualquier gasto adicional derivado de dicha exclusión será asumido en su totalidad por el Cliente.</p>
 
-    <p><strong>DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE LUCITOURS.</strong> Lucitours se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>
+    <p><strong>DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE VIAJES ALMA NOVA.</strong> Viajes Alma Nova se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>
 
     <p><strong>DÉCIMO SEXTO: EXONERACIÓN Y LIMITACIÓN DE RESPONSABILIDAD.</strong> El Cliente reconoce y acepta que la participación en el tour implica riesgos inherentes propios de los viajes nacionales e internacionales, incluyendo, pero no limitado a, condiciones climáticas adversas, retrasos, cancelaciones, accidentes, enfermedades, situaciones políticas, sociales o sanitarias, y cualquier otro evento fuera del control razonable de la Agencia.</p>
     <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a LUCI TOURS TURISMO INTERNACIONAL S.A. de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
@@ -1639,17 +1630,17 @@ const buildContractHtml = (data) => {
     <p>En consecuencia, la Agencia no será responsable por actos, omisiones, incumplimientos, retrasos, cancelaciones, sobreventas, cambios de itinerario, pérdidas, daños o cualquier otra situación atribuible a dichos proveedores.</p>
     <p>El Cliente acepta que cualquier reclamación derivada de servicios prestados por terceros deberá dirigirse directamente contra el proveedor correspondiente, conforme a sus propias políticas, términos y condiciones.</p>
 
-    <p><strong>DÉCIMO OCTAVO: EMISIÓN DE TIQUETES AÉREOS.</strong> El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
+    <p><strong>DÉCIMO OCTAVO: EMISIÓN DE TIQUETES AÉREOS.</strong> El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Viajes Alma Nova conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
     <p>En ese sentido, la emisión de los tiquetes aéreos no necesariamente se realizará de forma inmediata al momento del pago de la reserva, pagos parciales o incluso la cancelación total del Tour, pudiendo efectuarse en cualquier momento hasta un plazo máximo de cuarenta y ocho (48) horas previas al inicio del viaje.</p>
     <p>El Cliente entiende y acepta que la confirmación de su espacio dentro del Tour es independiente del momento de emisión de los tiquetes aéreos, y que estos podrán ser adquiridos en una fecha posterior según condiciones operativas y comerciales.</p>
-    <p>Lucitours garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>
+    <p>Viajes Alma Nova garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>
 
     <p><strong>DÉCIMO NOVENO: MODIFICACIONES AL CONTRATO.</strong> Toda modificación deberá formalizarse por escrito mediante adenda firmada por las Partes.</p>
     <p><strong>VIGÉSIMO: RESOLUCIÓN ALTERNA DE CONFLICTOS Y LEY APLICABLE.</strong> Este Contrato se regirá por la legislación de la República de Costa Rica. Cualquier controversia intentará resolverse primero por vía conciliatoria antes de acudir a la vía judicial.</p>
     <p><strong>VIGÉSIMO PRIMERO: CONFIDENCIALIDAD.</strong> Toda información comercial, operativa y documental conocida con ocasión del Contrato será tratada como confidencial durante su vigencia y por un año adicional a su terminación.</p>
       <p><strong>VIGÉSIMO SEGUNDO: NOTIFICACIONES Y COMUNICACIONES.</strong></p>
       <ul>
-        <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
+        <li><strong>Viajes Alma Nova:</strong> contratos@viajesalmanova.com y WhatsApp 6015-9906.</li>
         <li><strong>Cliente:</strong> Dirección ${contractVar(data.clientAddress)}, correo ${contractVar(data.clientEmail)} y teléfono ${contractVar(data.clientPhone)}.</li>
       </ul>
     <p><strong>VIGÉSIMO TERCERO: INTEGRIDAD CONTRACTUAL.</strong> Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>
@@ -1666,7 +1657,7 @@ const buildContractHtml = (data) => {
 
     <div class="signatures">
       ${clientAndCompanionSignatureBlocks}
-      ${erickSignatureBlock}
+      ${karenSignatureBlock}
     </div>
   `;
 };
@@ -1849,18 +1840,18 @@ const buildContractPdfHtml = (data, assets = {}) => {
     )
     .join("");
 
-  const erickImgSrc = assets.erickSrc || `${baseUrl}/assets/firmaerick.png`;
-  const erickBlock = `
+  const karenImgSrc = assets.karenSrc || `${baseUrl}/assets/firmakaren.png`;
+  const karenBlock = `
     <div class="sig-box">
       <div class="sig-area sig-area--company" data-signer-key="company">
         <span class="sig-label">Firma del representante</span>
         <img class="sig-img sig-img--company"
-             src="${escapeAttr(erickImgSrc)}"
-             alt="Firma de Erick Bonilla" />
+             src="${escapeAttr(karenImgSrc)}"
+             alt="Firma de Karen Campos" />
       </div>
-      <p class="sig-name">ERICK JOSUE BONILLA PEREIRA</p>
-      <p>Cédula: 1-1597-0559</p>
-      <p>Representante legal de Lucitours</p>
+      <p class="sig-name">KAREN KEITLYN CAMPOS CANTILLO</p>
+      <p>Cédula: 3-0522-0023</p>
+      <p>Representante legal de Viajes Alma Nova</p>
       <p>Fecha: ${v(signatureDate)}</p>
     </div>`;
 
@@ -1907,7 +1898,7 @@ const buildContractPdfHtml = (data, assets = {}) => {
 
             <section class="annex-clause">
               <p><strong>CUARTO: DECLARACIÓN DE AUTORIZACIÓN</strong></p>
-              <p>La persona firmante, en su condición de tutor legal y/o quien ejerce la patria potestad, declara bajo fe de juramento que cuenta con facultades legales suficientes para autorizar el viaje del menor e identifica expresamente a ${escapeHtml(minor.travelingWith)} como el adulto responsable que acompañará al menor durante el viaje. Asimismo, exonera a Lucitours de responsabilidad por información inexacta o documentación insuficiente aportada por el representante.</p>
+              <p>La persona firmante, en su condición de tutor legal y/o quien ejerce la patria potestad, declara bajo fe de juramento que cuenta con facultades legales suficientes para autorizar el viaje del menor e identifica expresamente a ${escapeHtml(minor.travelingWith)} como el adulto responsable que acompañará al menor durante el viaje. Asimismo, exonera a Viajes Alma Nova de responsabilidad por información inexacta o documentación insuficiente aportada por el representante.</p>
             </section>
 
             <section class="annex-clause">
@@ -1941,7 +1932,7 @@ const buildContractPdfHtml = (data, assets = {}) => {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Contrato ${escapeHtml(data.contractNumber)} — Lucitours</title>
+<title>Contrato ${escapeHtml(data.contractNumber)} — Viajes Alma Nova</title>
 <style>
 /* ── reset & page ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2211,13 +2202,13 @@ html, body {
 <!-- ── Document header ── -->
 <header class="doc-header">
   <img class="doc-header-logo"
-       src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/logo-lucitour.png`)}"
-       alt="Lucitours" />
+       src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/logo-alma-nova.png`)}"
+       alt="Viajes Alma Nova" />
   <div class="doc-header-text">
-    <h1>Viajes Lucitours Turismo Internacional S.A.</h1>
+    <h1>Viajes Viajes Alma Nova Turismo Internacional S.A.</h1>
     <p class="doc-meta">
       Cédula jurídica: 3-101-874546 &nbsp;|&nbsp;
-      contratos@lucitour.com &nbsp;|&nbsp; Tel. 6015-9906<br />
+      contratos@viajesalmanova.com &nbsp;|&nbsp; Tel. 6015-9906<br />
       Contrato N.° <strong>${escapeHtml(data.contractNumber)}</strong> &nbsp;|&nbsp;
       Emitido: ${escapeHtml(formatDate(data.issuedAt || new Date().toISOString().slice(0, 10)))} &nbsp;|&nbsp;
       Agente: ${escapeHtml(data.generatedByAgentName || "")}
@@ -2240,7 +2231,7 @@ html, body {
 <h3 class="section-heading">Partes</h3>
 
 <section class="clause">
-  <p>(a) <strong>ERICK JOSUE BONILLA PEREIRA</strong>, mayor, soltero, administrador de agencia de viajes, portador de la cédula de identidad número <strong>1-1597-0559</strong>, vecino de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES LUCITOURS TURISMO INTERNACIONAL SOCIEDAD ANONIMA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Lucitours"</strong>; y</p>
+  <p>(a) <strong>KAREN KEITLYN CAMPOS CANTILLO</strong>, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número <strong>3-0522-0023</strong>, vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES ALMA NOVA SOCIEDAD ANONIMA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Viajes Alma Nova"</strong>; y</p>
 </section>
 
 <section class="clause">
@@ -2285,54 +2276,54 @@ ${clause(
   <ul>
     <li>Cuenta bancaria (IBAN): CR25011610400074756807, Banco Promerica.</li>
     <li>Sinpe Móvil: 7296-9551.</li>
-    <li>Pagos en efectivo o tarjeta en oficinas de Lucitours.</li>
+    <li>Pagos en efectivo o tarjeta en oficinas de Viajes Alma Nova.</li>
   </ul>`,
 )}
 
 ${clause(
   "QUINTO: DEPÓSITO DE RESERVA.",
   `<p>La cuota de reserva inicial se utiliza como depósito mínimo para reservar y garantizar el espacio del Cliente en el Tour y los operadores turísticos, por lo que dicho depósito no será transferible, reutilizable ni reembolsable.</p>
-  <p>En caso de incumplimiento en pagos, Lucitours podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Lucitours podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>`,
+  <p>En caso de incumplimiento en pagos, Viajes Alma Nova podrá notificar una fecha límite para poner al día los montos. De mantenerse el incumplimiento, Viajes Alma Nova podrá excluir al Cliente del Tour y los dineros recibidos al momento no serán reembolsables.</p>`,
 )}
 
 ${clause(
   "SEXTO: ALOJAMIENTOS Y HOSPEDAJES.",
   `<p>Como parte del Tour, el Cliente será alojado en establecimientos tipo hostel, hotel u otros similares, conforme a la logística del viaje, disponibilidad y condiciones operativas del proveedor.</p>
   <p>Como referencia de preferencia del Cliente, se registra tipo de hospedaje ${v(data.lodgingType)} y acomodación solicitada ${v(data.accommodationType)}. Esta preferencia no constituye garantía absoluta y estará sujeta a disponibilidad y criterios operativos del Tour.</p>
-  <p>La asignación final de habitaciones y tipo de acomodación será determinada por Lucitours según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
+  <p>La asignación final de habitaciones y tipo de acomodación será determinada por Viajes Alma Nova según criterios operativos, pudiendo incluir habitaciones individuales, dobles, múltiples o compartidas.</p>
   <p>El Cliente reconoce y acepta expresamente que la acomodación podrá implicar el uso de habitaciones compartidas con otros participantes del Tour, ya sean conocidos o no, así como el uso de baños privados o compartidos, según disponibilidad del hospedaje.</p>
-  <p>Lucitours podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
+  <p>Viajes Alma Nova podrá modificar el hospedaje originalmente previsto, incluyendo cambios de establecimiento, categoría o tipo de habitación, siempre que se mantengan condiciones razonables de servicio dentro del Tour contratado.</p>
   <p>Todo lo anterior estará sujeto a disponibilidad, necesidades operativas del Tour, así como a casos fortuitos o de fuerza mayor.</p>`,
 )}
 
 ${clause(
   "SÉPTIMO: CHECK IN Y ASIGNACIÓN DE ASIENTOS.",
-  `<p>Lucitours realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
+  `<p>Viajes Alma Nova realizará el check in según apertura de aerolínea. La asignación de asientos la realiza la aerolínea de forma aleatoria.</p>
   <p>Equipaje permitido: ${v(data.luggageClause)}</p>`,
 )}
 
 ${clause(
   "OCTAVO: SEGURO DE VIAJE.",
-  `<p>Lucitours podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
-  <p>El Cliente acepta que, en caso de no contratar seguro con Lucitours o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Lucitours de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
-  <p>Asimismo, el Cliente declara que exime a Lucitours, en este mismo acto y en la medida permitida por ley, de responsabilidad por gastos médicos, hospitalarios, emergencias, cancelaciones, retrasos, pérdida de equipaje u otras contingencias cubribles por el seguro de viaje.</p>`,
+  `<p>Viajes Alma Nova podrá colaborar con la adquisición de seguro de viaje mediante agencia aliada Assist Card, siendo opcional para el Cliente.</p>
+  <p>El Cliente acepta que, en caso de no contratar seguro con Viajes Alma Nova o bien no contar con un seguro viajero propio durante el Tour en este mismo acto, exonera a Viajes Alma Nova de toda responsabilidad por cualquier accidente, enfermedad, gasto médico, muerte o repatriación.</p>
+  <p>Asimismo, el Cliente declara que exime a Viajes Alma Nova, en este mismo acto y en la medida permitida por ley, de responsabilidad por gastos médicos, hospitalarios, emergencias, cancelaciones, retrasos, pérdida de equipaje u otras contingencias cubribles por el seguro de viaje.</p>`,
 )}
 
 ${clause(
   "NOVENO: PERSONAL DE ACOMPAÑAMIENTO.",
-  `<p>Dependiendo del Tour, Lucitours podrá asignar personal de acompañamiento desde Costa Rica.</p>
-  <p>El Cliente debe presentarse con al menos 3 horas de anticipación al aeropuerto y con toda la documentación requerida para viajar. Lucitours no será responsable por llegada tardía, documentos vencidos o documentación incompleta del Cliente.</p>`,
+  `<p>Dependiendo del Tour, Viajes Alma Nova podrá asignar personal de acompañamiento desde Costa Rica.</p>
+  <p>El Cliente debe presentarse con al menos 3 horas de anticipación al aeropuerto y con toda la documentación requerida para viajar. Viajes Alma Nova no será responsable por llegada tardía, documentos vencidos o documentación incompleta del Cliente.</p>`,
 )}
 
 ${clause(
   "DÉCIMO: FICHA DE ACTIVIDADES E ITINERARIO.",
   `${itineraryHtml}
-  <p>Lucitours podrá modificar itinerario, ruta, hospedajes u orden del Tour cuando sea necesario para seguridad, resguardo y ejecución efectiva del servicio.</p>`,
+  <p>Viajes Alma Nova podrá modificar itinerario, ruta, hospedajes u orden del Tour cuando sea necesario para seguridad, resguardo y ejecución efectiva del servicio.</p>`,
 )}
 
 ${clause(
   "DÉCIMO PRIMERO: TRANSPORTES.",
-  `<p>Lucitours brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>`,
+  `<p>Viajes Alma Nova brindará, por medio de terceros contratados, transportes relacionados con el Tour (vehículo privado, microbús, colectivo o transporte público). Todo transporte fuera de itinerario corre por cuenta del Cliente.</p>`,
 )}
 
 ${clause(
@@ -2342,12 +2333,12 @@ ${clause(
 
 ${clause(
   "DÉCIMO TERCERO: CANCELACIONES, REEMBOLSOS, CRÉDITOS Y FUERZA MAYOR.",
-  `<p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Lucitours dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Lucitours confirme formalmente la procedencia del reembolso.</p>
-  <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Lucitours. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
-  <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Lucitours podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Lucitours. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
-  <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Lucitours actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Lucitours no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
-  <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Lucitours no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
-  <p><strong>13.5 Fuerza Mayor.</strong> Lucitours no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Lucitours podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
+  `<p><strong>13.1 Política de Reembolsos y Plazos de Devolución.</strong> En caso de que proceda un reembolso total o parcial por cualquier concepto relacionado con los servicios contratados, el Cliente acepta y reconoce que Viajes Alma Nova dispondrá de un plazo mínimo de tres (3) meses y máximo de seis (6) meses calendario para efectuar dicha devolución. El plazo comenzará a computarse a partir de la fecha en que Viajes Alma Nova confirme formalmente la procedencia del reembolso.</p>
+  <p>El Cliente acepta que este plazo responde a la operativa del sector turístico, incluyendo procesos de recuperación de fondos con terceros proveedores como aerolíneas, hoteles, operadores y servicios internacionales, los cuales no dependen directamente de Viajes Alma Nova. El Cliente renuncia expresamente a cualquier reclamación adicional, intereses, indemnización o penalización relacionada con el tiempo de espera dentro del plazo establecido.</p>
+  <p><strong>13.2 Política de Créditos a Favor (Voucher).</strong> Como alternativa al reembolso, Viajes Alma Nova podrá ofrecer al Cliente un crédito a favor (voucher) equivalente al monto pagado, utilizable en futuros viajes, servicios o experiencias ofrecidas por la agencia. Este crédito tendrá una vigencia de hasta doce (12) meses y será transferible previa autorización de Viajes Alma Nova. La aceptación del crédito por parte del Cliente implica la renuncia al reembolso en dinero.</p>
+  <p><strong>13.3 Responsabilidad frente a Terceros Proveedores.</strong> Viajes Alma Nova actúa como intermediario entre el Cliente y terceros proveedores (incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos y transportistas). Por lo tanto, Viajes Alma Nova no será responsable por cancelaciones, retrasos, modificaciones, pérdidas o incumplimientos atribuibles a dichos proveedores. Cualquier gestión de reembolso estará sujeta a las políticas y tiempos de respuesta de estos terceros.</p>
+  <p><strong>13.4 Cancelaciones por Parte del Cliente.</strong> En caso de cancelación voluntaria por parte del Cliente, los montos pagados podrán estar sujetos a penalidades, cargos administrativos y condiciones de los proveedores. Si la cancelación se realiza con menos de veintidós (22) días calendario de antelación a la fecha de inicio del viaje, aplicará una penalidad equivalente al diez por ciento (10%) del valor total del contrato. Viajes Alma Nova no garantiza reembolsos en estos casos, pudiendo ofrecer únicamente créditos a favor según la evaluación del caso.</p>
+  <p><strong>13.5 Fuerza Mayor.</strong> Viajes Alma Nova no será responsable por la imposibilidad total o parcial de prestar los servicios contratados cuando esto se deba a causas de fuerza mayor, incluyendo pero no limitado a: pandemias, conflictos políticos, desastres naturales, restricciones gubernamentales, huelgas, cancelaciones masivas o cualquier evento fuera del control razonable de la agencia. En estos casos, Viajes Alma Nova podrá reprogramar el servicio o emitir un crédito a favor, sin obligación inmediata de reembolso.</p>
   <p><strong>13.6 Aceptación de Condiciones.</strong> Al contratar los servicios, el Cliente declara haber leído, entendido y aceptado todas las condiciones de esta cláusula, incluyendo tiempos de reembolso, políticas de crédito y limitaciones de responsabilidad.</p>`,
 )}
 
@@ -2365,8 +2356,8 @@ ${clause(
 )}
 
 ${clause(
-  "DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE LUCITOURS.",
-  `<p>Lucitours se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>`,
+  "DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE VIAJES ALMA NOVA.",
+  `<p>Viajes Alma Nova se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>`,
 )}
 
 ${clause(
@@ -2386,10 +2377,10 @@ ${clause(
 
 ${clause(
   "DÉCIMO OCTAVO: EMISIÓN DE TIQUETES AÉREOS.",
-  `<p>El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Lucitours conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
+  `<p>El Cliente reconoce y acepta que la emisión de los tiquetes aéreos forma parte de la gestión operativa del Tour, la cual será realizada por Viajes Alma Nova conforme a criterios de disponibilidad, condiciones de mercado y coordinación con proveedores.</p>
   <p>En ese sentido, la emisión de los tiquetes aéreos no necesariamente se realizará de forma inmediata al momento del pago de la reserva, pagos parciales o incluso la cancelación total del Tour, pudiendo efectuarse en cualquier momento hasta un plazo máximo de cuarenta y ocho (48) horas previas al inicio del viaje.</p>
   <p>El Cliente entiende y acepta que la confirmación de su espacio dentro del Tour es independiente del momento de emisión de los tiquetes aéreos, y que estos podrán ser adquiridos en una fecha posterior según condiciones operativas y comerciales.</p>
-  <p>Lucitours garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>`,
+  <p>Viajes Alma Nova garantiza la prestación del servicio de transporte aéreo conforme a lo contratado, por lo que el Cliente renuncia a cualquier reclamo relacionado exclusivamente con el momento de emisión de los tiquetes, siempre que los mismos sean entregados dentro del plazo indicado y el servicio sea efectivamente brindado.</p>`,
 )}
 
 ${clause(
@@ -2410,7 +2401,7 @@ ${clause(
 ${clause(
   "VIGÉSIMO SEGUNDO: NOTIFICACIONES Y COMUNICACIONES.",
   `<ul>
-    <li><strong>Lucitours:</strong> contratos@lucitour.com y WhatsApp 6015-9906.</li>
+    <li><strong>Viajes Alma Nova:</strong> contratos@viajesalmanova.com y WhatsApp 6015-9906.</li>
     <li><strong>Cliente:</strong> Dirección ${v(data.clientAddress)}, correo ${v(data.clientEmail)} y teléfono ${v(data.clientPhone)}.</li>
   </ul>`,
 )}
@@ -2437,7 +2428,7 @@ ${clause(
   <h2 class="sig-page-title">Firmas — Contrato N.° ${escapeHtml(data.contractNumber)}</h2>
   <div class="sig-grid">
     ${signerBlocks}
-    ${erickBlock}
+    ${karenBlock}
   </div>
 </section>
 
@@ -2505,11 +2496,11 @@ if (sendAndDownloadButton) {
 
         statusText.textContent = "Construyendo contrato...";
         const data = renderPreview();
-        const [_logoSrc, _erickSrc] = await Promise.all([
-          loadAssetDataUri("./assets/logo-lucitour.png"),
-          loadAssetDataUri("./assets/firmaerick.png"),
+        const [_logoSrc, _karenSrc] = await Promise.all([
+          loadAssetDataUri("./assets/logo-alma-nova.png"),
+          loadAssetDataUri("./assets/firmakaren.png"),
         ]);
-        const contractHtml = buildContractPdfHtml(data, { logoSrc: _logoSrc, erickSrc: _erickSrc });
+        const contractHtml = buildContractPdfHtml(data, { logoSrc: _logoSrc, karenSrc: _karenSrc });
         const payloadData = { ...data };
 
         statusText.textContent = "Guardando contrato en base de datos...";
