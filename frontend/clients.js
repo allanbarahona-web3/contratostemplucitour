@@ -29,14 +29,10 @@ const filterOnlySigned = document.getElementById("filterOnlySigned");
 const documentsModal = document.getElementById("documentsModal");
 const documentsModalTitle = document.getElementById("documentsModalTitle");
 const documentsModalBody = document.getElementById("documentsModalBody");
-const contractModal = document.getElementById("contractModal");
-const contractModalTitle = document.getElementById("contractModalTitle");
-const contractModalBody = document.getElementById("contractModalBody");
 
 let allClients = [];
 let filteredClients = [];
 let clientDocumentsCache = new Map(); // Cache de documentos por cliente
-let contractDetailsCache = new Map(); // Cache de detalles de contratos
 
 // Utilidades
 const escapeHtml = (text) =>
@@ -53,6 +49,28 @@ const escapeAttr = (text) =>
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+
+const copyTextToClipboard = async (value) => {
+  const text = String(value || "").trim();
+  if (!text) {
+    throw new Error("No hay numero de contrato para copiar.");
+  }
+
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "true");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand("copy");
+  document.body.removeChild(input);
+};
 
 // Check authentication and load data
 const initializePage = async () => {
@@ -166,9 +184,22 @@ const renderClientsTable = () => {
 
   clientsTableBody.innerHTML = filteredClients
     .map((client) => {
-      // Generar lista de contratos como botones clickeables
+      // Mostrar numero de contrato + accion para copiar
       const contractLinks = client.contracts
-        .map((c) => `<button class="contract-link" data-action="view-contract" data-contract-id="${escapeAttr(c.id)}" data-contract-number="${escapeAttr(c.contractNumber)}">${escapeHtml(c.contractNumber)}</button>`)
+        .map(
+          (c) => `
+            <span class="contract-chip">
+              <span>${escapeHtml(c.contractNumber)}</span>
+              <button
+                type="button"
+                class="ghost"
+                data-action="copy-contract-number"
+                data-contract-number="${escapeAttr(c.contractNumber)}"
+                title="Copiar numero de contrato"
+              >Copiar</button>
+            </span>
+          `,
+        )
         .join(", ");
 
       // Verificar si tiene documentos de cédula
@@ -331,98 +362,6 @@ const renderDocuments = (docs) => {
   `;
 };
 
-// Ver detalles de un contrato
-const viewContractDetails = async (contractId, contractNumber) => {
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  if (!token) return;
-
-  // Mostrar loading
-  contractModalTitle.textContent = `Contrato ${contractNumber}`;
-  contractModalBody.innerHTML = `<p class="history-empty">Cargando detalles del contrato...</p>`;
-  contractModal.classList.remove("hidden");
-  contractModal.setAttribute("aria-hidden", "false");
-
-  // Check cache
-  if (contractDetailsCache.has(contractId)) {
-    const details = contractDetailsCache.get(contractId);
-    renderContractDetails(details, contractNumber);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/contracts/${contractId}/files`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) {
-      contractModalBody.innerHTML = `<p class="history-empty">Error al cargar el contrato.</p>`;
-      return;
-    }
-
-    const details = await response.json();
-    contractDetailsCache.set(contractId, details);
-    renderContractDetails(details, contractNumber);
-  } catch (error) {
-    log("Error loading contract details:", error);
-    contractModalBody.innerHTML = `<p class="history-empty">Error de conexión al cargar el contrato.</p>`;
-  }
-};
-
-// Renderizar detalles del contrato en el modal
-const renderContractDetails = (details, contractNumber) => {
-  const contract = details;
-  const status = contract.status === "SIGNED" ? "✅ Firmado" : "⏳ Pendiente de firma";
-  const signedDate = contract.signedAt 
-    ? new Date(contract.signedAt).toLocaleDateString("es-CR", { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    : "-";
-
-  const signedPdfUrl = contract.signedPdf?.url || null;
-
-  let html = `
-    <div class="contract-detail-panel">
-      <div class="detail-section">
-        <h3>Información del Contrato</h3>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Número:</label>
-            <p><strong>${escapeHtml(contractNumber)}</strong></p>
-          </div>
-          <div class="detail-item">
-            <label>Estado:</label>
-            <p>${status}</p>
-          </div>
-          ${signedDate !== "-" ? `
-          <div class="detail-item">
-            <label>Fecha de Firma:</label>
-            <p>${signedDate}</p>
-          </div>
-          ` : ""}
-        </div>
-      </div>
-
-      ${signedPdfUrl ? `
-      <div class="detail-section">
-        <div class="contract-docs-actions">
-          <a href="${escapeAttr(signedPdfUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-accent" style="font-size: 1.1rem; padding: 12px 24px;">✅ Ver Contrato Firmado</a>
-        </div>
-      </div>
-      ` : `
-      <div class="detail-section">
-        <p class="history-empty">Este contrato aún no ha sido firmado.</p>
-      </div>
-      `}
-    </div>
-  `;
-
-  contractModalBody.innerHTML = html;
-};
-
 // Filtering
 const applyFilters = () => {
   const searchTerm = clientSearch.value.toLowerCase();
@@ -475,15 +414,28 @@ if (clientsTableBody) {
   clientsTableBody.addEventListener("click", (event) => {
     const action = event.target.getAttribute("data-action");
     const clientId = event.target.getAttribute("data-client-id");
-    const contractId = event.target.getAttribute("data-contract-id");
     const contractNumber = event.target.getAttribute("data-contract-number");
 
     if (action === "view-cedula") {
       viewCedulaDocuments(clientId);
     } else if (action === "view-pasaporte") {
       viewPasaporteDocuments(clientId);
-    } else if (action === "view-contract") {
-      viewContractDetails(contractId, contractNumber);
+    } else if (action === "copy-contract-number") {
+      copyTextToClipboard(contractNumber)
+        .then(() => {
+          const button = event.target;
+          const original = button.textContent;
+          button.textContent = "Copiado";
+          button.disabled = true;
+          window.setTimeout(() => {
+            button.textContent = original || "Copiar";
+            button.disabled = false;
+          }, 1200);
+        })
+        .catch((error) => {
+          log("Error copying contract number:", error);
+          window.alert("No se pudo copiar el numero de contrato.");
+        });
     }
   });
 }
@@ -503,24 +455,6 @@ if (documentsModal) {
     overlay.addEventListener("click", () => {
       documentsModal.classList.add("hidden");
       documentsModal.setAttribute("aria-hidden", "true");
-    });
-  }
-}
-
-if (contractModal) {
-  const closeContractBtn = contractModal.querySelector("[data-action='close-contract']");
-  if (closeContractBtn) {
-    closeContractBtn.addEventListener("click", () => {
-      contractModal.classList.add("hidden");
-      contractModal.setAttribute("aria-hidden", "true");
-    });
-  }
-  
-  const overlay = contractModal.querySelector(".modal-overlay");
-  if (overlay) {
-    overlay.addEventListener("click", () => {
-      contractModal.classList.add("hidden");
-      contractModal.setAttribute("aria-hidden", "true");
     });
   }
 }

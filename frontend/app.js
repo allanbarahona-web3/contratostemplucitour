@@ -1616,17 +1616,17 @@ const buildContractHtml = (data) => {
 
     <p><strong>DÉCIMO CUARTO BIS: CONDUCTA Y NORMAS DEL CLIENTE.</strong> El Cliente se compromete a mantener una conducta respetuosa, adecuada y alineada con las normas de convivencia durante todo el desarrollo del tour, tanto con el personal de la Agencia como con otros participantes, proveedores y terceros.</p>
     <p>Queda estrictamente prohibido cualquier comportamiento que implique agresión verbal o física, discriminación, acoso, consumo excesivo de sustancias que afecten la convivencia, incumplimiento de normas locales o cualquier acción que ponga en riesgo la operación del tour o la experiencia del grupo.</p>
-    <p>LUCI TOURS TURISMO INTERNACIONAL S.A. se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
+    <p>Viajes Alma Nova se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
     <p>Asimismo, cualquier gasto adicional derivado de dicha exclusión será asumido en su totalidad por el Cliente.</p>
 
     <p><strong>DÉCIMO QUINTO: DERECHOS Y OBLIGACIONES DE VIAJES ALMA NOVA.</strong> Viajes Alma Nova se obliga, entre otros, a ejecutar el Tour contratado; contratar y pagar a proveedores del servicio; brindar acompañamiento contractual y soporte operativo; y gestionar check in cuando corresponda.</p>
 
     <p><strong>DÉCIMO SEXTO: EXONERACIÓN Y LIMITACIÓN DE RESPONSABILIDAD.</strong> El Cliente reconoce y acepta que la participación en el tour implica riesgos inherentes propios de los viajes nacionales e internacionales, incluyendo, pero no limitado a, condiciones climáticas adversas, retrasos, cancelaciones, accidentes, enfermedades, situaciones políticas, sociales o sanitarias, y cualquier otro evento fuera del control razonable de la Agencia.</p>
-    <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a LUCI TOURS TURISMO INTERNACIONAL S.A. de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
+    <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a Viajes Alma Nova de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
     <p>Asimismo, el Cliente acepta que la Agencia no garantiza resultados subjetivos del viaje, tales como satisfacción personal, experiencias individuales, condiciones climáticas específicas, calidad percibida de servicios de terceros, ni expectativas personales no estipuladas expresamente en el presente contrato.</p>
     <p>La responsabilidad total de la Agencia, en cualquier caso comprobado, se limitará exclusivamente al monto efectivamente pagado por el Cliente por los servicios contratados.</p>
 
-    <p><strong>DÉCIMO SÉPTIMO: INTERMEDIACIÓN Y RESPONSABILIDAD DE TERCEROS.</strong> El Cliente reconoce que LUCI TOURS TURISMO INTERNACIONAL S.A. actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
+    <p><strong>DÉCIMO SÉPTIMO: INTERMEDIACIÓN Y RESPONSABILIDAD DE TERCEROS.</strong> El Cliente reconoce que Viajes Alma Nova actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
     <p>En consecuencia, la Agencia no será responsable por actos, omisiones, incumplimientos, retrasos, cancelaciones, sobreventas, cambios de itinerario, pérdidas, daños o cualquier otra situación atribuible a dichos proveedores.</p>
     <p>El Cliente acepta que cualquier reclamación derivada de servicios prestados por terceros deberá dirigirse directamente contra el proveedor correspondiente, conforme a sus propias políticas, términos y condiciones.</p>
 
@@ -1645,7 +1645,7 @@ const buildContractHtml = (data) => {
       </ul>
     <p><strong>VIGÉSIMO TERCERO: INTEGRIDAD CONTRACTUAL.</strong> Las Partes aceptan que este Contrato y sus anexos constituyen el acuerdo total entre ellas respecto del Tour contratado.</p>
 
-    <p><strong>VIGÉSIMO CUARTO: AUTORIZACIÓN DE USO DE IMAGEN.</strong> El Cliente autoriza de forma expresa, voluntaria y gratuita a LUCI TOURS TURISMO INTERNACIONAL S.A. para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
+    <p><strong>VIGÉSIMO CUARTO: AUTORIZACIÓN DE USO DE IMAGEN.</strong> El Cliente autoriza de forma expresa, voluntaria y gratuita a Viajes Alma Nova para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
     <p>Dicho material podrá ser utilizado con fines comerciales, publicitarios y promocionales en redes sociales, sitios web, campañas de marketing y cualquier otro medio de difusión de la Agencia, sin limitación territorial ni temporal.</p>
     <p>El Cliente renuncia a cualquier compensación económica derivada del uso de su imagen en los términos aquí establecidos.</p>
     <p>En caso de no estar de acuerdo, el Cliente deberá manifestarlo por escrito previo al inicio del tour.</p>
@@ -2205,7 +2205,7 @@ html, body {
        src="${escapeAttr(assets.logoSrc || `${baseUrl}/assets/logo-alma-nova.png`)}"
        alt="Viajes Alma Nova" />
   <div class="doc-header-text">
-    <h1>Viajes Viajes Alma Nova Turismo Internacional S.A.</h1>
+    <h1>Viajes Alma Nova</h1>
     <p class="doc-meta">
       Cédula jurídica: 3-101-874546 &nbsp;|&nbsp;
       contratos@viajesalmanova.com &nbsp;|&nbsp; Tel. 6015-9906<br />
@@ -2231,7 +2231,7 @@ html, body {
 <h3 class="section-heading">Partes</h3>
 
 <section class="clause">
-  <p>(a) <strong>KAREN KEITLYN CAMPOS CANTILLO</strong>, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número <strong>3-0522-0023</strong>, vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES ALMA NOVA SOCIEDAD ANONIMA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Viajes Alma Nova"</strong>; y</p>
+  <p>(a) <strong>KAREN KEITLYN CAMPOS CANTILLO</strong>, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número <strong>3-0522-0023</strong>, vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES ALMA NOVA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Viajes Alma Nova"</strong>; y</p>
 </section>
 
 <section class="clause">
@@ -2351,7 +2351,7 @@ ${clause(
   "DÉCIMO CUARTO BIS: CONDUCTA Y NORMAS DEL CLIENTE.",
   `<p>El Cliente se compromete a mantener una conducta respetuosa, adecuada y alineada con las normas de convivencia durante todo el desarrollo del tour, tanto con el personal de la Agencia como con otros participantes, proveedores y terceros.</p>
   <p>Queda estrictamente prohibido cualquier comportamiento que implique agresión verbal o física, discriminación, acoso, consumo excesivo de sustancias que afecten la convivencia, incumplimiento de normas locales o cualquier acción que ponga en riesgo la operación del tour o la experiencia del grupo.</p>
-  <p>LUCI TOURS TURISMO INTERNACIONAL S.A. se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
+  <p>Viajes Alma Nova se reserva el derecho de excluir, sin derecho a reembolso alguno, a cualquier Cliente cuya conducta sea considerada inapropiada, riesgosa o perjudicial para el desarrollo del tour o la experiencia de terceros.</p>
   <p>Asimismo, cualquier gasto adicional derivado de dicha exclusión será asumido en su totalidad por el Cliente.</p>`,
 )}
 
@@ -2363,14 +2363,14 @@ ${clause(
 ${clause(
   "DÉCIMO SEXTO: EXONERACIÓN Y LIMITACIÓN DE RESPONSABILIDAD.",
   `<p>El Cliente reconoce y acepta que la participación en el tour implica riesgos inherentes propios de los viajes nacionales e internacionales, incluyendo, pero no limitado a, condiciones climáticas adversas, retrasos, cancelaciones, accidentes, enfermedades, situaciones políticas, sociales o sanitarias, y cualquier otro evento fuera del control razonable de la Agencia.</p>
-  <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a LUCI TOURS TURISMO INTERNACIONAL S.A. de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
+  <p>En consecuencia, el Cliente exonera expresa e irrevocablemente a Viajes Alma Nova de toda responsabilidad por daños, pérdidas, lesiones, gastos médicos, retrasos, modificaciones de itinerario, pérdida de equipaje, o cualquier otra contingencia que pueda surgir durante el desarrollo del tour, cuando estos no sean atribuibles directamente a dolo o culpa grave comprobada de la Agencia.</p>
   <p>Asimismo, el Cliente acepta que la Agencia no garantiza resultados subjetivos del viaje, tales como satisfacción personal, experiencias individuales, condiciones climáticas específicas, calidad percibida de servicios de terceros, ni expectativas personales no estipuladas expresamente en el presente contrato.</p>
   <p>La responsabilidad total de la Agencia, en cualquier caso comprobado, se limitará exclusivamente al monto efectivamente pagado por el Cliente por los servicios contratados.</p>`,
 )}
 
 ${clause(
   "DÉCIMO SÉPTIMO: INTERMEDIACIÓN Y RESPONSABILIDAD DE TERCEROS.",
-  `<p>El Cliente reconoce que LUCI TOURS TURISMO INTERNACIONAL S.A. actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
+  `<p>El Cliente reconoce que Viajes Alma Nova actúa exclusivamente como intermediario entre el Cliente y los distintos proveedores de servicios turísticos, incluyendo, pero no limitado a, aerolíneas, hoteles, operadores turísticos, empresas de transporte y otros prestadores.</p>
   <p>En consecuencia, la Agencia no será responsable por actos, omisiones, incumplimientos, retrasos, cancelaciones, sobreventas, cambios de itinerario, pérdidas, daños o cualquier otra situación atribuible a dichos proveedores.</p>
   <p>El Cliente acepta que cualquier reclamación derivada de servicios prestados por terceros deberá dirigirse directamente contra el proveedor correspondiente, conforme a sus propias políticas, términos y condiciones.</p>`,
 )}
@@ -2413,7 +2413,7 @@ ${clause(
 
 ${clause(
   "VIGÉSIMO CUARTO: AUTORIZACIÓN DE USO DE IMAGEN.",
-  `<p>El Cliente autoriza de forma expresa, voluntaria y gratuita a LUCI TOURS TURISMO INTERNACIONAL S.A. para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
+  `<p>El Cliente autoriza de forma expresa, voluntaria y gratuita a Viajes Alma Nova para captar, reproducir, publicar y utilizar su imagen, voz y/o apariencia en fotografías, videos o cualquier material audiovisual generado durante el desarrollo del tour.</p>
   <p>Dicho material podrá ser utilizado con fines comerciales, publicitarios y promocionales en redes sociales, sitios web, campañas de marketing y cualquier otro medio de difusión de la Agencia, sin limitación territorial ni temporal.</p>
   <p>El Cliente renuncia a cualquier compensación económica derivada del uso de su imagen en los términos aquí establecidos.</p>
   <p>En caso de no estar de acuerdo, el Cliente deberá manifestarlo por escrito previo al inicio del tour.</p>`,

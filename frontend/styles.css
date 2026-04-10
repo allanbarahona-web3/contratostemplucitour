@@ -276,6 +276,23 @@ h2 {
   gap: 6px;
 }
 
+.contract-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin: 2px 4px 2px 0;
+  border: 1px solid rgba(18, 63, 147, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.82rem;
+}
+
+.contract-chip .ghost {
+  padding: 3px 8px;
+  font-size: 0.72rem;
+}
+
 .session-controls {
   display: flex;
   flex-direction: column;
