@@ -2,8 +2,8 @@
   const normalizeBase = (value) => String(value || "").trim().replace(/\/+$/, "");
   const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const productionFallbackByHost = {
-    "contratos.lucitour.com": "https://contratostempapi-h5ppc.ondigitalocean.app",
-    "www.contratos.lucitour.com": "https://contratostempapi-h5ppc.ondigitalocean.app",
+    "contratos.lucitour.com": "https://contractstemporal-f8too.ondigitalocean.app",
+    "www.contratos.lucitour.com": "https://contractstemporal-f8too.ondigitalocean.app",
   };
 
   // Runtime sources (first non-empty wins):
