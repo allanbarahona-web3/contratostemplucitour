@@ -12,6 +12,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
 import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { BillingService } from "../billing/billing.service";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
 
 import { SendContractEmailDto } from "./dto/send-contract-email.dto";
@@ -21,6 +22,7 @@ import { SearchContractsDto } from "./dto/search-contracts.dto";
 const CONTRACT_STATUS_PENDING_SIGNATURE = "PENDING_SIGNATURE";
 const CONTRACT_STATUS_VIEWED = "VIEWED";
 const CONTRACT_STATUS_SIGNED = "SIGNED";
+const CONTRACT_STATUS_DRAFT = "DRAFT";
 const SIGNING_TOKEN_VERSION = 1;
 
 type SigningRole = "CLIENTE" | "ACOMPANANTE";
@@ -50,6 +52,7 @@ export class ContractsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly pdfRenderService: PdfRenderService,
+    private readonly billingService: BillingService,
   ) {}
 
   private pad(value: number, size = 2) {
@@ -1219,6 +1222,16 @@ export class ContractsService {
     });
 
     const pdfUrl = await this.buildSignedObjectUrl(pdfKey, 900);
+
+    if (dto.draftId?.trim()) {
+      await (this.prisma as any).contractDraft.deleteMany({
+        where: {
+          id: dto.draftId.trim(),
+          generatedByUserId: user.id,
+        },
+      });
+    }
+
     return {
       id: archived.id,
       contractNumber: archived.contractNumber,
@@ -1227,6 +1240,179 @@ export class ContractsService {
       createdAt: archived.createdAt,
       pdfUrl,
     };
+  }
+
+  async saveContractDraft(
+    user: { id: string; email: string; fullName: string },
+    dto: {
+      id?: string;
+      contractNumber: string;
+      clientFullName?: string;
+      clientIdNumber?: string;
+      clientEmail?: string;
+      clientPhone?: string;
+      destination?: string;
+      payloadJson: string;
+    },
+  ) {
+    const contractNumber = String(dto.contractNumber || "").trim();
+    if (!contractNumber) {
+      throw new BadRequestException("Se requiere numero de contrato para guardar el borrador.");
+    }
+
+    const existingContract = await (this.prisma as any).contract.findUnique({
+      where: { contractNumber },
+      select: { id: true },
+    });
+    if (existingContract) {
+      throw new BadRequestException("Ese numero ya fue usado en un contrato final y no puede guardarse como borrador.");
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(dto.payloadJson);
+    } catch {
+      throw new BadRequestException("payloadJson no tiene un JSON valido.");
+    }
+
+    const normalized = {
+      clientFullName: String(dto.clientFullName || "").trim() || null,
+      clientIdNumber: String(dto.clientIdNumber || "").trim() || null,
+      clientEmail: String(dto.clientEmail || "").trim().toLowerCase() || null,
+      clientPhone: String(dto.clientPhone || "").trim() || null,
+      destination: String(dto.destination || "").trim() || null,
+    };
+
+    const draftId = String(dto.id || "").trim();
+    const existingByNumber = await (this.prisma as any).contractDraft.findUnique({
+      where: { contractNumber },
+    });
+
+    let draft: any;
+    if (draftId) {
+      const found = await (this.prisma as any).contractDraft.findFirst({
+        where: {
+          id: draftId,
+          generatedByUserId: user.id,
+        },
+      });
+
+      if (!found) {
+        throw new NotFoundException("Borrador no encontrado.");
+      }
+
+      if (existingByNumber && existingByNumber.id !== draftId) {
+        throw new BadRequestException("Ya existe otro borrador con ese numero de contrato.");
+      }
+
+      draft = await (this.prisma as any).contractDraft.update({
+        where: { id: draftId },
+        data: {
+          contractNumber,
+          status: CONTRACT_STATUS_DRAFT,
+          clientFullName: normalized.clientFullName,
+          clientIdNumber: normalized.clientIdNumber,
+          clientEmail: normalized.clientEmail,
+          clientPhone: normalized.clientPhone,
+          destination: normalized.destination,
+          payload: payload as any,
+        },
+      });
+    } else if (existingByNumber) {
+      if (existingByNumber.generatedByUserId !== user.id) {
+        throw new BadRequestException("Ese numero de contrato pertenece a un borrador de otro agente.");
+      }
+
+      draft = await (this.prisma as any).contractDraft.update({
+        where: { id: existingByNumber.id },
+        data: {
+          status: CONTRACT_STATUS_DRAFT,
+          clientFullName: normalized.clientFullName,
+          clientIdNumber: normalized.clientIdNumber,
+          clientEmail: normalized.clientEmail,
+          clientPhone: normalized.clientPhone,
+          destination: normalized.destination,
+          payload: payload as any,
+        },
+      });
+    } else {
+      draft = await (this.prisma as any).contractDraft.create({
+        data: {
+          contractNumber,
+          status: CONTRACT_STATUS_DRAFT,
+          clientFullName: normalized.clientFullName,
+          clientIdNumber: normalized.clientIdNumber,
+          clientEmail: normalized.clientEmail,
+          clientPhone: normalized.clientPhone,
+          destination: normalized.destination,
+          payload: payload as any,
+          generatedByUserId: user.id,
+          generatedByEmail: user.email,
+          generatedByName: user.fullName,
+        },
+      });
+    }
+
+    return {
+      id: draft.id,
+      contractNumber: draft.contractNumber,
+      status: draft.status || CONTRACT_STATUS_DRAFT,
+      updatedAt: draft.updatedAt,
+      createdAt: draft.createdAt,
+    };
+  }
+
+  async getContractDraft(
+    user: { id: string; email: string; fullName: string },
+    draftId: string,
+  ) {
+    const normalizedId = String(draftId || "").trim();
+    if (!normalizedId) {
+      throw new BadRequestException("Se requiere el id del borrador.");
+    }
+
+    const draft = await (this.prisma as any).contractDraft.findFirst({
+      where: {
+        id: normalizedId,
+        generatedByUserId: user.id,
+      },
+    });
+
+    if (!draft) {
+      throw new NotFoundException("Borrador no encontrado.");
+    }
+
+    return {
+      id: draft.id,
+      contractNumber: draft.contractNumber,
+      status: draft.status || CONTRACT_STATUS_DRAFT,
+      payload: draft.payload,
+      updatedAt: draft.updatedAt,
+      createdAt: draft.createdAt,
+    };
+  }
+
+  async deleteContractDraft(
+    user: { id: string; email: string; fullName: string },
+    draftId: string,
+  ) {
+    const normalizedId = String(draftId || "").trim();
+    if (!normalizedId) {
+      throw new BadRequestException("Se requiere el id del borrador.");
+    }
+
+    const deleted = await (this.prisma as any).contractDraft.deleteMany({
+      where: {
+        id: normalizedId,
+        generatedByUserId: user.id,
+      },
+    });
+
+    if (!deleted.count) {
+      throw new NotFoundException("Borrador no encontrado.");
+    }
+
+    return { ok: true, id: normalizedId };
   }
 
   async finalizeContractSignatureByToken(
@@ -1411,6 +1597,41 @@ export class ContractsService {
       `allCompleted=${allCompleted} ip=${signedClientIp || "unknown"} sha256=${signedPdfHash.slice(0, 16)}…`,
     );
 
+    let billingInvoiceAutoEmail: {
+      ok: boolean;
+      alreadySent?: boolean;
+      sentToEmail?: string | null;
+      invoiceNumber?: string;
+      error?: string;
+    } | null = null;
+
+    if (allCompleted) {
+      try {
+        const autoResult = await this.billingService.autoIssueAndSendInvoiceToTitular({
+          contractId: contract.id,
+          actorUserId: String(contract.generatedByUserId || "system"),
+          actorEmail: String(contract.generatedByEmail || "system@local"),
+          actorName: String(contract.generatedByName || "Sistema"),
+        });
+
+        billingInvoiceAutoEmail = {
+          ok: true,
+          alreadySent: Boolean(autoResult.alreadySent),
+          sentToEmail: autoResult.sentToEmail ?? null,
+          invoiceNumber: autoResult.invoiceNumber,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Fallo el auto-envio de factura al titular.";
+        this.logger.error(
+          `[billing-auto] No se pudo enviar factura automatica contractId=${contract.id}: ${message}`,
+        );
+        billingInvoiceAutoEmail = {
+          ok: false,
+          error: message,
+        };
+      }
+    }
+
     return {
       id: updated.id,
       contractNumber: updated.contractNumber,
@@ -1428,6 +1649,7 @@ export class ContractsService {
           signerRole: item.role,
           signerEmail: item.email,
         })),
+      billingInvoiceAutoEmail,
     };
   }
 
@@ -1491,6 +1713,10 @@ export class ContractsService {
 
     if (!contract) {
       throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    if (String(contract.status || "").toUpperCase() === CONTRACT_STATUS_SIGNED) {
+      throw new BadRequestException("Este contrato ya esta cerrado o firmado.");
     }
 
     const basePdfUrl = await this.buildSignedObjectUrl(contract.pdfObjectKey, 1200);
@@ -1593,19 +1819,80 @@ export class ContractsService {
       },
     });
 
+    const draftWhere = q
+      ? {
+          generatedByUserId: _user.id,
+          OR: [
+            { contractNumber: { contains: q, mode: "insensitive" as const } },
+            { clientFullName: { contains: q, mode: "insensitive" as const } },
+            { clientIdNumber: { contains: q, mode: "insensitive" as const } },
+            { clientEmail: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : { generatedByUserId: _user.id };
+
+    const drafts = await (this.prisma as any).contractDraft.findMany({
+      where: draftWhere,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    const contractRows = items.map((item: any) => {
+        const payload = this.getPayloadRecord(item.payload);
+        const emailDispatchLog = Array.isArray(payload?.emailDispatchLog)
+          ? payload.emailDispatchLog.filter((entry: any) => entry && typeof entry === "object")
+          : [];
+        const signedResendEntries = emailDispatchLog.filter(
+          (entry: any) =>
+            String(entry?.type || "").toUpperCase() === "SIGNED_RESEND_MANUAL" && Number(entry?.sentCount || 0) > 0,
+        );
+        const lastSignedResendEntry = signedResendEntries.length
+          ? signedResendEntries[signedResendEntries.length - 1]
+          : null;
+
+        return {
+          kind: "CONTRACT",
+          id: item.id,
+          draftId: null,
+          contractNumber: item.contractNumber,
+          status: item.status || CONTRACT_STATUS_PENDING_SIGNATURE,
+          clientFullName: item.client?.fullName || "-",
+          clientIdNumber: item.client?.idNumber || "-",
+          clientEmail: item.client?.email || "-",
+          clientPhone: item.client?.phone || "-",
+          destination: item.destination,
+          generatedByName: item.generatedByName,
+          createdAt: item.createdAt,
+          documentCount: item.documents.length,
+          signedContractResent: signedResendEntries.length > 0,
+          signedContractResentAt: lastSignedResendEntry?.createdAt || null,
+        };
+      });
+
+    const draftRows = drafts.map((draft: any) => ({
+      kind: "DRAFT",
+      id: draft.id,
+      draftId: draft.id,
+      contractNumber: draft.contractNumber,
+      status: CONTRACT_STATUS_DRAFT,
+      clientFullName: draft.clientFullName || "-",
+      clientIdNumber: draft.clientIdNumber || "-",
+      clientEmail: draft.clientEmail || "-",
+      clientPhone: draft.clientPhone || "-",
+      destination: draft.destination || "-",
+      generatedByName: draft.generatedByName || "-",
+      createdAt: draft.createdAt,
+      documentCount: 0,
+      signedContractResent: false,
+      signedContractResentAt: null,
+    }));
+
+    const merged = [...draftRows, ...contractRows]
+      .sort((a, b) => new Date(String(b.createdAt || 0)).getTime() - new Date(String(a.createdAt || 0)).getTime())
+      .slice(0, limit);
+
     return {
-      items: items.map((item: any) => ({
-        id: item.id,
-        contractNumber: item.contractNumber,
-        status: item.status || CONTRACT_STATUS_PENDING_SIGNATURE,
-        clientFullName: item.client?.fullName || "-",
-        clientIdNumber: item.client?.idNumber || "-",
-        clientEmail: item.client?.email || "-",
-        destination: item.destination,
-        generatedByName: item.generatedByName,
-        createdAt: item.createdAt,
-        documentCount: item.documents.length,
-      })),
+      items: merged,
     };
   }
 
@@ -1679,6 +1966,19 @@ export class ContractsService {
 
     // Preparar los datos completos del contrato para enviar a facturación
     const payload = contract.payload || {};
+    const toNumber = (value: unknown, fallback = 0) => {
+      const parsed = Number.parseFloat(String(value ?? "").trim());
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const toStringOrNull = (value: unknown) => {
+      const text = String(value ?? "").trim();
+      return text ? text : null;
+    };
+    const itineraryItemsRaw = Array.isArray(payload?.itineraryItems)
+      ? payload.itineraryItems
+      : Array.isArray(payload?.itinerary)
+        ? payload.itinerary
+        : [];
     
     const billingData = {
       // Información del sistema
@@ -1716,12 +2016,12 @@ export class ContractsService {
       
       // Información de montos
       billing: {
-        totalAmount: payload?.totalAmount || 0,
-        reservationAmount: payload?.reservationAmount || 0,
-        balanceAmount: payload?.balanceAmount || 0,
-        installmentCount: payload?.installmentCount || 1,
-        monthlyInstallmentAmount: payload?.monthlyInstallmentAmount || 0,
-        paymentDueDate: payload?.paymentDueDate || null,
+        totalAmount: toNumber(payload?.totalAmount, 0),
+        reservationAmount: toNumber(payload?.reservationAmount, 0),
+        balanceAmount: toNumber(payload?.balanceAmount, 0),
+        installmentCount: Math.max(1, Math.trunc(toNumber(payload?.installmentCount, 1))),
+        monthlyInstallmentAmount: toNumber(payload?.monthlyInstallmentAmount, 0),
+        paymentDueDate: toStringOrNull(payload?.paymentDueDate),
         currency: "CRC",
       },
       
@@ -1754,20 +2054,20 @@ export class ContractsService {
       // Menores de edad
       minors: Array.isArray(payload?.minors)
         ? payload.minors.map((m: any) => ({
-            name: m.name,
-            idNumber: m.idNumber,
-            tutorName: m.tutorName,
-            tutorIdNumber: m.tutorIdNumber,
-            tutorRelationship: m.tutorRelationship,
-            tutorEmail: m.tutorEmail,
-            tutorPhone: m.tutorPhone,
-            travelingWith: m.travelingWith,
+            name: m.name || m.minorName || null,
+            idNumber: m.idNumber || m.minorId || null,
+            tutorName: m.tutorName || null,
+            tutorIdNumber: m.tutorIdNumber || m.tutorId || null,
+            tutorRelationship: m.tutorRelationship || null,
+            tutorEmail: m.tutorEmail || null,
+            tutorPhone: m.tutorPhone || null,
+            travelingWith: m.travelingWith || null,
           }))
         : [],
       
       // Itinerario
-      itinerary: Array.isArray(payload?.itineraryItems)
-        ? payload.itineraryItems.map((item: any) => ({
+      itinerary: itineraryItemsRaw
+        ? itineraryItemsRaw.map((item: any) => ({
             date: item.date,
             detail: item.detail,
           }))

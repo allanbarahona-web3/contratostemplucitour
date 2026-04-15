@@ -11,6 +11,7 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   fullName     String
+  role         String   @default("AGENT")
   passwordHash String
   isActive     Boolean  @default(true)
   activeJti    String?
@@ -65,8 +66,32 @@ model Contract {
   documents         ContractDocument[]
   signatureEvents   ContractSignatureEvent[]
   usedTokens        ContractUsedToken[]
+  billingInvoice    BillingInvoice?
+  billingPayments   BillingPayment[]
+  billingReceipts   BillingReceipt[]
+  billingCreditNotes BillingCreditNote[]
 
   @@index([clientId])
+  @@index([createdAt])
+}
+
+model ContractDraft {
+  id                String   @id @default(cuid())
+  contractNumber    String   @unique
+  status            String   @default("DRAFT")
+  clientFullName    String?
+  clientIdNumber    String?
+  clientEmail       String?
+  clientPhone       String?
+  destination       String?
+  payload           Json
+  generatedByUserId String
+  generatedByEmail  String
+  generatedByName   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([generatedByUserId])
   @@index([createdAt])
 }
 
@@ -81,6 +106,8 @@ model Client {
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
   contracts             Contract[]
+  billingInvoices       BillingInvoice[]
+  billingClientBalance  BillingClientBalance?
 
   @@index([fullName])
   @@index([email])
@@ -136,4 +163,184 @@ model ContractUsedToken {
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   @@index([contractId])
+}
+
+model BillingInvoice {
+  id                String   @id @default(cuid())
+  contractId        String   @unique
+  clientId          String
+  contractNumber    String   @unique
+  invoiceNumber     String   @unique
+  currency          String   @default("CRC")
+  totalAmount       Decimal  @db.Decimal(14, 2)
+  verifiedAmount    Decimal  @db.Decimal(14, 2)
+  pendingAmount     Decimal  @db.Decimal(14, 2)
+  balanceAmount     Decimal  @db.Decimal(14, 2)
+  status            String   @default("FACTURA_EMITIDA")
+  issuedAt          DateTime @default(now())
+  paymentDueDate    DateTime?
+  closedAt          DateTime?
+  objectKeyPdf      String?
+  pdfFileName       String?
+  pdfMimeType       String?
+  pdfSize           Int?
+  createdByUserId   String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  contract          Contract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  client            Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  payments          BillingPayment[]
+  receipts          BillingReceipt[]
+  creditNotes       BillingCreditNote[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BillingPayment {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  contractId        String
+  type              String   @default("OTHER")
+  amount            Decimal  @db.Decimal(14, 2)
+  currency          String   @default("CRC")
+  reportedAt        DateTime @default(now())
+  status            String   @default("ABONO_REPORTADO")
+  bankReference     String?
+  payerName         String?
+  notes             String?
+  verifiedAt        DateTime?
+  verifiedByUserId  String?
+  verifiedByName    String?
+  rejectionReason   String?
+  createdByUserId   String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  invoice           BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  contract          Contract       @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  attachments       BillingPaymentAttachment[]
+  receipt           BillingReceipt?
+
+  @@index([invoiceId])
+  @@index([contractId])
+  @@index([status])
+  @@index([reportedAt])
+}
+
+model BillingPaymentAttachment {
+  id               String   @id @default(cuid())
+  paymentId        String
+  objectKey        String   @unique
+  originalFileName String
+  mimeType         String
+  size             Int
+  createdAt        DateTime @default(now())
+  payment          BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([createdAt])
+}
+
+model BillingReceipt {
+  id                String   @id @default(cuid())
+  paymentId         String   @unique
+  invoiceId         String
+  contractId        String
+  contractNumber    String
+  receiptNumber     String   @unique
+  amount            Decimal  @db.Decimal(14, 2)
+  issuedAt          DateTime @default(now())
+  issuedByUserId    String
+  issuedByName      String
+  approvedAt        DateTime?
+  approvedByUserId  String?
+  approvedByName    String?
+  sentAt            DateTime?
+  sentToEmail       String?
+  objectKeyPdf      String?
+  status            String   @default("RECIBO_PENDIENTE_VERIFICACION")
+  createdAt         DateTime @default(now())
+  payment           BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice           BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  contract          Contract       @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@index([contractId])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+model BillingCreditNote {
+  id                 String   @id @default(cuid())
+  creditNoteNumber   String   @unique
+  contractId         String
+  invoiceId          String
+  contractNumber     String
+  reason             String
+  amount             Decimal  @db.Decimal(14, 2)
+  status             String   @default("NC_EMITIDA")
+  sourceDocumentType String
+  sourceDocumentId   String
+  issuedAt           DateTime @default(now())
+  issuedByUserId     String
+  issuedByName       String
+  appliedAt          DateTime?
+  appliedByUserId    String?
+  appliedByName      String?
+  objectKeyPdf       String?
+  createdAt          DateTime @default(now())
+  invoice            BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  contract           Contract       @relation(fields: [contractId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@index([contractId])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+model BillingClientBalance {
+  id                   String   @id @default(cuid())
+  clientId             String   @unique
+  availableCreditAmount Decimal @db.Decimal(14, 2)
+  currency             String   @default("CRC")
+  updatedAt            DateTime @updatedAt
+  client               Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+}
+
+model BillingAuditLog {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  action      String
+  actorUserId String
+  actorName   String
+  beforeJson  Json?
+  afterJson   Json?
+  sourceIp    String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
+model ExchangeRate {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  buyRate     Decimal  @db.Decimal(10, 4)
+  sellRate    Decimal  @db.Decimal(10, 4)
+  source      String   @default("MANUAL")
+  setByUserId String
+  setByName   String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+  @@index([setByUserId])
 }

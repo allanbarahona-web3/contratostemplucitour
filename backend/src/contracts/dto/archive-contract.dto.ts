@@ -1,6 +1,11 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class ArchiveContractDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  draftId?: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)

@@ -4,7 +4,9 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AuthModule } from "./auth/auth.module";
+import { BillingModule } from "./billing/billing.module";
 import { ContractsModule } from "./contracts/contracts.module";
+import { ExchangeRateModule } from "./exchange-rate/exchange-rate.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -23,6 +25,8 @@ import { PrismaModule } from "./prisma/prisma.module";
     PrismaModule,
     AuthModule,
     ContractsModule,
+    BillingModule,
+    ExchangeRateModule,
   ],
   providers: [
     {

@@ -1,0 +1,1613 @@
+"use client";
+
+import {
+  archiveContract,
+  createSigningLink,
+  getContractDraft,
+  reserveNextContractNumber,
+  saveContractDraft,
+  sendSigningEmail,
+} from "@/lib/contracts-api";
+import { loadAssetDataUri } from "@/lib/assets";
+import { buildContractPdfHtml } from "@/features/contracts-form/pdf-template";
+import {
+  addCompanion,
+  addCustomItineraryItem,
+  addMinor,
+  applyMoneyDerivedValues,
+  createInitialFormState,
+  getDateRangeValidityMessage,
+  getItineraryValidityMessage,
+  getTodayIsoLocal,
+  normalizeMoneyInputValue,
+  removeCompanion,
+  removeCustomItineraryItem,
+  removeMinor,
+  syncTourDates,
+  addDaysIso,
+  updateCompanion,
+  updateItineraryItem,
+  updateMinor,
+} from "@/features/contracts-form/utils";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ContractFormState } from "@/features/contracts-form/types";
+
+const NATIONALITY_OPTIONS = [
+  "Costa Rica",
+  "──────────",
+  "Argentina",
+  "Antigua y Barbuda",
+  "Bahamas",
+  "Barbados",
+  "Belice",
+  "Bolivia",
+  "Brasil",
+  "Canadá",
+  "Chile",
+  "Colombia",
+  "Cuba",
+  "Dominica",
+  "Ecuador",
+  "El Salvador",
+  "Estados Unidos",
+  "Granada",
+  "Guatemala",
+  "Guyana",
+  "Haití",
+  "Honduras",
+  "Jamaica",
+  "México",
+  "Nicaragua",
+  "Panamá",
+  "Paraguay",
+  "Perú",
+  "República Dominicana",
+  "San Cristóbal y Nieves",
+  "Santa Lucía",
+  "San Vicente y las Granadinas",
+  "Surinam",
+  "Trinidad y Tobago",
+  "Uruguay",
+  "Venezuela",
+  "──────────",
+  "Otro",
+];
+
+type ContractsFormProps = {
+  agent?: {
+    id: string;
+    email: string;
+    fullName: string;
+    role?: string;
+  } | null;
+  initialDraftId?: string | null;
+};
+
+export function ContractsForm({ agent = null, initialDraftId = null }: ContractsFormProps) {
+  const [state, setState] = useState(() => createInitialFormState(agent || undefined));
+  const [status, setStatus] = useState("Listo para iniciar migracion del formulario.");
+  const [busyNumber, setBusyNumber] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [copiedSignerKey, setCopiedSignerKey] = useState("");
+  const [latestSigningLinks, setLatestSigningLinks] = useState<
+    Array<{ signerKey: string; signerName: string; signerEmail: string | null; signingUrl: string }>
+  >([]);
+  const [holderDocs, setHolderDocs] = useState<{ idFront: File | null; idBack: File | null; passport: File | null }>({
+    idFront: null,
+    idBack: null,
+    passport: null,
+  });
+  const [supportDocs, setSupportDocs] = useState<File[]>([]);
+  const [companionDocs, setCompanionDocs] = useState<Record<string, { idFront: File | null; idBack: File | null; passport: File | null }>>({});
+  const [minorDocs, setMinorDocs] = useState<
+    Record<string, {
+      minorIdFront: File | null;
+      minorIdBack: File | null;
+      minorPassport: File | null;
+      tutorIdFront: File | null;
+      tutorIdBack: File | null;
+      tutorPassport: File | null;
+    }>
+  >({});
+  const autoReservationStarted = useRef(false);
+  const loadedDraftIdRef = useRef("");
+  const todayIso = useMemo(() => getTodayIsoLocal(), []);
+
+  const rangeMessage = useMemo(() => getDateRangeValidityMessage(state), [state]);
+  const itineraryMessage = useMemo(() => getItineraryValidityMessage(state), [state]);
+
+  const requiredDocumentLabelClass = (hasAttachment: boolean) =>
+    `doc-required-label ${hasAttachment ? "doc-required-label--done" : "doc-required-label--missing"}`;
+
+  const onMoneyChange = (field: "totalAmount" | "reservationAmount" | "installmentCount", value: string) => {
+    setState((prev) => applyMoneyDerivedValues({ ...prev, [field]: value }));
+  };
+
+  const onMoneyBlur = (field: "totalAmount" | "reservationAmount") => {
+    setState((prev) =>
+      applyMoneyDerivedValues({
+        ...prev,
+        [field]: normalizeMoneyInputValue(prev[field]),
+      }),
+    );
+  };
+
+  const responsibleAdults = useMemo(() => {
+    const base = state.clientFullName.trim();
+    const names = [base, ...state.companions.map((item) => item.fullName.trim())].filter(Boolean);
+    return Array.from(new Set(names));
+  }, [state.clientFullName, state.companions]);
+
+  const clientSigningLinks = useMemo(
+    () => latestSigningLinks.filter((item) => String(item.signerKey || "").toLowerCase() === "client"),
+    [latestSigningLinks],
+  );
+
+  const companionSigningLinks = useMemo(
+    () => latestSigningLinks.filter((item) => String(item.signerKey || "").toLowerCase() !== "client"),
+    [latestSigningLinks],
+  );
+
+  const loadFirstAvailableAsset = async (paths: string[], fallbackDataUri = ""): Promise<string> => {
+    for (const assetPath of paths) {
+      try {
+        return await loadAssetDataUri(assetPath);
+      } catch {
+        // Try next candidate path.
+      }
+    }
+    return fallbackDataUri;
+  };
+
+  const buildWhatsappShareUrl = (signingUrl: string, signerName = "") => {
+    const normalizedUrl = String(signingUrl || "").trim();
+    const normalizedSigner = String(signerName || "").trim();
+    const signerText = normalizedSigner ? ` para ${normalizedSigner}` : "";
+    return `https://wa.me/?text=${encodeURIComponent(
+      `Hola, te compartimos el enlace para firmar tu contrato de viaje${signerText}: ${normalizedUrl}`,
+    )}`;
+  };
+
+  const copySigningUrl = async (signingUrl: string, signerKey: string) => {
+    const normalized = String(signingUrl || "").trim();
+    if (!normalized) {
+      setStatus("No hay enlace para copiar.");
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(normalized);
+      } else {
+        const input = document.createElement("input");
+        input.value = normalized;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+      }
+
+      setCopiedSignerKey(signerKey);
+      setStatus("Link de firma copiado al portapapeles.");
+      window.setTimeout(() => {
+        setCopiedSignerKey((prev) => (prev === signerKey ? "" : prev));
+      }, 1800);
+    } catch {
+      setStatus("No se pudo copiar automaticamente. Copialo manualmente del campo.");
+    }
+  };
+
+  const cloneWithPrefix = (file: File, prefix: string): File =>
+    new File([file], `${prefix}__${file.name}`, {
+      type: file.type,
+      lastModified: file.lastModified,
+    });
+
+  const collectDocumentsForArchive = (): File[] => {
+    const docs: File[] = [];
+
+    if (holderDocs.idFront) docs.push(cloneWithPrefix(holderDocs.idFront, "titular-cedula-frente"));
+    if (holderDocs.idBack) docs.push(cloneWithPrefix(holderDocs.idBack, "titular-cedula-reverso"));
+    if (holderDocs.passport) docs.push(cloneWithPrefix(holderDocs.passport, "titular-pasaporte"));
+
+    state.companions.forEach((companion, index) => {
+      const files = companionDocs[companion.id];
+      if (!files) return;
+      const idx = index + 1;
+      if (files.idFront) docs.push(cloneWithPrefix(files.idFront, `acompanante${idx}-cedula-frente`));
+      if (files.idBack) docs.push(cloneWithPrefix(files.idBack, `acompanante${idx}-cedula-reverso`));
+      if (files.passport) docs.push(cloneWithPrefix(files.passport, `acompanante${idx}-pasaporte`));
+    });
+
+    state.minors.forEach((minor, index) => {
+      const files = minorDocs[minor.id];
+      if (!files) return;
+      const idx = index + 1;
+      if (files.minorIdFront) docs.push(cloneWithPrefix(files.minorIdFront, `menor${idx}-cedula-frente`));
+      if (files.minorIdBack) docs.push(cloneWithPrefix(files.minorIdBack, `menor${idx}-cedula-reverso`));
+      if (files.minorPassport) docs.push(cloneWithPrefix(files.minorPassport, `menor${idx}-pasaporte`));
+      if (files.tutorIdFront) docs.push(cloneWithPrefix(files.tutorIdFront, `menor${idx}-tutor-cedula-frente`));
+      if (files.tutorIdBack) docs.push(cloneWithPrefix(files.tutorIdBack, `menor${idx}-tutor-cedula-reverso`));
+      if (files.tutorPassport) docs.push(cloneWithPrefix(files.tutorPassport, `menor${idx}-tutor-pasaporte`));
+    });
+
+    supportDocs.forEach((file, index) => {
+      docs.push(cloneWithPrefix(file, `soporte-${index + 1}`));
+    });
+
+    return docs;
+  };
+
+  const runArchiveFlow = async () => {
+    if (submitting) return;
+    if (previewing) return;
+    if (!state.contractNumber.trim()) {
+      setStatus("No hay numero de contrato reservado todavia.");
+      return;
+    }
+    if (!state.clientFullName.trim() || !state.clientIdNumber.trim() || !state.clientEmail.trim()) {
+      setStatus("Completa los datos principales del cliente antes de guardar.");
+      return;
+    }
+    if (rangeMessage || itineraryMessage) {
+      setStatus("Corrige las validaciones de fechas/itinerario antes de guardar.");
+      return;
+    }
+
+    setSubmitting(true);
+    setLatestSigningLinks([]);
+    try {
+      setStatus("Preparando contrato...");
+      const [logoSrc, representativeSignSrc] = await Promise.all([
+        loadFirstAvailableAsset([
+          "/assets/LOGO ALMANOVA NEGRO CON DORADO.png",
+          "/LOGO ALMANOVA NEGRO CON DORADO.png",
+          "/assets/LOGO ALMANOVA NEGRO.png",
+        ]),
+        loadFirstAvailableAsset([
+          "/firmakaren.png",
+          "/assets/firmakaren.png",
+        ]),
+      ]);
+
+      const contractHtml = buildContractPdfHtml(state, {
+        logoSrc,
+        representativeSignSrc,
+      });
+
+      setStatus("Guardando contrato en base de datos...");
+      const archived = await archiveContract({
+        draftId: activeDraftId || undefined,
+        contractNumber: state.contractNumber,
+        clientFullName: state.clientFullName,
+        clientIdNumber: state.clientIdNumber,
+        clientEmail: state.clientEmail,
+        destination: state.destination,
+        issuedAt: state.issuedAt,
+        startDate: state.startDate,
+        endDate: state.endDate,
+        payloadJson: JSON.stringify(state),
+        contractHtml,
+        documents: collectDocumentsForArchive(),
+      });
+
+      if (archived.pdfUrl) {
+        window.open(archived.pdfUrl, "_blank", "noopener,noreferrer");
+      }
+
+      setStatus("Generando enlaces de firma...");
+      const signing = await createSigningLink(archived.id, 1440);
+      const links = (signing.signingLinks || []).map((item) => ({
+        signerKey: item.signerKey,
+        signerName: item.signerName,
+        signerEmail: item.signerEmail,
+        signingUrl: item.signingUrl,
+      }));
+      setLatestSigningLinks(links);
+
+      let sent = 0;
+      for (const target of links) {
+        if (!target.signerEmail) continue;
+        try {
+          await sendSigningEmail({
+            toEmail: target.signerEmail,
+            clientName: target.signerName || "Firmante",
+            contractNumber: state.contractNumber,
+            signingUrl: target.signingUrl,
+          });
+          sent += 1;
+        } catch {
+          // Continue with the rest.
+        }
+      }
+
+      const completionMessage =
+        sent > 0
+          ? `Contrato guardado y ${sent} correo(s) de firma enviados.`
+          : "Contrato guardado. Enlaces de firma generados para compartir manualmente.";
+
+      await resetFormForNextContract(completionMessage);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "No se pudo completar el guardado del contrato.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const runPreviewFlow = async () => {
+    if (previewing || submitting) return;
+
+    if (!state.contractNumber.trim()) {
+      setStatus("No hay numero de contrato reservado todavia.");
+      return;
+    }
+    if (!state.clientFullName.trim() || !state.clientIdNumber.trim() || !state.clientEmail.trim()) {
+      setStatus("Completa los datos principales del cliente antes de generar la vista previa.");
+      return;
+    }
+    if (rangeMessage || itineraryMessage) {
+      setStatus("Corrige las validaciones de fechas/itinerario antes de generar la vista previa.");
+      return;
+    }
+
+    setPreviewing(true);
+    try {
+      setStatus("Generando vista previa...");
+
+      const [logoSrc, representativeSignSrc] = await Promise.all([
+        loadFirstAvailableAsset([
+          "/assets/LOGO ALMANOVA NEGRO CON DORADO.png",
+          "/LOGO ALMANOVA NEGRO CON DORADO.png",
+          "/assets/LOGO ALMANOVA NEGRO.png",
+        ]),
+        loadFirstAvailableAsset([
+          "/firmakaren.png",
+          "/assets/firmakaren.png",
+        ]),
+      ]);
+
+      const contractHtml = buildContractPdfHtml(state, {
+        logoSrc,
+        representativeSignSrc,
+      });
+
+      setPreviewHtml(contractHtml);
+      setStatus("Vista previa actualizada abajo del formulario.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "No se pudo generar la vista previa del contrato.");
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const reserveNumber = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (busyNumber) return;
+
+    setBusyNumber(true);
+    if (!silent) {
+      setStatus("Reservando numero...");
+    }
+    try {
+      const contractNumber = await reserveNextContractNumber();
+      setState((prev) => ({ ...prev, contractNumber }));
+      if (!silent) {
+        setStatus(`Numero asignado: ${contractNumber}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo reservar numero.";
+      setStatus(message);
+    } finally {
+      setBusyNumber(false);
+    }
+  };
+
+  const saveDraftFlow = async () => {
+    if (savingDraft || submitting || previewing || busyNumber) return;
+    if (!state.contractNumber.trim()) {
+      setStatus("No hay numero de contrato reservado para guardar el borrador.");
+      return;
+    }
+
+    setSavingDraft(true);
+    try {
+      const saved = await saveContractDraft({
+        id: activeDraftId || undefined,
+        contractNumber: state.contractNumber,
+        clientFullName: state.clientFullName || undefined,
+        clientIdNumber: state.clientIdNumber || undefined,
+        clientEmail: state.clientEmail || undefined,
+        clientPhone: state.clientPhone || undefined,
+        destination: state.destination || undefined,
+        payloadJson: JSON.stringify(state),
+      });
+
+      setActiveDraftId(saved.id);
+      const nextBaseState = createInitialFormState(agent || undefined);
+      setState(nextBaseState);
+      setHolderDocs({ idFront: null, idBack: null, passport: null });
+      setSupportDocs([]);
+      setCompanionDocs({});
+      setMinorDocs({});
+      setPreviewHtml("");
+      setLatestSigningLinks([]);
+      setCopiedSignerKey("");
+      setActiveDraftId(null);
+
+      try {
+        const nextNumber = await reserveNextContractNumber();
+        setState((prev) => ({ ...prev, contractNumber: nextNumber }));
+        setStatus(`Borrador guardado (${saved.contractNumber}). Formulario limpio y listo para nuevo contrato (${nextNumber}).`);
+      } catch {
+        setStatus(`Borrador guardado (${saved.contractNumber}). Formulario limpio; usa Reintentar para reservar numero.`);
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "No se pudo guardar el borrador.");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const resetFormForNextContract = async (successMessage: string) => {
+    const nextBaseState = createInitialFormState(agent || undefined);
+    setState(nextBaseState);
+    setHolderDocs({ idFront: null, idBack: null, passport: null });
+    setSupportDocs([]);
+    setCompanionDocs({});
+    setMinorDocs({});
+    setPreviewHtml("");
+    setLatestSigningLinks([]);
+    setCopiedSignerKey("");
+    setActiveDraftId(null);
+
+    try {
+      const nextNumber = await reserveNextContractNumber();
+      setState((prev) => ({ ...prev, contractNumber: nextNumber }));
+      setStatus(`${successMessage} Formulario limpiado y listo para nuevo contrato (${nextNumber}).`);
+    } catch {
+      setStatus(`${successMessage} Formulario limpiado. Usa "Reintentar" para reservar nuevo numero.`);
+    }
+  };
+
+  useEffect(() => {
+    const draftId = String(initialDraftId || "").trim();
+    if (!draftId) {
+      loadedDraftIdRef.current = "";
+      return;
+    }
+    if (loadedDraftIdRef.current === draftId) {
+      return;
+    }
+
+    loadedDraftIdRef.current = draftId;
+    setStatus("Cargando borrador...");
+
+    void getContractDraft(draftId)
+      .then((draft) => {
+        const payload = draft.payload;
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          throw new Error("El borrador no contiene informacion valida del formulario.");
+        }
+
+        const base = createInitialFormState(agent || undefined);
+        const payloadState = payload as Partial<ContractFormState>;
+        setState({
+          ...base,
+          ...payloadState,
+          companions: Array.isArray(payloadState.companions) ? payloadState.companions : base.companions,
+          minors: Array.isArray(payloadState.minors) ? payloadState.minors : base.minors,
+          itinerary: Array.isArray(payloadState.itinerary) ? payloadState.itinerary : base.itinerary,
+          contractDocumentsNames: Array.isArray(payloadState.contractDocumentsNames)
+            ? payloadState.contractDocumentsNames
+            : base.contractDocumentsNames,
+          generatedByAgentName: base.generatedByAgentName,
+          generatedByAgentEmail: base.generatedByAgentEmail,
+        });
+        setActiveDraftId(draft.id);
+        setPreviewHtml("");
+        setLatestSigningLinks([]);
+        setCopiedSignerKey("");
+        setHolderDocs({ idFront: null, idBack: null, passport: null });
+        setSupportDocs([]);
+        setCompanionDocs({});
+        setMinorDocs({});
+        setStatus(`Borrador ${draft.contractNumber} cargado. Continua completando la informacion.`);
+      })
+      .catch((error) => {
+        setActiveDraftId(null);
+        setStatus(error instanceof Error ? error.message : "No se pudo cargar el borrador.");
+      });
+  }, [agent, initialDraftId]);
+
+  useEffect(() => {
+    if (autoReservationStarted.current) {
+      return;
+    }
+    autoReservationStarted.current = true;
+    if (String(initialDraftId || "").trim()) {
+      return;
+    }
+    void reserveNumber();
+    // Contract number must be automatic and immutable; reserve once when form mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDraftId]);
+
+  return (
+    <section className="card contracts-card">
+      <h1>Formulario de Contrato - Etapa 2</h1>
+      <p>Migracion ampliada: contrato, cliente, acompanantes, menores, itinerario, equipaje y adjuntos.</p>
+      <p className="agent-line">
+        Elaborado por: <strong>{agent?.fullName || "Agente no identificado"}</strong>
+        {agent?.email ? ` (${agent.email})` : ""}
+      </p>
+
+      <div className="contracts-workspace">
+        <div className="contracts-editor">
+
+      <h2 className="section-title">Datos del Contrato</h2>
+
+      <div className="contracts-grid">
+        <label>
+          Numero de contrato
+          <div className="inline-row">
+            <input value={state.contractNumber} readOnly placeholder="Generando automaticamente..." />
+            {!state.contractNumber ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  void reserveNumber();
+                }}
+                disabled={busyNumber}
+              >
+                {busyNumber ? "Reservando..." : "Reintentar"}
+              </button>
+            ) : null}
+          </div>
+        </label>
+
+        <label>
+          Fecha de emision
+          <input type="date" value={state.issuedAt} readOnly />
+        </label>
+
+        <label>
+          Destino
+          <input
+            value={state.destination}
+            onChange={(event) => setState((prev) => ({ ...prev, destination: event.target.value }))}
+            placeholder="Ej. España"
+          />
+        </label>
+
+        <label>
+          Tipo de hospedaje
+          <select
+            value={state.lodgingType}
+            onChange={(event) => setState((prev) => ({ ...prev, lodgingType: event.target.value }))}
+          >
+            <option value="Hotel">Hotel</option>
+            <option value="Hostel">Hostel</option>
+            <option value="Airbnb">Airbnb</option>
+          </select>
+        </label>
+
+        <label>
+          Tipo de acomodacion
+          <select
+            value={state.accommodationType}
+            onChange={(event) => setState((prev) => ({ ...prev, accommodationType: event.target.value }))}
+          >
+            <option value="Sencilla">Sencilla</option>
+            <option value="Doble">Doble</option>
+            <option value="Multiple">Multiple</option>
+            <option value="Compartida">Compartida</option>
+          </select>
+        </label>
+
+        <label>
+          Fecha inicio tour
+          <input
+            type="date"
+            value={state.startDate}
+            min={todayIso}
+            onChange={(event) => {
+              const selected = String(event.target.value || "");
+              const safe = selected && selected < todayIso ? todayIso : selected;
+              setState((prev) => applyMoneyDerivedValues(syncTourDates(prev, "start", safe)));
+            }}
+          />
+        </label>
+
+        <label>
+          Fecha fin tour
+          <input
+            type="date"
+            value={state.endDate}
+            min={state.startDate ? addDaysIso(state.startDate, 1) : addDaysIso(todayIso, 1)}
+            onChange={(event) =>
+              setState((prev) => applyMoneyDerivedValues(syncTourDates(prev, "end", event.target.value)))
+            }
+          />
+        </label>
+
+        {rangeMessage ? <p className="form-error full-row">{rangeMessage}</p> : null}
+
+        <label>
+          Monto total USD
+          <input
+            type="number"
+            step="0.01"
+            value={state.totalAmount}
+            placeholder="Ej. 1250.00"
+            onChange={(event) => onMoneyChange("totalAmount", event.target.value)}
+            onBlur={() => onMoneyBlur("totalAmount")}
+          />
+        </label>
+
+        <label>
+          Reserva USD
+          <input
+            type="number"
+            step="0.01"
+            value={state.reservationAmount}
+            placeholder="Ej. 300.00"
+            onChange={(event) => onMoneyChange("reservationAmount", event.target.value)}
+            onBlur={() => onMoneyBlur("reservationAmount")}
+          />
+        </label>
+
+        <label>
+          Saldo pendiente USD
+          <input value={state.balanceAmount} readOnly placeholder="Se calcula automaticamente" />
+        </label>
+
+        <label>
+          Frecuencia de pago
+          <select
+            value={state.paymentFrequency}
+            onChange={(event) =>
+              setState((prev) =>
+                applyMoneyDerivedValues({
+                  ...prev,
+                  paymentFrequency: event.target.value as "QUINCENAL" | "MENSUAL",
+                }),
+              )
+            }
+          >
+            <option value="MENSUAL">Mensual (cada 30 dias)</option>
+            <option value="QUINCENAL">Quincenal (cada 15 dias)</option>
+          </select>
+        </label>
+
+        <label>
+          Cantidad de cuotas (automatico)
+          <input value={state.installmentCount} readOnly placeholder="Se calcula automaticamente" />
+        </label>
+
+        <div className="full-row payment-summary-grid">
+          <label className="payment-summary-field">
+            Monto por cuota USD (regular)
+            <input value={state.monthlyInstallmentAmount} readOnly placeholder="Saldo / plazo" />
+          </label>
+
+          <label className="payment-summary-field">
+            Ultima cuota USD
+            <input value={state.lastInstallmentAmount} readOnly placeholder="Ajuste de fraccion" />
+            <small>Si hay fraccion, se ajusta en la ultima cuota.</small>
+          </label>
+
+          <label className="payment-summary-field">
+            Fecha limite de pago total
+            <input value={state.paymentDueDate} type="date" readOnly />
+            <small>Todo debe quedar cancelado 22 dias antes de iniciar el viaje.</small>
+          </label>
+        </div>
+      </div>
+
+      <h2 className="section-title">Datos del Cliente</h2>
+
+      <div className="contracts-grid">
+        <label>
+          Nombre completo
+          <input
+            value={state.clientFullName}
+            onChange={(event) => setState((prev) => ({ ...prev, clientFullName: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Tipo ID
+          <select
+            value={state.clientIdType}
+            onChange={(event) => setState((prev) => ({ ...prev, clientIdType: event.target.value as "Cedula" | "Pasaporte" | "DIMEX" }))}
+          >
+            <option value="Cedula">Cedula</option>
+            <option value="Pasaporte">Pasaporte</option>
+            <option value="DIMEX">DIMEX</option>
+          </select>
+        </label>
+
+        <label>
+          Numero ID
+          <input
+            value={state.clientIdNumber}
+            onChange={(event) => setState((prev) => ({ ...prev, clientIdNumber: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Correo
+          <input
+            type="email"
+            value={state.clientEmail}
+            onChange={(event) => setState((prev) => ({ ...prev, clientEmail: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Telefono
+          <input
+            value={state.clientPhone}
+            onChange={(event) => setState((prev) => ({ ...prev, clientPhone: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Direccion
+          <input
+            value={state.clientAddress}
+            onChange={(event) => setState((prev) => ({ ...prev, clientAddress: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Contacto emergencia
+          <input
+            value={state.emergencyContactName}
+            onChange={(event) => setState((prev) => ({ ...prev, emergencyContactName: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Telefono emergencia
+          <input
+            value={state.emergencyContactPhone}
+            onChange={(event) => setState((prev) => ({ ...prev, emergencyContactPhone: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Estado civil
+          <select
+            value={state.civilStatus}
+            onChange={(event) =>
+              setState((prev) => ({
+                ...prev,
+                civilStatus: event.target.value as "Soltero" | "Casado" | "Divorciado" | "Viudo" | "Union libre",
+              }))
+            }
+          >
+            <option value="Soltero">Soltero</option>
+            <option value="Casado">Casado</option>
+            <option value="Divorciado">Divorciado</option>
+            <option value="Viudo">Viudo</option>
+            <option value="Union libre">Union libre</option>
+          </select>
+        </label>
+
+        <label>
+          Profesion
+          <input
+            value={state.profession}
+            onChange={(event) => setState((prev) => ({ ...prev, profession: event.target.value }))}
+          />
+        </label>
+
+        <label>
+          Nacionalidad
+          <select
+            value={state.clientNationality}
+            onChange={(event) => setState((prev) => ({ ...prev, clientNationality: event.target.value }))}
+          >
+            {NATIONALITY_OPTIONS.map((country, idx) => (
+              <option key={idx} value={country} disabled={country === "──────────"}>
+                {country}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={requiredDocumentLabelClass(Boolean(holderDocs.idFront))}>
+          Cedula titular (frente)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setHolderDocs((prev) => ({ ...prev, idFront: file }));
+              setState((prev) => ({
+                ...prev,
+                idFrontDocumentName: file?.name || "",
+              }));
+            }}
+          />
+        </label>
+
+        <label className={requiredDocumentLabelClass(Boolean(holderDocs.idBack))}>
+          Cedula titular (reverso)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setHolderDocs((prev) => ({ ...prev, idBack: file }));
+              setState((prev) => ({
+                ...prev,
+                idBackDocumentName: file?.name || "",
+              }));
+            }}
+          />
+        </label>
+
+        <label className={requiredDocumentLabelClass(Boolean(holderDocs.passport))}>
+          Pasaporte titular
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setHolderDocs((prev) => ({ ...prev, passport: file }));
+              setState((prev) => ({
+                ...prev,
+                passportDocumentName: file?.name || "",
+              }));
+            }}
+          />
+        </label>
+      </div>
+
+      <div className="itinerary-box">
+        <div className="itinerary-head">
+          <h2>Acompanantes</h2>
+          <button type="button" className="btn btn-secondary" onClick={() => setState((prev) => addCompanion(prev))}>
+            + Agregar acompanante
+          </button>
+        </div>
+
+        <div className="itinerary-list">
+          {state.companions.length === 0 ? <p className="muted">Aun no hay acompanantes.</p> : null}
+          {state.companions.map((companion, index) => (
+            <article key={companion.id} className="subcard">
+              <div className="itinerary-head">
+                <h3>Acompanante {index + 1}</h3>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setCompanionDocs((prev) => {
+                      const next = { ...prev };
+                      delete next[companion.id];
+                      return next;
+                    });
+                    setState((prev) => removeCompanion(prev, companion.id));
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
+
+              <div className="contracts-grid">
+                <label>
+                  Nombre completo
+                  <input
+                    value={companion.fullName}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "fullName", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Tipo ID
+                  <select
+                    value={companion.idType}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "idType", event.target.value))
+                    }
+                  >
+                    <option value="Cedula">Cedula</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="DIMEX">DIMEX</option>
+                  </select>
+                </label>
+                <label>
+                  Numero ID
+                  <input
+                    value={companion.idNumber}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "idNumber", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Correo
+                  <input
+                    type="email"
+                    value={companion.email}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "email", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Telefono
+                  <input
+                    value={companion.phone}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "phone", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Contacto emergencia
+                  <input
+                    value={companion.emergencyContactName}
+                    onChange={(event) =>
+                      setState((prev) =>
+                        updateCompanion(prev, companion.id, "emergencyContactName", event.target.value)
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Telefono emergencia
+                  <input
+                    value={companion.emergencyContactPhone}
+                    onChange={(event) =>
+                      setState((prev) =>
+                        updateCompanion(prev, companion.id, "emergencyContactPhone", event.target.value)
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Direccion
+                  <input
+                    value={companion.address}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "address", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Estado civil
+                  <select
+                    value={companion.civilStatus}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "civilStatus", event.target.value))
+                    }
+                  >
+                    <option value="Soltero">Soltero</option>
+                    <option value="Casado">Casado</option>
+                    <option value="Divorciado">Divorciado</option>
+                    <option value="Viudo">Viudo</option>
+                    <option value="Union libre">Union libre</option>
+                  </select>
+                </label>
+                <label>
+                  Profesion
+                  <input
+                    value={companion.profession}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "profession", event.target.value))
+                    }
+                  />
+                </label>
+                <label>
+                  Nacionalidad
+                  <select
+                    value={companion.nationality}
+                    onChange={(event) =>
+                      setState((prev) => updateCompanion(prev, companion.id, "nationality", event.target.value))
+                    }
+                  >
+                    {NATIONALITY_OPTIONS.map((country, idx) => (
+                      <option key={idx} value={country} disabled={country === "──────────"}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(companionDocs[companion.id]?.idFront))}>
+                  Cedula frente
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setCompanionDocs((prev) => ({
+                        ...prev,
+                        [companion.id]: {
+                          idFront: file,
+                          idBack: prev[companion.id]?.idBack || null,
+                          passport: prev[companion.id]?.passport || null,
+                        },
+                      }));
+                      setState((prev) => updateCompanion(prev, companion.id, "idFrontDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(companionDocs[companion.id]?.idBack))}>
+                  Cedula reverso
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setCompanionDocs((prev) => ({
+                        ...prev,
+                        [companion.id]: {
+                          idFront: prev[companion.id]?.idFront || null,
+                          idBack: file,
+                          passport: prev[companion.id]?.passport || null,
+                        },
+                      }));
+                      setState((prev) => updateCompanion(prev, companion.id, "idBackDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(companionDocs[companion.id]?.passport))}>
+                  Pasaporte
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setCompanionDocs((prev) => ({
+                        ...prev,
+                        [companion.id]: {
+                          idFront: prev[companion.id]?.idFront || null,
+                          idBack: prev[companion.id]?.idBack || null,
+                          passport: file,
+                        },
+                      }));
+                      setState((prev) => updateCompanion(prev, companion.id, "passportDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="itinerary-box">
+        <div className="itinerary-head">
+          <h2>Menores</h2>
+          <div className="inline-actions">
+            <label className="check-inline">
+              <input
+                type="checkbox"
+                checked={state.hasMinorCompanion}
+                onChange={(event) => {
+                  const enabled = event.target.checked;
+                  setState((prev) => ({
+                    ...prev,
+                    hasMinorCompanion: enabled,
+                    minors: enabled ? (prev.minors.length ? prev.minors : prev.minors) : [],
+                  }));
+                }}
+              />
+              Viajan menores
+            </label>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setState((prev) => addMinor(prev))}
+              disabled={!state.hasMinorCompanion}
+            >
+              + Agregar menor
+            </button>
+          </div>
+        </div>
+
+        {!state.hasMinorCompanion ? <p className="muted">Marca la casilla si hay menores en el viaje.</p> : null}
+
+        <div className="itinerary-list">
+          {state.hasMinorCompanion && state.minors.length === 0 ? <p className="muted">Aun no hay menores.</p> : null}
+          {state.minors.map((minor, index) => (
+            <article key={minor.id} className="subcard">
+              <div className="itinerary-head">
+                <h3>Menor {index + 1}</h3>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setMinorDocs((prev) => {
+                      const next = { ...prev };
+                      delete next[minor.id];
+                      return next;
+                    });
+                    setState((prev) => removeMinor(prev, minor.id));
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
+
+              <div className="contracts-grid">
+                <label>
+                  Nombre del menor
+                  <input
+                    value={minor.minorName}
+                    onChange={(event) => setState((prev) => updateMinor(prev, minor.id, "minorName", event.target.value))}
+                  />
+                </label>
+                <label>
+                  Identificacion del menor
+                  <input
+                    value={minor.minorId}
+                    onChange={(event) => setState((prev) => updateMinor(prev, minor.id, "minorId", event.target.value))}
+                  />
+                </label>
+                <label>
+                  Nombre tutor legal
+                  <input
+                    value={minor.tutorName}
+                    onChange={(event) => setState((prev) => updateMinor(prev, minor.id, "tutorName", event.target.value))}
+                  />
+                </label>
+                <label>
+                  Tipo ID tutor
+                  <select
+                    value={minor.tutorIdType}
+                    onChange={(event) => setState((prev) => updateMinor(prev, minor.id, "tutorIdType", event.target.value))}
+                  >
+                    <option value="Cedula">Cedula</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="DIMEX">DIMEX</option>
+                  </select>
+                </label>
+                <label>
+                  ID tutor
+                  <input
+                    value={minor.tutorId}
+                    onChange={(event) => setState((prev) => updateMinor(prev, minor.id, "tutorId", event.target.value))}
+                  />
+                </label>
+                <label>
+                  Adulto que viaja con el menor
+                  <select
+                    value={minor.travelingWith}
+                    onChange={(event) =>
+                      setState((prev) => updateMinor(prev, minor.id, "travelingWith", event.target.value))
+                    }
+                  >
+                    <option value="">Seleccionar</option>
+                    {responsibleAdults.map((name) => (
+                      <option key={`${minor.id}-${name}`} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorIdFront))}>
+                  Cedula menor frente
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: file,
+                          minorIdBack: prev[minor.id]?.minorIdBack || null,
+                          minorPassport: prev[minor.id]?.minorPassport || null,
+                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
+                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
+                          tutorPassport: prev[minor.id]?.tutorPassport || null,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "minorIdFrontDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorIdBack))}>
+                  Cedula menor reverso
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: prev[minor.id]?.minorIdFront || null,
+                          minorIdBack: file,
+                          minorPassport: prev[minor.id]?.minorPassport || null,
+                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
+                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
+                          tutorPassport: prev[minor.id]?.tutorPassport || null,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "minorIdBackDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorPassport))}>
+                  Pasaporte menor
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: prev[minor.id]?.minorIdFront || null,
+                          minorIdBack: prev[minor.id]?.minorIdBack || null,
+                          minorPassport: file,
+                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
+                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
+                          tutorPassport: prev[minor.id]?.tutorPassport || null,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "minorPassportDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.tutorIdFront))}>
+                  Cedula tutor frente
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: prev[minor.id]?.minorIdFront || null,
+                          minorIdBack: prev[minor.id]?.minorIdBack || null,
+                          minorPassport: prev[minor.id]?.minorPassport || null,
+                          tutorIdFront: file,
+                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
+                          tutorPassport: prev[minor.id]?.tutorPassport || null,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "tutorIdFrontDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.tutorIdBack))}>
+                  Cedula tutor reverso
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: prev[minor.id]?.minorIdFront || null,
+                          minorIdBack: prev[minor.id]?.minorIdBack || null,
+                          minorPassport: prev[minor.id]?.minorPassport || null,
+                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
+                          tutorIdBack: file,
+                          tutorPassport: prev[minor.id]?.tutorPassport || null,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "tutorIdBackDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.tutorPassport))}>
+                  Pasaporte tutor
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      setMinorDocs((prev) => ({
+                        ...prev,
+                        [minor.id]: {
+                          minorIdFront: prev[minor.id]?.minorIdFront || null,
+                          minorIdBack: prev[minor.id]?.minorIdBack || null,
+                          minorPassport: prev[minor.id]?.minorPassport || null,
+                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
+                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
+                          tutorPassport: file,
+                        },
+                      }));
+                      setState((prev) => updateMinor(prev, minor.id, "tutorPassportDocumentName", file?.name || ""));
+                    }}
+                  />
+                </label>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="itinerary-box">
+        <div className="itinerary-head">
+          <h2>Itinerario</h2>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setState((prev) => addCustomItineraryItem(prev))}
+            disabled={Boolean(rangeMessage) || Boolean(itineraryMessage)}
+          >
+            + Agregar actividad
+          </button>
+        </div>
+
+        {itineraryMessage ? <p className="form-error">{itineraryMessage}</p> : null}
+
+        <div className="itinerary-list">
+          {state.itinerary.map((item) => {
+            const isFixed = item.kind === "opening" || item.kind === "closing";
+            const label = item.kind === "opening" ? "Inicio del Viaje" : item.kind === "closing" ? "Fin del Viaje" : "Actividad";
+
+            return (
+              <div key={item.id} className="itinerary-row">
+                <label>
+                  Tipo
+                  <input value={label} readOnly />
+                </label>
+
+                <label>
+                  Fecha
+                  <input
+                    type="date"
+                    value={item.date}
+                    min={!rangeMessage ? state.startDate || undefined : undefined}
+                    max={!rangeMessage ? state.endDate || undefined : undefined}
+                    readOnly={isFixed}
+                    onChange={(event) =>
+                      setState((prev) => updateItineraryItem(prev, item.id, "date", event.target.value))
+                    }
+                  />
+                </label>
+
+                <label>
+                  Detalle
+                  <input
+                    value={item.detail}
+                    placeholder="Tour a X lugar"
+                    onChange={(event) =>
+                      setState((prev) => updateItineraryItem(prev, item.id, "detail", event.target.value))
+                    }
+                  />
+                </label>
+
+                <div className="itinerary-actions">
+                  {item.kind === "custom" ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={Boolean(itineraryMessage)}
+                      onClick={() => setState((prev) => removeCustomItineraryItem(prev, item.id))}
+                    >
+                      Eliminar
+                    </button>
+                  ) : (
+                    <span className="hint-pill">No eliminar</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <h2 className="section-title">Equipaje</h2>
+      <div className="contracts-grid">
+        <label className="full-row">
+          Clausula de equipaje permitido
+          <textarea
+            rows={4}
+            value={state.luggageClause}
+            onChange={(event) => setState((prev) => ({ ...prev, luggageClause: event.target.value }))}
+          />
+        </label>
+      </div>
+
+      <div className="contracts-grid">
+        <label className="full-row">
+          Firma del representante
+          <input value="Se usa automaticamente: /firmakaren.png" readOnly />
+          <small>Esta firma no se carga desde el formulario; se toma fija desde assets al generar el PDF.</small>
+        </label>
+      </div>
+
+      <h2 className="section-title">Adjuntos del Contrato</h2>
+      <div className="contracts-grid">
+        <label className="full-row">
+          Adjuntar documentos de soporte (multiple)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            multiple
+            onChange={(event) => {
+              const files = Array.from(event.target.files || []);
+              setSupportDocs(files);
+              setState((prev) => ({
+                ...prev,
+                contractDocumentsNames: files.map((file) => file.name),
+              }));
+            }}
+          />
+          {state.contractDocumentsNames.length ? (
+            <ul className="simple-list">
+              {state.contractDocumentsNames.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          ) : (
+            <small>No hay adjuntos aun.</small>
+          )}
+        </label>
+      </div>
+
+      <div className="actions">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
+          onClick={() => {
+            void saveDraftFlow();
+          }}
+        >
+          {savingDraft ? "Guardando borrador..." : "Guardar borrador"}
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
+          onClick={() => {
+            void runPreviewFlow();
+          }}
+        >
+          {previewing ? "Generando vista previa..." : "Vista previa"}
+        </button>
+
+        <button
+          type="button"
+          className="btn"
+          disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
+          onClick={() => {
+            void runArchiveFlow();
+          }}
+        >
+          {submitting ? "Guardando..." : "Guardar contrato y generar firma"}
+        </button>
+      </div>
+
+      {latestSigningLinks.length ? (
+        <div className="itinerary-box">
+          <div className="itinerary-head">
+            <h2>Enlaces de firma</h2>
+          </div>
+
+          {clientSigningLinks.length ? (
+            <div className="itinerary-head" style={{ marginTop: 8 }}>
+              <h3>Link principal del cliente</h3>
+            </div>
+          ) : null}
+          <div className="itinerary-list">
+            {clientSigningLinks.map((item) => (
+              <article key={`${item.signerKey}-${item.signingUrl}`} className="subcard">
+                <p>
+                  <strong>{item.signerName || item.signerKey}</strong>
+                  {item.signerEmail ? ` (${item.signerEmail})` : ""}
+                </p>
+                <div className="contracts-grid" style={{ marginTop: 8 }}>
+                  <label className="full-row">
+                    Link de firma
+                    <input type="text" value={item.signingUrl} readOnly />
+                  </label>
+                </div>
+                <div className="actions" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      void copySigningUrl(item.signingUrl, item.signerKey);
+                    }}
+                  >
+                    {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
+                  </button>
+                  <a
+                    className="btn btn-secondary"
+                    href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Compartir por WhatsApp
+                  </a>
+                </div>
+              </article>
+            ))}
+
+            {companionSigningLinks.length ? (
+              <div className="itinerary-head" style={{ marginTop: 8 }}>
+                <h3>Links de firma de acompanantes</h3>
+              </div>
+            ) : null}
+
+            {companionSigningLinks.map((item) => (
+              <article key={`${item.signerKey}-${item.signingUrl}`} className="subcard">
+                <p>
+                  <strong>{item.signerName || item.signerKey}</strong>
+                  {item.signerEmail ? ` (${item.signerEmail})` : ""}
+                </p>
+                <div className="contracts-grid" style={{ marginTop: 8 }}>
+                  <label className="full-row">
+                    Link de firma
+                    <input type="text" value={item.signingUrl} readOnly />
+                  </label>
+                </div>
+                <div className="actions" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      void copySigningUrl(item.signingUrl, item.signerKey);
+                    }}
+                  >
+                    {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
+                  </button>
+                  <a
+                    className="btn btn-secondary"
+                    href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Compartir por WhatsApp
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <p className="status-line">{status}</p>
+
+      <details>
+        <summary>Ver payload actual (debug local)</summary>
+        <pre className="json-preview">{JSON.stringify(state, null, 2)}</pre>
+      </details>
+
+        </div>
+
+        <aside className="contracts-preview-panel">
+          <section className="contract-preview-wrap">
+            <div className="contract-preview-head">
+              <h2>Vista previa del contrato</h2>
+              <p>Formato de lectura tipo A4 para revisar y corregir sin salir del formulario.</p>
+            </div>
+            <div className="contract-preview-stage">
+              {previewHtml ? (
+                <iframe
+                  title="Vista previa del contrato"
+                  className="contract-preview-iframe"
+                  srcDoc={previewHtml}
+                />
+              ) : (
+                <div className="contract-preview-placeholder">
+                  Completa los datos y pulsa Vista previa para mostrar el contrato aqui.
+                </div>
+              )}
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  );
+}

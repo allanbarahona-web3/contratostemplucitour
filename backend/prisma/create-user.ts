@@ -8,6 +8,7 @@ async function main() {
   const password = String(process.env.USER_PASSWORD || "");
   const fullName = String(process.env.USER_NAME || "").trim();
   const isActive = String(process.env.USER_ACTIVE || "true").toLowerCase() !== "false";
+  const role = String(process.env.USER_ROLE || "AGENT").trim().toUpperCase() || "AGENT";
 
   if (!email || !password || !fullName) {
     console.error("Faltan variables. Usa USER_EMAIL, USER_PASSWORD, USER_NAME y opcional USER_ACTIVE.");
@@ -27,12 +28,14 @@ async function main() {
       fullName,
       passwordHash,
       isActive,
+      role,
     },
     create: {
       email,
       fullName,
       passwordHash,
       isActive,
+      role,
     },
     select: {
       id: true,

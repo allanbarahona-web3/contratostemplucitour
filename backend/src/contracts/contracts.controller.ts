@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -15,6 +16,8 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
 import { ArchiveContractDto } from "./dto/archive-contract.dto";
 import { CreateSigningLinkDto } from "./dto/create-signing-link.dto";
 import { FinalizeContractSignaturePublicDto } from "./dto/finalize-contract-signature-public.dto";
@@ -24,12 +27,14 @@ import { SearchContractsDto } from "./dto/search-contracts.dto";
 import { ContractsService } from "./contracts.service";
 import { SendContractEmailDto } from "./dto/send-contract-email.dto";
 import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
+import { SaveContractDraftDto } from "./dto/save-contract-draft.dto";
 
 @Controller("contracts")
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post("next-number")
   reserveNextNumber(
     @Req()
@@ -40,7 +45,8 @@ export class ContractsController {
     return this.contractsService.reserveNextNumber(req.user);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post("send-email")
   @UseInterceptors(FileInterceptor("pdfFile"))
   sendContractEmail(
@@ -70,7 +76,47 @@ export class ContractsController {
     return this.contractsService.sendContractEmail(req.user, dto, file.buffer);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
+  @Post("drafts")
+  saveDraft(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Body() dto: SaveContractDraftDto,
+  ) {
+    return this.contractsService.saveContractDraft(req.user, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
+  @Get("drafts/:draftId")
+  getDraft(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("draftId") draftId: string,
+  ) {
+    return this.contractsService.getContractDraft(req.user, draftId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
+  @Delete("drafts/:draftId")
+  deleteDraft(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("draftId") draftId: string,
+  ) {
+    return this.contractsService.deleteContractDraft(req.user, draftId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post("archive")
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -100,7 +146,8 @@ export class ContractsController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post(":contractId/send-to-billing")
   sendContractToBilling(
     @Req()
@@ -136,7 +183,8 @@ export class ContractsController {
     return this.contractsService.getContractFiles(req.user, contractId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post(":contractId/signing-link")
   createSigningLink(
     @Req()
@@ -149,7 +197,8 @@ export class ContractsController {
     return this.contractsService.createContractSigningLink(req.user, contractId, dto.ttlMinutes);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post("send-signing-email")
   sendSigningEmail(
     @Req()
@@ -161,7 +210,8 @@ export class ContractsController {
     return this.contractsService.sendContractSigningEmail(req.user, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post(":contractId/resend-signed-email")
   resendSignedEmail(
     @Req()

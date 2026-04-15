@@ -40,7 +40,7 @@ Actualmente se está usando el logo antiguo como placeholder temporal.
 **Acción requerida**: Reemplazar con el logo oficial de **Viajes Alma Nova**
 
 ### 2. Cédula Jurídica
-El contrato aún usa la cédula jurídica: `3-101-874546`
+El contrato aún usa la cédula jurídica: `3-101-960028`
 
 Si "Viajes Alma Nova" es una empresa diferente, debes actualizar:
 - Cédula jurídica en `frontend/app.js` (líneas ~1534, ~2234)

@@ -1,0 +1,145 @@
+"use client";
+
+import { getStoredToken } from "@/lib/auth-api";
+import { listBillingContracts, type BillingListItem } from "@/lib/billing-api";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+const formatMoney = (value: number) => `USD ${Number.isFinite(value) ? value.toFixed(2) : "0.00"}`;
+
+const formatDate = (value?: string | null): string => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("es-CR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
+
+export default function BillingPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [items, setItems] = useState<BillingListItem[]>([]);
+
+  const load = async (search = query, statusValue = status) => {
+    setLoading(true);
+    setError("");
+    try {
+      const list = await listBillingContracts({ q: search, status: statusValue, limit: 60 });
+      setItems(list);
+    } catch (fetchError) {
+      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar estados de cuenta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) {
+      router.replace("/");
+      return;
+    }
+
+    void load("", "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  return (
+    <main className="app-shell">
+      <section className="card contracts-card">
+        <h1>Estados de cuenta</h1>
+        <p className="muted">Panel operativo de estados de cuenta por contrato, pagos reportados y saldos pendientes.</p>
+
+        <div className="contracts-grid" style={{ marginTop: 12 }}>
+          <label>
+            Buscar
+            <input
+              value={query}
+              placeholder="Cliente, contrato, cedula o correo"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Estado
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">Todos</option>
+              <option value="FACTURA_EMITIDA">Emitida</option>
+              <option value="FACTURA_PARCIAL">Parcial</option>
+              <option value="FACTURA_PAGADA">Pagada</option>
+              <option value="FACTURA_VENCIDA">Vencida</option>
+              <option value="FACTURA_ANULADA">Anulada</option>
+            </select>
+          </label>
+
+          <div className="actions" style={{ alignItems: "flex-end", marginTop: 22 }}>
+            <button type="button" className="btn" onClick={() => void load()} disabled={loading}>
+              {loading ? "Buscando..." : "Aplicar filtros"}
+            </button>
+          </div>
+        </div>
+
+        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
+
+        <div className="history-table-wrap" style={{ marginTop: 14 }}>
+          <table className="history-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Contrato</th>
+                <th>Estado</th>
+                <th>Vence</th>
+                <th>Total</th>
+                <th>Pendiente</th>
+                <th>Saldo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && items.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <p className="history-empty">No hay expedientes de cobro.</p>
+                  </td>
+                </tr>
+              ) : null}
+
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div className="history-col-name">{item.client.fullName}</div>
+                    <div className="history-col-muted">{item.client.idNumber} - {item.client.email}</div>
+                  </td>
+                  <td>{item.invoiceNumber}</td>
+                  <td>
+                    <span className={`contract-status ${item.status === "FACTURA_PAGADA" ? "status-signed" : item.status === "FACTURA_VENCIDA" ? "status-overdue" : "status-pending"}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div>{formatDate(item.paymentDueDate)}</div>
+                    {item.isOverdue ? <div className="history-col-muted">{item.overdueDays} dia(s) vencida</div> : null}
+                  </td>
+                  <td>{formatMoney(item.amounts.total)}</td>
+                  <td>{formatMoney(item.amounts.pending)}</td>
+                  <td>{formatMoney(item.amounts.balance)}</td>
+                  <td>
+                    <Link href={`/billing/${encodeURIComponent(item.contractId)}`} className="btn btn-secondary">
+                      Abrir cuenta
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  );
+}

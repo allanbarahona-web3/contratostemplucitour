@@ -2235,7 +2235,7 @@ html, body {
   <div class="doc-header-text">
     <h1>Viajes Alma Nova</h1>
     <p class="doc-meta">
-      Cédula jurídica: 3-101-874546 &nbsp;|&nbsp;
+      Cédula jurídica: 3-101-960028 &nbsp;|&nbsp;
       contratos@viajesalmanova.com &nbsp;|&nbsp; Tel. 6015-9906<br />
       Contrato N.° <strong>${escapeHtml(data.contractNumber)}</strong> &nbsp;|&nbsp;
       Emitido: ${escapeHtml(formatDate(data.issuedAt || new Date().toISOString().slice(0, 10)))} &nbsp;|&nbsp;
@@ -2259,7 +2259,7 @@ html, body {
 <h3 class="section-heading">Partes</h3>
 
 <section class="clause">
-  <p>(a) <strong>KAREN KEITLYN CAMPOS CANTILLO</strong>, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número <strong>3-0522-0023</strong>, vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES ALMA NOVA</strong>, cédula jurídica número 3-101-874546, en adelante denominada <strong>"Viajes Alma Nova"</strong>; y</p>
+  <p>(a) <strong>KAREN KEITLYN CAMPOS CANTILLO</strong>, mayor, soltera, administradora de agencia de viajes, portadora de la cédula de identidad número <strong>3-0522-0023</strong>, vecina de Cartago, en condición de representante legal, con facultades de apoderado generalísimo sin límite de suma de <strong>VIAJES ALMA NOVA</strong>, cédula jurídica número 3-101-960028, en adelante denominada <strong>"Viajes Alma Nova"</strong>; y</p>
 </section>
 
 <section class="clause">

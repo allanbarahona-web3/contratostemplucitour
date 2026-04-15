@@ -16,12 +16,14 @@ async function main() {
       fullName,
       passwordHash,
       isActive: true,
+      role: "ADMIN",
     },
     create: {
       email,
       fullName,
       passwordHash,
       isActive: true,
+      role: "ADMIN",
     },
   });
 

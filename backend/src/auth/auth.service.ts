@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { LoginDto } from "./dto/login.dto";
+import { AdminCreateUserDto } from "./dto/admin-create-user.dto";
+import { AdminUpdateUserDto } from "./dto/admin-update-user.dto";
 
 type JwtSessionPayload = {
   sub: string;
@@ -51,6 +53,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       fullName: user.fullName,
+      role: user.role,
       },
       { jwtid: tokenId },
     );
@@ -62,6 +65,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        role: user.role,
       },
     };
   }
@@ -73,6 +77,7 @@ export class AuthService {
         id: true,
         email: true,
         fullName: true,
+        role: true,
         isActive: true,
       },
     });
@@ -110,5 +115,88 @@ export class AuthService {
         userId: null,
       };
     }
+  }
+
+  async adminListUsers() {
+    const users = await this.prisma.user.findMany({
+      orderBy: [{ createdAt: "desc" }],
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isActive: true,
+        activeAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return users;
+  }
+
+  async adminCreateUser(dto: AdminCreateUserDto) {
+    const email = String(dto.email || "").trim().toLowerCase();
+    const fullName = String(dto.fullName || "").trim();
+    const password = String(dto.password || "");
+    const role = String(dto.role || "AGENT").trim().toUpperCase() === "ADMIN" ? "ADMIN" : "AGENT";
+
+    const passwordHash = await hash(password, 10);
+
+    const created = await this.prisma.user.create({
+      data: {
+        email,
+        fullName,
+        passwordHash,
+        role,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    return created;
+  }
+
+  async adminUpdateUser(userId: string, dto: AdminUpdateUserDto) {
+    const data: Record<string, unknown> = {};
+
+    if (typeof dto.fullName === "string") {
+      data.fullName = dto.fullName.trim();
+    }
+
+    if (typeof dto.role === "string") {
+      data.role = String(dto.role).trim().toUpperCase() === "ADMIN" ? "ADMIN" : "AGENT";
+    }
+
+    if (typeof dto.isActive === "boolean") {
+      data.isActive = dto.isActive;
+      if (!dto.isActive) {
+        data.activeJti = null;
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isActive: true,
+        activeAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return updated;
   }
 }
