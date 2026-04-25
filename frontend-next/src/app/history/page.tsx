@@ -480,7 +480,7 @@ export default function HistoryPage() {
 
       <ConfirmationModal
         isOpen={draftToDelete !== null}
-        onClose={closeDeleteDraftModal}
+        onCancel={closeDeleteDraftModal}
         onConfirm={() => void confirmDeleteDraft()}
         title="Confirmar eliminacion de borrador"
         message={
@@ -488,9 +488,9 @@ export default function HistoryPage() {
             ? `Vas a eliminar el borrador ${draftToDelete.contractNumber}${draftToDelete.clientFullName && draftToDelete.clientFullName !== "-" ? ` de ${draftToDelete.clientFullName}` : ""}. Esta accion no se puede deshacer.`
             : ""
         }
-        confirmText="Eliminar borrador"
-        cancelText="Cancelar"
-        variant="danger"
+        confirmLabel="Eliminar borrador"
+        cancelLabel="Cancelar"
+        confirmVariant="danger"
         isLoading={busyAction === "delete-draft:confirm"}
       />
 
