@@ -45,12 +45,13 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_DISABLE_SANDBOX=true
 
-# Copy backend package files and pnpm lock
-COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
+# Copy all backend files FIRST
+COPY backend/ ./
+
+# Install dependencies (now package.json is in the right place)
 RUN pnpm install --frozen-lockfile
 
-# Copy backend source and build
-COPY backend/ ./
+# Generate Prisma client and build
 RUN pnpm exec prisma generate
 RUN pnpm run build
 
