@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { VerticalNav } from "@/components/vertical-nav";
 import "./globals.css";
 
@@ -28,6 +29,9 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <Script src="/config.js" strategy="beforeInteractive" />
+      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <VerticalNav />
         {children}
