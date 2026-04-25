@@ -17,6 +17,9 @@ import {
   verifyBillingPayment,
   type BillingAccount,
 } from "@/lib/billing-api";
+import { ReceiptProcessor } from "@/components/receipt-processor";
+import { LoadingModal } from "@/components/loading-modal";
+import type { ExtractedPaymentData } from "@/lib/payment-verification-api";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -136,6 +139,7 @@ export default function BillingContractAccountPage() {
   const [actionBusy, setActionBusy] = useState("");
   const [error, setError] = useState("");
   const [statusText, setStatusText] = useState("");
+  const [criticalAlert, setCriticalAlert] = useState<{ title: string; message: string; details?: string } | null>(null);
   const [account, setAccount] = useState<BillingAccount | null>(null);
 
   const [modalMode, setModalMode] = useState<BillingModalMode>("NONE");
@@ -144,6 +148,10 @@ export default function BillingContractAccountPage() {
   const [paymentDate, setPaymentDate] = useState("");
   const [bankReference, setBankReference] = useState("");
   const [payerName, setPayerName] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [originBank, setOriginBank] = useState("");
+  const [destinationBank, setDestinationBank] = useState("");
+  const [destinationAccount, setDestinationAccount] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>(PAYMENT_METHOD_OPTIONS[0]);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -169,6 +177,12 @@ export default function BillingContractAccountPage() {
   const [documentEmailCc, setDocumentEmailCc] = useState("");
   const [documentEmailError, setDocumentEmailError] = useState("");
   const [documentEmailSuccess, setDocumentEmailSuccess] = useState("");
+
+  // Estados para LoadingModal
+  const [loadingModalOpen, setLoadingModalOpen] = useState(false);
+  const [loadingModalState, setLoadingModalState] = useState<"loading" | "success" | "error">("loading");
+  const [loadingModalMessage, setLoadingModalMessage] = useState("");
+  const [loadingModalSuccessMsg, setLoadingModalSuccessMsg] = useState("");
 
   const role = String(getStoredSession()?.user?.role || "").toUpperCase();
   const isAdmin = role === "ADMIN";
@@ -198,6 +212,37 @@ export default function BillingContractAccountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, contractId]);
 
+  // Auto-refresh cada 30 segundos para agentes
+  useEffect(() => {
+    // Solo auto-refresh si no es admin (para agentes que esperan aprobación)
+    if (isAdmin) return;
+
+    const intervalId = setInterval(() => {
+      // Solo refrescar si:
+      // 1. La página está visible
+      // 2. No hay modales abiertos
+      // 3. No está cargando actualmente
+      const isPageVisible = document.visibilityState === "visible";
+      const hasOpenModals = modalMode !== "NONE" || loadingModalOpen || statementModalOpen;
+      
+      if (isPageVisible && !hasOpenModals && !loading) {
+        void load();
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, modalMode, loadingModalOpen, statementModalOpen, loading]);
+
+  // Helper: Detecta si un pago fue aprobado recientemente (últimos 5 minutos)
+  const isRecentlyApproved = (verifiedAt?: string | null, status?: string | null): boolean => {
+    if (status !== "ABONO_VERIFICADO" || !verifiedAt) return false;
+    const verified = new Date(verifiedAt);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - verified.getTime()) / (1000 * 60);
+    return diffMinutes <= 5;
+  };
+
   const timelineRows = useMemo(() => {
     if (!account) return [] as Array<{
       id: string;
@@ -208,6 +253,7 @@ export default function BillingContractAccountPage() {
       status: string;
       balanceBefore: number;
       balanceAfter: number;
+      verifiedAt?: string | null;
     }>;
 
     const rows = [] as Array<{
@@ -218,6 +264,7 @@ export default function BillingContractAccountPage() {
       actor: string;
       status: string;
       effectAmount: number;
+      verifiedAt?: string | null;
     }>;
 
     rows.push({
@@ -228,6 +275,7 @@ export default function BillingContractAccountPage() {
       actor: "Sistema",
       status: account.invoice.status,
       effectAmount: 0,
+      verifiedAt: null,
     });
 
     account.payments.forEach((payment) => {
@@ -242,6 +290,7 @@ export default function BillingContractAccountPage() {
         actor: payment.createdByName || payment.verifiedByName || "-",
         status: payment.status,
         effectAmount: verifiedEffect,
+        verifiedAt: payment.verifiedAt,
       });
     });
 
@@ -255,6 +304,7 @@ export default function BillingContractAccountPage() {
         actor: note.appliedByName || note.issuedByName || "-",
         status: note.status,
         effectAmount: appliedEffect,
+        verifiedAt: null,
       });
     });
 
@@ -278,6 +328,7 @@ export default function BillingContractAccountPage() {
         status: row.status,
         balanceBefore: before,
         balanceAfter: runningBalance,
+        verifiedAt: row.verifiedAt,
       };
     }).reverse();
   }, [account]);
@@ -287,9 +338,64 @@ export default function BillingContractAccountPage() {
     setPaymentDate(new Date().toISOString().slice(0, 10));
     setBankReference("");
     setPayerName("");
+    setPaymentReference("");
+    setOriginBank("");
+    setDestinationBank("");
+    setDestinationAccount("");
     setNotes("");
     setPaymentMethod(PAYMENT_METHOD_OPTIONS[0]);
     setAttachments([]);
+    console.log("🔄 Formulario de pago reseteado");
+  };
+
+  const handleReceiptDataExtracted = (data: ExtractedPaymentData) => {
+    // Pre-llenar campos del formulario con datos extraídos del comprobante
+    if (data.amount) {
+      // Redondear a 2 decimales
+      setAmount(data.amount.toFixed(2));
+    }
+    
+    if (data.date) {
+      // Convertir fecha ISO a formato YYYY-MM-DD
+      const dateOnly = data.date.split('T')[0];
+      setPaymentDate(dateOnly);
+    }
+    
+    if (data.reference) {
+      setBankReference(data.reference);
+    }
+    
+    if (data.payerName) {
+      setPayerName(data.payerName);
+    }
+    
+    if (data.paymentCode) {
+      setPaymentReference(data.paymentCode.toUpperCase());
+    }
+    
+    if (data.originBank) {
+      setOriginBank(data.originBank);
+    }
+    
+    if (data.destinationBank) {
+      setDestinationBank(data.destinationBank);
+    }
+    
+    if (data.destinationAccount) {
+      setDestinationAccount(data.destinationAccount);
+    }
+    
+    if (data.notes) {
+      setNotes(data.notes);
+    }
+
+    // Mostrar mensaje de éxito con información de conversión si aplica
+    let successMessage = "✅ Datos extraídos exitosamente";
+    if (data.conversionApplied && data.originalAmount && data.originalCurrency && data.usedExchangeRate) {
+      successMessage += ` | 💱 Conversión automática: ₡${data.originalAmount.toFixed(2)} → $${data.amount?.toFixed(2)} (TC: ₡${data.usedExchangeRate.toFixed(2)})`;
+    }
+    setStatusText(successMessage);
+    setTimeout(() => setStatusText(""), 6000);
   };
 
   const openInstallmentModal = () => {
@@ -319,8 +425,39 @@ export default function BillingContractAccountPage() {
       return;
     }
 
+    // Validar código de pago si fue proporcionado
+    const trimmedPaymentRef = paymentReference.trim().toUpperCase();
+    const expectedPaymentRef = String(account?.invoice?.paymentReference || "").trim().toUpperCase();
+    
+    if (trimmedPaymentRef) {
+      // Validar que sea alfanumérico mixto (al menos 1 letra Y 1 número)
+      const hasLetter = /[A-Z]/.test(trimmedPaymentRef);
+      const hasNumber = /[0-9]/.test(trimmedPaymentRef);
+      
+      if (!hasLetter || !hasNumber) {
+        setStatusText(`❌ El código de pago debe contener al menos 1 letra y 1 número (Ej: A3B7K9). Recibido: "${trimmedPaymentRef}"`);
+        return;
+      }
+      
+      if (trimmedPaymentRef.length !== 6) {
+        setStatusText(`❌ El código de pago debe tener exactamente 6 caracteres. Recibido: "${trimmedPaymentRef}" (${trimmedPaymentRef.length} caracteres)`);
+        return;
+      }
+      
+      if (expectedPaymentRef && trimmedPaymentRef !== expectedPaymentRef) {
+        setStatusText(`❌ El código de pago "${trimmedPaymentRef}" no coincide con el esperado "${expectedPaymentRef}". Verifica e intenta nuevamente.`);
+        return;
+      }
+    }
+
     setSaving(true);
     setStatusText("");
+    
+    // Abrir modal de loading
+    setLoadingModalMessage("Guardando abono...");
+    setLoadingModalState("loading");
+    setLoadingModalOpen(true);
+
     try {
       const methodLabel = paymentMethod
         .split("_")
@@ -340,16 +477,49 @@ export default function BillingContractAccountPage() {
         paymentDate,
         bankReference,
         payerName,
+        originBank: originBank.trim() || undefined,
+        destinationBank: destinationBank.trim() || undefined,
+        destinationAccount: destinationAccount.trim() || undefined,
+        paymentReference: paymentReference.trim() || undefined,
         notes: composedNotes,
         attachments,
       });
 
-      setStatusText(`Exito: abono registrado. Recibo pendiente: ${result.receiptNumber}`);
+      // Cambiar a estado de éxito
+      setLoadingModalState("success");
+      setLoadingModalSuccessMsg(`✅ Abono registrado | Recibo: ${result.receiptNumber} | Monto: $${amount}`);
+      
+      // Cerrar modal de formulario y recargar datos
       closeMainModal();
       resetPaymentForm();
       await load();
+      
     } catch (reportError) {
-      setStatusText(reportError instanceof Error ? reportError.message : "No se pudo registrar el pago.");
+      const errorMsg = reportError instanceof Error ? reportError.message : "No se pudo registrar el pago.";
+      
+      // Cambiar a estado de error
+      setLoadingModalState("error");
+      setLoadingModalSuccessMsg(errorMsg);
+      
+      // Detectar errores críticos y mostrarlos en modal rojo adicional
+      if (errorMsg.toLowerCase().includes("duplicado") || 
+          errorMsg.toLowerCase().includes("ya existe")) {
+        setCriticalAlert({
+          title: "⚠️ Pago Duplicado Detectado",
+          message: "Ya existe un pago con la misma información en el sistema.",
+          details: errorMsg
+        });
+      } else if (errorMsg.toLowerCase().includes("cuenta destino no registrada") || 
+                 errorMsg.toLowerCase().includes("cuenta destino inactiva")) {
+        setCriticalAlert({
+          title: "🚨 Pago Rechazado - Cuenta No Registrada",
+          message: "La cuenta destino no está registrada en el sistema de Viajes Alma Nova.",
+          details: errorMsg
+        });
+      } else {
+        // Otros errores mostrar en statusText
+        setStatusText(`❌ ${errorMsg}`);
+      }
     } finally {
       setSaving(false);
     }
@@ -722,7 +892,25 @@ export default function BillingContractAccountPage() {
 
         {loading ? <p className="muted">Cargando...</p> : null}
         {error ? <p className="form-error">{error}</p> : null}
-        {statusText ? <p className="status-line">{statusText}</p> : null}
+        
+        {statusText ? (
+          <div 
+            className="status-line" 
+            style={{
+              backgroundColor: statusText.includes('✅') ? '#d1fae5' : '#fef3c7',
+              border: statusText.includes('✅') ? '2px solid #10b981' : '2px solid #f59e0b',
+              color: statusText.includes('✅') ? '#065f46' : statusText.includes('❌') ? '#dc2626' : '#78350f',
+              padding: '16px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '15px',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}
+          >
+            {statusText}
+          </div>
+        ) : null}
 
         {account ? (
           <>
@@ -758,6 +946,30 @@ export default function BillingContractAccountPage() {
                   <span>Saldo actual</span>
                   <strong style={{ color: '#ef4444' }}>{formatMoney(account.invoice.amounts.balance)}</strong>
                 </article>
+                {account.invoice.paymentReference ? (
+                  <article className="billing-kpi" style={{ background: '#fef3c7', border: '2px solid #f59e0b', borderRadius: '8px', padding: '12px' }}>
+                    <span style={{ color: '#78350f', fontWeight: 600, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
+                      ⚠️ Código de Pago
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <strong style={{ fontFamily: 'Monaco, Consolas, monospace', fontSize: '18px', color: '#92400e', letterSpacing: '2px' }}>
+                        {account.invoice.paymentReference}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(account.invoice.paymentReference || '');
+                          setStatusText(`Código ${account.invoice.paymentReference} copiado al portapapeles.`);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        title="Copiar código de pago"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </article>
+                ) : null}
               </div>
             </section>
 
@@ -842,9 +1054,14 @@ export default function BillingContractAccountPage() {
                       <td>{formatMoney(row.balanceAfter)}</td>
                       <td>{row.actor || "-"}</td>
                       <td>
-                        <span className={`contract-status ${statusBadgeClassName(row.status)}`}>
-                          {labelStatus(row.status, { ...INVOICE_STATUS_LABELS, ...PAYMENT_STATUS_LABELS, ...CREDIT_NOTE_STATUS_LABELS })}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className={`contract-status ${statusBadgeClassName(row.status)}`}>
+                            {labelStatus(row.status, { ...INVOICE_STATUS_LABELS, ...PAYMENT_STATUS_LABELS, ...CREDIT_NOTE_STATUS_LABELS })}
+                          </span>
+                          {isRecentlyApproved(row.verifiedAt, row.status) && (
+                            <span className="new-badge">✨ NUEVO</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1337,23 +1554,58 @@ export default function BillingContractAccountPage() {
                     El sistema guarda automaticamente fecha/hora de registro y usuario responsable.
                   </p>
 
+                  {/* Procesador de comprobantes con IA */}
+                  <ReceiptProcessor 
+                    onDataExtracted={handleReceiptDataExtracted}
+                    onFileSelected={(file) => {
+                      // Guardar el archivo en el estado de attachments
+                      setAttachments([file]);
+                      console.log("📎 Archivo adjunto agregado:", file.name, "("+file.size+" bytes)");
+                    }}
+                    onError={(error) => {
+                      // Detectar error de cuenta destino no registrada
+                      const errorMsg = String(error || "").toLowerCase();
+                      if (errorMsg.includes("cuenta destino no registrada") || errorMsg.includes("cuenta destino inactiva")) {
+                        setCriticalAlert({
+                          title: "🚨 Pago Rechazado - Cuenta No Registrada",
+                          message: "La cuenta destino detectada en el comprobante NO está registrada en el sistema de Viajes Alma Nova.",
+                          details: error
+                        });
+                      } else {
+                        setStatusText(`❌ ${error}`);
+                      }
+                    }}
+                  />
+
                   <div className="contracts-grid payment-entry-grid" style={{ marginTop: 10 }}>
                     <label>
-                      Monto
+                      <span style={{ 
+                        color: amount.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Monto
+                      </span>
                       {modalMode === "INSTALLMENT" ? (
                         <div className="inline-row">
-                          <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Ej. 50000" />
+                          <input value={amount} onChange={(event) => setAmount(event.target.value)} />
                           <button type="button" className="btn btn-secondary" onClick={setInstallmentToFullBalance}>
                             Saldo total
                           </button>
                         </div>
                       ) : (
-                        <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Ej. 50000" />
+                        <input value={amount} onChange={(event) => setAmount(event.target.value)} />
                       )}
                     </label>
 
                     <label>
-                      Metodo de pago
+                      <span style={{ 
+                        color: paymentMethod.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Metodo de pago
+                      </span>
                       <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
                         {PAYMENT_METHOD_OPTIONS.map((method) => (
                           <option key={method} value={method}>
@@ -1367,33 +1619,110 @@ export default function BillingContractAccountPage() {
                     </label>
 
                     <label>
-                      Fecha del comprobante
+                      <span style={{ 
+                        color: paymentDate.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Fecha del comprobante
+                      </span>
                       <input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
                     </label>
 
                     <label>
-                      Referencia bancaria
+                      <span style={{ 
+                        color: bankReference.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Referencia bancaria
+                      </span>
                       <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} />
                     </label>
 
                     <label>
-                      Nombre del pagador
+                      <span style={{ 
+                        color: payerName.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Nombre del pagador
+                      </span>
                       <input value={payerName} onChange={(event) => setPayerName(event.target.value)} />
                     </label>
 
-                    <label className="full-row">
-                      Notas
-                      <textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
+                    <label>
+                      <span style={{ 
+                        color: paymentReference.trim() ? '#10b981' : '#94a3b8',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Código de pago (opcional)
+                      </span>
+                      <input 
+                        value={paymentReference} 
+                        onChange={(event) => setPaymentReference(event.target.value.toUpperCase())} 
+                        maxLength={6}
+                        style={{ fontFamily: 'Monaco, Consolas, monospace', letterSpacing: '1px' }}
+                      />
+                      <small style={{ display: 'block', marginTop: '4px', color: '#64748b', fontSize: '12px' }}>
+                        {account?.invoice.paymentReference ? (
+                          <>Código esperado: <strong>{account.invoice.paymentReference}</strong></>
+                        ) : null}
+                      </small>
+                    </label>
+
+                    <label>
+                      <span style={{ 
+                        color: originBank.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Banco origen
+                      </span>
+                      <input 
+                        value={originBank} 
+                        onChange={(event) => setOriginBank(event.target.value)} 
+                      />
+                    </label>
+
+                    <label>
+                      <span style={{ 
+                        color: destinationBank.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Banco destino
+                      </span>
+                      <input 
+                        value={destinationBank} 
+                        onChange={(event) => setDestinationBank(event.target.value)} 
+                      />
+                    </label>
+
+                    <label>
+                      <span style={{ 
+                        color: destinationAccount.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Cuenta destino
+                      </span>
+                      <input 
+                        value={destinationAccount} 
+                        onChange={(event) => setDestinationAccount(event.target.value)} 
+                      />
                     </label>
 
                     <label className="full-row">
-                      Adjuntar comprobante(s)
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.webp"
-                        multiple
-                        onChange={(event) => setAttachments(Array.from(event.target.files || []))}
-                      />
+                      <span style={{ 
+                        color: notes.trim() ? '#10b981' : '#dc2626',
+                        fontWeight: '600',
+                        transition: 'color 0.3s ease'
+                      }}>
+                        Notas
+                      </span>
+                      <textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
                     </label>
                   </div>
 
@@ -1487,6 +1816,130 @@ export default function BillingContractAccountPage() {
           </div>
         </section>
       ) : null}
+
+      {/* Modal de alerta crítica para cuenta no registrada */}
+      {criticalAlert ? (
+        <section
+          className="viewer-modal"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setCriticalAlert(null);
+            }
+          }}
+          style={{ zIndex: 10000 }}
+        >
+          <div 
+            className="viewer-panel reject-modal-panel" 
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              maxWidth: '550px',
+              border: '3px solid #dc2626',
+              boxShadow: '0 20px 25px -5px rgba(220, 38, 38, 0.3)'
+            }}
+          >
+            <div className="viewer-head" style={{ background: '#dc2626', color: 'white' }}>
+              <h2 style={{ color: 'white', margin: 0 }}>{criticalAlert.title}</h2>
+              <button 
+                type="button" 
+                className="btn" 
+                onClick={() => setCriticalAlert(null)}
+                style={{ background: 'white', color: '#dc2626' }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="viewer-body" style={{ padding: '24px' }}>
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600', 
+                  color: '#991b1b',
+                  marginBottom: '12px',
+                  lineHeight: '1.5'
+                }}>
+                  {criticalAlert.message}
+                </p>
+                <p style={{ 
+                  fontSize: '14px', 
+                  color: '#7f1d1d',
+                  marginBottom: '12px',
+                  lineHeight: '1.6'
+                }}>
+                  <strong>⚠️ Acción requerida:</strong> Por favor, verifique con el administrador que esta cuenta bancaria esté registrada en el sistema antes de procesar este pago.
+                </p>
+                <p style={{ 
+                  fontSize: '14px', 
+                  color: '#7f1d1d',
+                  marginBottom: '0',
+                  lineHeight: '1.6'
+                }}>
+                  <strong>🔒 Razón de seguridad:</strong> Solo se aceptan pagos a cuentas verificadas de Viajes Alma Nova para prevenir fraudes.
+                </p>
+              </div>
+
+              {criticalAlert.details ? (
+                <details style={{ 
+                  background: '#f9fafb', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  color: '#6b7280'
+                }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: '500', marginBottom: '8px' }}>
+                    Ver detalles técnicos
+                  </summary>
+                  <pre style={{ 
+                    whiteSpace: 'pre-wrap', 
+                    wordBreak: 'break-word',
+                    fontSize: '12px',
+                    fontFamily: 'Monaco, Consolas, monospace',
+                    margin: '0',
+                    color: '#374151'
+                  }}>
+                    {criticalAlert.details}
+                  </pre>
+                </details>
+              ) : null}
+
+              <div className="actions" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setCriticalAlert(null)}
+                  style={{ 
+                    width: '100%',
+                    background: '#dc2626',
+                    color: 'white',
+                    fontSize: '15px',
+                    padding: '12px'
+                  }}
+                >
+                  Entendido - Verificar con Admin
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Loading Modal Animado */}
+      <LoadingModal
+        isOpen={loadingModalOpen}
+        state={loadingModalState}
+        loadingMessage={loadingModalMessage}
+        successMessage={loadingModalSuccessMsg}
+        errorMessage={loadingModalSuccessMsg}
+        onClose={() => setLoadingModalOpen(false)}
+        autoCloseDelay={2000}
+      />
     </main>
   );
 }

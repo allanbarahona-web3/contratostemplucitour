@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppShellHeader } from "@/components/app-shell-header";
+import { VerticalNav } from "@/components/vertical-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Contratos App - Next",
-  description: "Migracion progresiva del frontend de contratos a Next.js",
+  title: "Contratos Alma Nova",
+  description: "Sistema de gestion de contratos y cobros",
 };
 
 export default function RootLayout({
@@ -28,8 +28,8 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <AppShellHeader />
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <VerticalNav />
         {children}
       </body>
     </html>

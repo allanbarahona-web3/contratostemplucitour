@@ -7,6 +7,8 @@ import {
   rejectBillingCreditNote,
   type BillingPendingCreditNoteItem,
 } from "@/lib/billing-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { PageLoader } from "@/components/loading-spinner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -27,23 +29,21 @@ const formatDateTime = (value: string): string => {
 export default function AdminCreditNotesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [items, setItems] = useState<BillingPendingCreditNoteItem[]>([]);
   const [actionBusy, setActionBusy] = useState("");
-  const [statusText, setStatusText] = useState("");
+  const { toasts, showSuccess, showError, dismissToast } = useToast();
 
   const [rejectModalId, setRejectModalId] = useState("");
   const [rejectReason, setRejectReason] = useState("");
 
   const load = async () => {
     setLoading(true);
-    setError("");
     try {
       const result = await listBillingPendingCreditNotes({ q: q.trim() || undefined, limit: 120 });
       setItems(result);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar cola de aprobacion.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar cola de aprobacion.");
     } finally {
       setLoading(false);
     }
@@ -71,10 +71,10 @@ export default function AdminCreditNotesPage() {
     setActionBusy(`approve:${item.id}`);
     try {
       await approveBillingCreditNote(item.id, "Aprobada por admin");
-      setStatusText(`Nota ${item.creditNoteNumber} aprobada y aplicada.`);
+      showSuccess(`Nota ${item.creditNoteNumber} aprobada y aplicada.`);
       await load();
     } catch (actionError) {
-      setStatusText(actionError instanceof Error ? actionError.message : "No se pudo aprobar.");
+      showError(actionError instanceof Error ? actionError.message : "No se pudo aprobar.");
     } finally {
       setActionBusy("");
     }
@@ -84,19 +84,19 @@ export default function AdminCreditNotesPage() {
     const id = String(rejectModalId || "").trim();
     const reason = String(rejectReason || "").trim();
     if (!id || !reason) {
-      setStatusText("Debes indicar motivo de rechazo.");
+      showError("Debes indicar motivo de rechazo.");
       return;
     }
 
     setActionBusy(`reject:${id}`);
     try {
       await rejectBillingCreditNote(id, reason);
-      setStatusText("Nota de credito rechazada.");
+      showSuccess("Nota de credito rechazada.");
       setRejectModalId("");
       setRejectReason("");
       await load();
     } catch (actionError) {
-      setStatusText(actionError instanceof Error ? actionError.message : "No se pudo rechazar.");
+      showError(actionError instanceof Error ? actionError.message : "No se pudo rechazar.");
     } finally {
       setActionBusy("");
     }
@@ -104,9 +104,12 @@ export default function AdminCreditNotesPage() {
 
   return (
     <main className="app-shell">
-      <section className="card contracts-card">
-        <h1>Cola Admin - Notas de Credito</h1>
-        <p className="muted">Solo admin puede aprobar o rechazar. Ninguna nota pendiente impacta saldos.</p>
+      {loading && items.length === 0 ? (
+        <PageLoader />
+      ) : (
+        <section className="card contracts-card">
+          <h1>Cola Admin - Notas de Credito</h1>
+          <p className="muted">Solo admin puede aprobar o rechazar. Ninguna nota pendiente impacta saldos.</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>
@@ -124,9 +127,6 @@ export default function AdminCreditNotesPage() {
             {loading ? "Cargando..." : "Actualizar"}
           </button>
         </div>
-
-        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
-        {statusText ? <p className="status-line">{statusText}</p> : null}
 
         <div className="history-table-wrap" style={{ marginTop: 14 }}>
           <table className="history-table">
@@ -194,6 +194,7 @@ export default function AdminCreditNotesPage() {
           </table>
         </div>
       </section>
+      )}
 
       {rejectModalId ? (
         <section className="viewer-modal" onClick={() => setRejectModalId("")}>
@@ -228,6 +229,8 @@ export default function AdminCreditNotesPage() {
           </div>
         </section>
       ) : null}
+
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

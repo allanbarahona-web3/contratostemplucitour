@@ -22,6 +22,29 @@ export class ReportPaymentDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  originBank?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  destinationBank?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  destinationAccount?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  @Matches(/^(?=.*[A-Z])(?=.*[0-9])[A-Z0-9]{6}$/, { 
+    message: 'paymentReference debe ser un código alfanumérico de 6 caracteres (mínimo 1 letra y 1 número)' 
+  })
+  paymentReference?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(1000)
   notes?: string;
 

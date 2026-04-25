@@ -30,10 +30,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
 
-    if (!user || !user.isActive) {
+    // User doesn't exist
+    if (!user) {
       throw new UnauthorizedException("Usuario no autorizado");
     }
 
+    // User is suspended - specific message for this case
+    if (!user.isActive) {
+      throw new UnauthorizedException("Tu usuario ha sido suspendido. Contacta al administrador.");
+    }
+
+    // Session invalidated (role change, explicit logout, etc.)
     if (!payload.jti || !user.activeJti || payload.jti !== user.activeJti) {
       throw new UnauthorizedException("Sesion invalida o reemplazada por otro inicio de sesion");
     }

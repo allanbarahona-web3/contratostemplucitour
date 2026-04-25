@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -225,6 +226,24 @@ export class BillingController {
     return this.billingService.rejectPayment(req.user, paymentId, dto.reason, req.ip || null, userAgent || null);
   }
 
+  @Get("payments/:paymentId/attachments/:attachmentId")
+  async getPaymentAttachment(
+    @Req() req: { user: { id: string; email: string; fullName: string; role: string } },
+    @Param("paymentId") paymentId: string,
+    @Param("attachmentId") attachmentId: string,
+    @Res() res: any,
+  ) {
+    const file = await this.billingService.getPaymentAttachment(req.user, paymentId, attachmentId);
+    
+    res.set({
+      "Content-Type": file.mimeType,
+      "Content-Disposition": `inline; filename="${encodeURIComponent(file.fileName)}"`,
+      "Content-Length": file.buffer.length,
+    });
+    
+    res.send(file.buffer);
+  }
+
   @Post("receipts/:receiptId/approve-send")
   approveAndSendReceipt(
     @Req()
@@ -349,8 +368,36 @@ export class BillingController {
     });
   }
 
+  @Get("admin/pending-counts")
+  @Roles("ADMIN", "CONTADOR", "AGENTE")
+  @UseGuards(RolesGuard)
+  async getPendingCounts(): Promise<{ pendingReceipts: number; pendingCreditNotes: number }> {
+    const pendingReceipts = await this.billingService.getPendingPaymentsCount();
+    const pendingCreditNotes = await this.billingService.getPendingCreditNotesCount();
+    return { pendingReceipts, pendingCreditNotes };
+  }
+
+  @Get("admin/dashboard-metrics")
+  @Roles("ADMIN", "CONTADOR")
+  @UseGuards(RolesGuard)
+  getDashboardMetrics(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Query("period") period?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.billingService.getDashboardMetrics(req.user, { 
+      period: period || "month",
+      from,
+      to,
+    });
+  }
+
   @Get("admin/reports")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "CONTADOR")
   @UseGuards(RolesGuard)
   getAdminReports(
     @Req()

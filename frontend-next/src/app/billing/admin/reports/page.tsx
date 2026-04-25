@@ -2,6 +2,8 @@
 
 import { getStoredSession, getStoredToken } from "@/lib/auth-api";
 import { getBillingAdminReports, type BillingAdminReportData } from "@/lib/billing-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { PageLoader } from "@/components/loading-spinner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -29,20 +31,63 @@ const formatDate = (value?: string | null): string => {
   });
 };
 
+const getTodayISO = (): string => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+};
+
+const getDateDaysAgo = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split("T")[0];
+};
+
+const getStartOfYear = (): string => {
+  const date = new Date();
+  date.setMonth(0, 1);
+  return date.toISOString().split("T")[0];
+};
+
 export default function AdminReportsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [q, setQ] = useState("");
   const [invoiceStatus, setInvoiceStatus] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
   const [data, setData] = useState<BillingAdminReportData | null>(null);
+  const { toasts, showSuccess, showError, dismissToast } = useToast();
+
+  const applyQuickRange = (range: "today" | "week" | "month" | "year" | "all") => {
+    const today = getTodayISO();
+    
+    switch (range) {
+      case "today":
+        setFrom(today);
+        setTo(today);
+        break;
+      case "week":
+        setFrom(getDateDaysAgo(7));
+        setTo(today);
+        break;
+      case "month":
+        setFrom(getDateDaysAgo(30));
+        setTo(today);
+        break;
+      case "year":
+        setFrom(getStartOfYear());
+        setTo(today);
+        break;
+      case "all":
+        setFrom("");
+        setTo("");
+        break;
+    }
+  };
 
   const load = async () => {
     setLoading(true);
-    setError("");
     try {
       const result = await getBillingAdminReports({
         from: from || undefined,
@@ -54,8 +99,9 @@ export default function AdminReportsPage() {
         limitPayments: 900,
       });
       setData(result);
+      showSuccess("Reporte actualizado correctamente.");
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar reporte.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar reporte.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +116,7 @@ export default function AdminReportsPage() {
 
     const session = getStoredSession();
     const role = String(session?.user?.role || "").toUpperCase();
-    if (role !== "ADMIN") {
+    if (!["ADMIN", "CONTADOR"].includes(role)) {
       router.replace("/billing");
       return;
     }
@@ -81,9 +127,59 @@ export default function AdminReportsPage() {
 
   return (
     <main className="app-shell">
-      <section className="card contracts-card">
-        <h1>Reportes Contables</h1>
-        <p className="muted">Vista para revision interna y envio manual al contador.</p>
+      {loading && data === null ? (
+        <PageLoader />
+      ) : (
+        <section className="card contracts-card">
+          <h1>Reportes Contables</h1>
+          <p className="muted">Vista para revisión interna y envío manual al contador.</p>
+
+        {/* Botones de Rango Rápido */}
+        <div style={{ marginTop: "16px", marginBottom: "12px", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e5e7eb" }}>
+          <p style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", color: "#374151" }}>📅 Rangos rápidos:</p>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => applyQuickRange("today")}
+              style={{ fontSize: "13px", padding: "6px 12px" }}
+            >
+              Hoy
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => applyQuickRange("week")}
+              style={{ fontSize: "13px", padding: "6px 12px" }}
+            >
+              Última semana (7 días)
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => applyQuickRange("month")}
+              style={{ fontSize: "13px", padding: "6px 12px" }}
+            >
+              Último mes (30 días)
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => applyQuickRange("year")}
+              style={{ fontSize: "13px", padding: "6px 12px" }}
+            >
+              Este año
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => applyQuickRange("all")}
+              style={{ fontSize: "13px", padding: "6px 12px" }}
+            >
+              Todo (sin filtro)
+            </button>
+          </div>
+        </div>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>
@@ -134,8 +230,6 @@ export default function AdminReportsPage() {
             {loading ? "Cargando..." : "Actualizar reporte"}
           </button>
         </div>
-
-        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
 
         {data ? (
           <>
@@ -310,6 +404,9 @@ export default function AdminReportsPage() {
           </>
         ) : null}
       </section>
+      )}
+
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

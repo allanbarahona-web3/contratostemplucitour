@@ -10,6 +10,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
+import * as sharp from "sharp";
 import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
@@ -75,6 +76,116 @@ export class ContractsService {
     const unique = this.randomHex(2);
 
     return `LUC-${yyyy}${mm}${dd}-${hh}${min}${ss}${ms}-${unique}`;
+  }
+
+  /**
+   * Genera un código alfanumérico de 6 caracteres para identificar pagos.
+   * GARANTIZA que sea mixto: al menos 1 letra Y al menos 1 número.
+   * Formato: mayúsculas y números (sin I, O, 0, 1 para evitar confusión).
+   * Ejemplo: "A3B7K9", "XY5Z2E"
+   */
+  private generatePaymentReference(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sin I, O, 0, 1
+    const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const numbers = '23456789';
+    
+    let result = '';
+    let hasLetter = false;
+    let hasNumber = false;
+    const maxAttempts = 100;
+    let attempts = 0;
+    
+    // Generar hasta que tenga al menos 1 letra Y 1 número
+    while ((!hasLetter || !hasNumber) && attempts < maxAttempts) {
+      result = '';
+      hasLetter = false;
+      hasNumber = false;
+      
+      for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      // Verificar que tenga al menos 1 letra y 1 número
+      hasLetter = /[A-Z]/.test(result);
+      hasNumber = /[0-9]/.test(result);
+      attempts++;
+    }
+    
+    // Fallback: si después de 100 intentos no cumple, forzar formato mixto
+    if (!hasLetter || !hasNumber) {
+      // Generar 3 letras + 3 números y mezclar
+      const lettersPart = Array.from({ length: 3 }, () => 
+        letters.charAt(Math.floor(Math.random() * letters.length))
+      );
+      const numbersPart = Array.from({ length: 3 }, () => 
+        numbers.charAt(Math.floor(Math.random() * numbers.length))
+      );
+      
+      // Mezclar aleatoriamente
+      const mixed = [...lettersPart, ...numbersPart];
+      for (let i = mixed.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+      }
+      result = mixed.join('');
+    }
+    
+    return result;
+  }
+
+  /**
+   * Genera un código de pago único intentando hasta maxAttempts veces.
+   * Retorna el código o lanza error si no puede generar uno único.
+   */
+  private async generateUniquePaymentReference(maxAttempts = 50): Promise<string> {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const paymentRef = this.generatePaymentReference();
+      
+      // Verificar si ya existe
+      const existing = await (this.prisma as any).contract.findUnique({
+        where: { paymentReference: paymentRef },
+      });
+
+      if (!existing) {
+        return paymentRef;
+      }
+    }
+
+    throw new InternalServerErrorException(
+      `No se pudo generar un código de pago único después de ${maxAttempts} intentos.`
+    );
+  }
+
+  /**
+   * Inyecta el código de pago en el HTML del contrato,
+   * agregándolo en la tabla de metadata justo después del número de contrato.
+   */
+  private injectPaymentReferenceIntoHtml(html: string, paymentReference: string): string {
+    // Buscar la tabla contract-meta y agregar una fila con el código de pago
+    const searchPattern = /<tr><td>Numero de contrato:<\/td><td>[^<]+<\/td><\/tr>/i;
+    
+    if (!searchPattern.test(html)) {
+      this.logger.warn('No se encontró la tabla contract-meta en el HTML, el código de pago no se inyectó');
+      return html;
+    }
+
+    // Inyectar justo después de la fila "Numero de contrato"
+    return html.replace(
+      searchPattern,
+      (match) => `${match}\n  <tr><td>Código de pago:</td><td><strong>${this.escapeHtml(paymentReference)}</strong></td></tr>`
+    );
+  }
+
+  /**
+   * Escapa caracteres especiales HTML para evitar inyección
+   */
+  private escapeHtml(text: string): string {
+    return String(text ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private getSpacesConfig() {
@@ -333,6 +444,55 @@ export class ContractsService {
         ContentType: params.contentType,
       }),
     );
+  }
+
+  private async convertImageToWebP(params: {
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
+  }): Promise<{
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
+  }> {
+    // Si es PDF, retornar sin cambios
+    if (params.mimetype === "application/pdf") {
+      return params;
+    }
+
+    // Si ya es WebP, retornar sin cambios
+    if (params.mimetype === "image/webp") {
+      return params;
+    }
+
+    // Convertir JPEG/PNG a WebP
+    if (params.mimetype === "image/jpeg" || params.mimetype === "image/png") {
+      try {
+        const webpBuffer = await sharp(params.buffer)
+          .webp({ quality: 85 }) // 85% calidad para balance entre tamaño y calidad
+          .toBuffer();
+
+        // Cambiar la extensión del nombre del archivo
+        const nameWithoutExt = params.originalname.replace(/\.(jpe?g|png)$/i, "");
+        const newName = `${nameWithoutExt}.webp`;
+
+        return {
+          buffer: webpBuffer,
+          mimetype: "image/webp",
+          originalname: newName,
+          size: webpBuffer.length,
+        };
+      } catch (error) {
+        // Si falla la conversión, retornar el archivo original
+        console.error("Error convirtiendo imagen a WebP:", error);
+        return params;
+      }
+    }
+
+    // Para otros tipos, retornar sin cambios
+    return params;
   }
 
   private async buildSignedObjectUrl(objectKey: string, expiresInSeconds = 900) {
@@ -1134,8 +1294,18 @@ export class ContractsService {
     const m = this.pad(now.getMonth() + 1);
     const d = this.pad(now.getDate());
     const baseFolder = `contracts/${y}/${m}/${d}/${this.sanitizeSegment(contractNumber)}`;
+    
+    // Generar código de pago único ANTES de renderizar el PDF
+    const paymentReference = await this.generateUniquePaymentReference();
+    
+    // Inyectar el código de pago en el HTML del contrato
+    const htmlWithPaymentRef = this.injectPaymentReferenceIntoHtml(
+      dto.contractHtml,
+      paymentReference
+    );
+    
     const { pdfBuffer, signatureAnchors } =
-      await this.pdfRenderService.renderContractToBuffer(dto.contractHtml);
+      await this.pdfRenderService.renderContractToBuffer(htmlWithPaymentRef);
 
     const pdfKey = `${baseFolder}/contract.pdf`;
     const htmlKey = `${baseFolder}/contract.html`;
@@ -1149,7 +1319,7 @@ export class ContractsService {
     await this.uploadToSpaces({
       objectKey: htmlKey,
       contentType: "text/html; charset=utf-8",
-      body: Buffer.from(dto.contractHtml, "utf-8"),
+      body: Buffer.from(htmlWithPaymentRef, "utf-8"),
     });
 
     const enrichedPayload = {
@@ -1172,25 +1342,29 @@ export class ContractsService {
         continue;
       }
 
-      const safeName = this.sanitizeSegment(doc.originalname || `document-${index + 1}`);
+      // Convertir imágenes a WebP automáticamente
+      const processedDoc = await this.convertImageToWebP(doc);
+
+      const safeName = this.sanitizeSegment(processedDoc.originalname || `document-${index + 1}`);
       const objectKey = `${baseFolder}/docs/${index + 1}-${safeName}`;
       await this.uploadToSpaces({
         objectKey,
-        contentType: doc.mimetype || "application/octet-stream",
-        body: doc.buffer,
+        contentType: processedDoc.mimetype || "application/octet-stream",
+        body: processedDoc.buffer,
       });
 
       uploadedDocuments.push({
-        originalFileName: doc.originalname || `document-${index + 1}`,
+        originalFileName: processedDoc.originalname || `document-${index + 1}`,
         objectKey,
-        mimeType: doc.mimetype || "application/octet-stream",
-        size: doc.size || doc.buffer.length,
+        mimeType: processedDoc.mimetype || "application/octet-stream",
+        size: processedDoc.size || processedDoc.buffer.length,
       });
     }
 
     const archived = await (this.prisma as any).contract.create({
       data: {
         contractNumber,
+        paymentReference,
         clientId: client.id,
         destination: dto.destination.trim(),
         status: CONTRACT_STATUS_PENDING_SIGNATURE,
@@ -1235,6 +1409,7 @@ export class ContractsService {
     return {
       id: archived.id,
       contractNumber: archived.contractNumber,
+      paymentReference: archived.paymentReference,
       status: archived.status,
       documentCount: archived.documents.length,
       createdAt: archived.createdAt,
@@ -1512,11 +1687,19 @@ export class ContractsService {
       body: signedPdfBuffer,
     });
 
-    const sigPngKey = `${baseFolder}/signatures/${this.sanitizeSegment(signer.key)}.png`;
+    // Convertir firma PNG a WebP
+    const processedSignature = await this.convertImageToWebP({
+      buffer: pngBuffer,
+      mimetype: "image/png",
+      originalname: `${this.sanitizeSegment(signer.key)}.png`,
+      size: pngBuffer.length,
+    });
+
+    const sigPngKey = `${baseFolder}/signatures/${processedSignature.originalname}`;
     await this.uploadToSpaces({
       objectKey: sigPngKey,
-      contentType: "image/png",
-      body: pngBuffer,
+      contentType: processedSignature.mimetype,
+      body: processedSignature.buffer,
     });
 
     const now = new Date();
@@ -1855,6 +2038,7 @@ export class ContractsService {
           id: item.id,
           draftId: null,
           contractNumber: item.contractNumber,
+          paymentReference: item.paymentReference || null,
           status: item.status || CONTRACT_STATUS_PENDING_SIGNATURE,
           clientFullName: item.client?.fullName || "-",
           clientIdNumber: item.client?.idNumber || "-",
@@ -1926,6 +2110,7 @@ export class ContractsService {
     return {
       id: contract.id,
       contractNumber: contract.contractNumber,
+      paymentReference: contract.paymentReference || null,
       status: contract.status || CONTRACT_STATUS_PENDING_SIGNATURE,
       pdf: {
         fileName: contract.pdfFileName,

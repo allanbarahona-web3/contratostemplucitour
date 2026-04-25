@@ -2,6 +2,8 @@
 
 import { getStoredToken } from "@/lib/auth-api";
 import { listBillingContracts, type BillingListItem } from "@/lib/billing-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { PageLoader } from "@/components/loading-spinner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -21,19 +23,18 @@ const formatDate = (value?: string | null): string => {
 export default function BillingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [items, setItems] = useState<BillingListItem[]>([]);
+  const { toasts, showError, dismissToast } = useToast();
 
   const load = async (search = query, statusValue = status) => {
     setLoading(true);
-    setError("");
     try {
       const list = await listBillingContracts({ q: search, status: statusValue, limit: 60 });
       setItems(list);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar estados de cuenta.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar estados de cuenta.");
     } finally {
       setLoading(false);
     }
@@ -50,8 +51,29 @@ export default function BillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query || status) {
+        void load();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, status]);
+
+  if (loading && items.length === 0) {
+    return (
+      <main className="app-shell">
+        <PageLoader message="Cargando estados de cuenta..." />
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
+      
       <section className="card contracts-card">
         <h1>Estados de cuenta</h1>
         <p className="muted">Panel operativo de estados de cuenta por contrato, pagos reportados y saldos pendientes.</p>
@@ -85,8 +107,6 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
-
         <div className="history-table-wrap" style={{ marginTop: 14 }}>
           <table className="history-table">
             <thead>
@@ -105,7 +125,13 @@ export default function BillingPage() {
               {!loading && items.length === 0 ? (
                 <tr>
                   <td colSpan={8}>
-                    <p className="history-empty">No hay expedientes de cobro.</p>
+                    <div className="empty-state" style={{ padding: "40px 20px" }}>
+                      <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>💰</div>
+                      <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>No hay estados de cuenta</h3>
+                      <p className="muted" style={{ margin: 0 }}>
+                        {query || status ? "No se encontraron resultados con los filtros aplicados." : "Los estados de cuenta aparecerán aquí automáticamente al firmar contratos."}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : null}

@@ -3,115 +3,336 @@
 import {
   adminCreateUser,
   adminListUsers,
+  adminResetPassword,
   adminUpdateUser,
   getStoredSession,
   getStoredToken,
   type AdminUserListItem,
 } from "@/lib/auth-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { ConfirmModal } from "@/components/confirm-modal";
+import { PageLoader } from "@/components/loading-spinner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const roleLabel = (role: string) => (String(role || "").toUpperCase() === "ADMIN" ? "ADMIN" : "AGENT");
+const roleLabel = (role: string) => {
+  const normalized = String(role || "").toUpperCase();
+  if (normalized === "ADMIN") return "ADMIN";
+  if (normalized === "CONTADOR") return "CONTADOR";
+  return "AGENT";
+};
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const session = getStoredSession();
-  const role = String(session?.user?.role || "").toUpperCase();
-  const isAdmin = role === "ADMIN";
-
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
   const [items, setItems] = useState<AdminUserListItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+  const { toasts, showSuccess, showError, dismissToast } = useToast();
 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [newRole, setNewRole] = useState<"AGENT" | "ADMIN">("AGENT");
+  const [newRole, setNewRole] = useState<"AGENT" | "ADMIN" | "CONTADOR">("AGENT");
+
+  // Modal de contraseña temporal
+  const [resetModalUser, setResetModalUser] = useState<{
+    fullName: string;
+    email: string;
+    temporaryPassword: string;
+  } | null>(null);
+
+  // Modal de edición
+  const [editModalUser, setEditModalUser] = useState<{
+    id: string;
+    fullName: string;
+    email: string;
+  } | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+  // Modal de confirmación
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    variant?: "primary" | "danger" | "warning";
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  const showConfirm = (config: Omit<typeof confirmModal, "isOpen">) => {
+    setConfirmModal({ ...config, isOpen: true });
+  };
+
+  const closeConfirm = () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
+  };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const load = async () => {
     setLoading(true);
-    setError("");
     try {
       const users = await adminListUsers();
       setItems(users);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar usuarios.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar usuarios.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!mounted) return;
+
     const token = getStoredToken();
     if (!token) {
       router.replace("/");
       return;
     }
 
-    if (!isAdmin) {
+    const session = getStoredSession();
+    const role = String(session?.user?.role || "").toUpperCase();
+    if (role !== "ADMIN") {
       router.replace("/contracts");
       return;
     }
 
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, [router, mounted]);
 
   const onCreate = async () => {
     if (saving) return;
+
+    const trimmedEmail = String(email || "").trim();
+    const trimmedFullName = String(fullName || "").trim();
+    const trimmedPassword = String(password || "");
+
+    // Validaciones del lado del cliente
+    if (!trimmedEmail || !trimmedFullName || !trimmedPassword) {
+      showError("Todos los campos son obligatorios");
+      return;
+    }
+
+    if (trimmedPassword.length < 8) {
+      showError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    if (!/[A-Z]/.test(trimmedPassword)) {
+      showError("La contraseña debe incluir al menos una letra mayúscula");
+      return;
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/`~]/.test(trimmedPassword)) {
+      showError("La contraseña debe incluir al menos un carácter especial (!@#$%&*...)");
+      return;
+    }
+
     setSaving(true);
-    setError("");
-    setStatus("");
     try {
-      await adminCreateUser({
-        email: String(email || "").trim(),
-        fullName: String(fullName || "").trim(),
-        password: String(password || ""),
+      const newUser = await adminCreateUser({
+        email: trimmedEmail,
+        fullName: trimmedFullName,
+        password: trimmedPassword,
         role: newRole,
       });
-      setStatus("Usuario creado correctamente.");
+      
+      // Add new user to the list immediately (at the top since it's newest)
+      setItems((prevItems) => [newUser, ...prevItems]);
+      
+      showSuccess("Usuario creado correctamente.");
+      
+      // Clear form
       setEmail("");
       setFullName("");
       setPassword("");
       setNewRole("AGENT");
-      await load();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "No se pudo crear el usuario.");
+      showError(createError instanceof Error ? createError.message : "No se pudo crear el usuario.");
     } finally {
       setSaving(false);
     }
   };
 
   const onToggleActive = async (item: AdminUserListItem) => {
+    const action = item.isActive ? "suspender" : "activar";
+    
+    const message = action === "suspender"
+      ? `¿${action.charAt(0).toUpperCase() + action.slice(1)} a ${item.fullName}?\n\nEl usuario no podrá iniciar sesión pero toda su información se mantendrá intacta (contratos, pagos, historial).`
+      : `¿${action.charAt(0).toUpperCase() + action.slice(1)} a ${item.fullName}?\n\nEl usuario podrá volver a iniciar sesión normalmente.`;
+    
+    showConfirm({
+      title: action === "suspender" ? "Suspender Usuario" : "Activar Usuario",
+      message,
+      confirmText: action === "suspender" ? "Suspender" : "Activar",
+      variant: action === "suspender" ? "danger" : "primary",
+      onConfirm: async () => {
+        closeConfirm();
+        await performToggleActive(item, action);
+      },
+    });
+  };
+
+  const performToggleActive = async (item: AdminUserListItem, action: string) => {
     try {
-      await adminUpdateUser(item.id, { isActive: !item.isActive });
-      await load();
+      const updated = await adminUpdateUser(item.id, { isActive: !item.isActive });
+      
+      // Update the item in the list immediately
+      setItems((prevItems) =>
+        prevItems.map((i) => (i.id === item.id ? { ...i, isActive: updated.isActive } : i))
+      );
+      
+      showSuccess(`Usuario ${action === "suspender" ? "suspendido" : "activado"} correctamente.`);
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "No se pudo actualizar estado.");
+      const errorMessage = updateError instanceof Error ? updateError.message : "No se pudo actualizar estado.";
+      showError(errorMessage);
+      
+      // Reload to ensure consistency if there was an error
+      await load();
     }
   };
 
-  const onToggleRole = async (item: AdminUserListItem) => {
-    const nextRole: "AGENT" | "ADMIN" = roleLabel(item.role) === "ADMIN" ? "AGENT" : "ADMIN";
+  const onChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR") => {
+    const currentRole = roleLabel(item.role);
+    
+    if (newRole === currentRole) {
+      return; // No hay cambio
+    }
+
+    showConfirm({
+      title: "Cambiar Rol de Usuario",
+      message: `¿Cambiar rol de ${item.fullName} de ${currentRole} a ${newRole}?`,
+      confirmText: "Cambiar Rol",
+      variant: "primary",
+      onConfirm: async () => {
+        closeConfirm();
+        await performChangeRole(item, newRole);
+      },
+    });
+  };
+
+  const performChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR") => {
     try {
-      await adminUpdateUser(item.id, { role: nextRole });
-      await load();
+      const updated = await adminUpdateUser(item.id, { role: newRole });
+      
+      // Update the item in the list immediately
+      setItems((prevItems) =>
+        prevItems.map((i) => (i.id === item.id ? { ...i, role: updated.role } : i))
+      );
+      
+      showSuccess(`Rol cambiado a ${newRole} correctamente.`);
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "No se pudo actualizar rol.");
+      const errorMessage = updateError instanceof Error ? updateError.message : "No se pudo actualizar rol.";
+      showError(errorMessage);
+      
+      // Reload to ensure consistency
+      await load();
     }
   };
 
-  if (!isAdmin) {
+  const onResetPassword = async (item: AdminUserListItem) => {
+    showConfirm({
+      title: "Resetear Contraseña",
+      message: `¿Generar contraseña temporal para ${item.fullName}?\n\nEl usuario deberá cambiar la contraseña en su próximo inicio de sesión.`,
+      confirmText: "Generar Contraseña",
+      variant: "warning",
+      onConfirm: async () => {
+        closeConfirm();
+        await performResetPassword(item);
+      },
+    });
+  };
+
+  const performResetPassword = async (item: AdminUserListItem) => {
+    try {
+      const result = await adminResetPassword(item.id);
+      setResetModalUser({
+        fullName: result.fullName,
+        email: result.email,
+        temporaryPassword: result.temporaryPassword,
+      });
+      showSuccess("Contraseña temporal generada correctamente.");
+      // No need to reload - password change doesn't affect visible fields
+    } catch (resetError) {
+      showError(resetError instanceof Error ? resetError.message : "No se pudo resetear la contraseña.");
+    }
+  };
+
+  const onEditUser = (item: AdminUserListItem) => {
+    setEditModalUser({
+      id: item.id,
+      fullName: item.fullName,
+      email: item.email,
+    });
+    setEditFullName(item.fullName);
+    setEditEmail(item.email);
+  };
+
+  const closeEditModal = () => {
+    setEditModalUser(null);
+    setEditFullName("");
+    setEditEmail("");
+  };
+
+  const onSaveEdit = async () => {
+    if (!editModalUser) return;
+    if (saving) return;
+
+    const trimmedName = String(editFullName || "").trim();
+    const trimmedEmail = String(editEmail || "").trim();
+
+    if (!trimmedName || !trimmedEmail) {
+      showError("Nombre y correo son obligatorios.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await adminUpdateUser(editModalUser.id, {
+        fullName: trimmedName,
+        email: trimmedEmail,
+      });
+
+      // Update the item in the list immediately
+      setItems((prevItems) =>
+        prevItems.map((i) =>
+          i.id === editModalUser.id ? { ...i, fullName: updated.fullName, email: updated.email } : i
+        )
+      );
+
+      showSuccess("Usuario actualizado correctamente.");
+      closeEditModal();
+    } catch (updateError) {
+      const errorMessage = updateError instanceof Error ? updateError.message : "No se pudo actualizar el usuario.";
+      showError(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!mounted) {
     return null;
   }
 
   return (
     <main className="app-shell">
-      <section className="card contracts-card">
-        <h1>Admin - Usuarios</h1>
-        <p className="muted">Solo ADMIN puede crear usuarios y otorgar permisos de vistas administrativas.</p>
+      {loading && items.length === 0 ? (
+        <PageLoader />
+      ) : (
+        <section className="card contracts-card">
+          <h1>Admin - Usuarios</h1>
+          <p className="muted">Roles disponibles: ADMIN (acceso total), CONTADOR (facturación y reportes), AGENT (solo formularios).</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>
@@ -124,12 +345,22 @@ export default function AdminUsersPage() {
           </label>
           <label>
             Password temporal
-            <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} />
+            <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" />
+            <p style={{ 
+              fontSize: "0.85rem", 
+              color: "#6b7280", 
+              marginTop: "6px",
+              marginBottom: "0",
+              lineHeight: "1.4"
+            }}>
+              • Mínimo 8 caracteres • Una mayúscula • Un carácter especial (!@#$%&*...)
+            </p>
           </label>
           <label>
             Rol
-            <select value={newRole} onChange={(event) => setNewRole((event.target.value as "AGENT" | "ADMIN") || "AGENT")}>
+            <select value={newRole} onChange={(event) => setNewRole((event.target.value as "AGENT" | "ADMIN" | "CONTADOR") || "AGENT")}>
               <option value="AGENT">AGENT</option>
+              <option value="CONTADOR">CONTADOR</option>
               <option value="ADMIN">ADMIN</option>
             </select>
           </label>
@@ -139,9 +370,6 @@ export default function AdminUsersPage() {
             </button>
           </div>
         </div>
-
-        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
-        {status ? <p className="status-line">{status}</p> : null}
 
         <div className="history-table-wrap" style={{ marginTop: 14 }}>
           <table className="history-table">
@@ -162,15 +390,89 @@ export default function AdminUsersPage() {
                 <tr key={item.id}>
                   <td>{item.fullName}</td>
                   <td>{item.email}</td>
-                  <td>{roleLabel(item.role)}</td>
-                  <td>{item.isActive ? "SI" : "NO"}</td>
                   <td>
-                    <div className="actions" style={{ marginTop: 0 }}>
-                      <button type="button" className="btn btn-secondary" onClick={() => void onToggleRole(item)}>
-                        Cambiar a {roleLabel(item.role) === "ADMIN" ? "AGENT" : "ADMIN"}
+                    <select
+                      value={roleLabel(item.role)}
+                      onChange={(e) => void onChangeRole(item, e.target.value as "AGENT" | "ADMIN" | "CONTADOR")}
+                      style={{
+                        padding: "8px 12px",
+                        fontSize: "0.9rem",
+                        border: "2px solid #e5e7eb",
+                        borderRadius: "8px",
+                        background: "white",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        color: roleLabel(item.role) === "ADMIN" ? "#7c3aed" : roleLabel(item.role) === "CONTADOR" ? "#2563eb" : "#059669",
+                        transition: "all 0.2s",
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = "#3b82f6";
+                        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = "#e5e7eb";
+                        e.currentTarget.style.boxShadow = "none";
+                      }}
+                    >
+                      <option value="AGENT">AGENTE</option>
+                      <option value="CONTADOR">CONTADOR</option>
+                      <option value="ADMIN">ADMIN</option>
+                    </select>
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 12px",
+                        borderRadius: "12px",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        background: item.isActive ? "#d1fae5" : "#fef3c7",
+                        color: item.isActive ? "#065f46" : "#92400e",
+                      }}
+                    >
+                      {item.isActive ? "✓ Activo" : "⏸ Suspendido"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="actions" style={{ marginTop: 0, gap: "8px" }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => onEditUser(item)} 
+                        title="Editar nombre y correo"
+                        style={{
+                          background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                          color: "white",
+                          border: "none",
+                        }}
+                      >
+                        ✏️ Editar
                       </button>
-                      <button type="button" className="btn btn-secondary" onClick={() => void onToggleActive(item)}>
-                        {item.isActive ? "Desactivar" : "Activar"}
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => void onResetPassword(item)} 
+                        title="Generar contraseña temporal"
+                        style={{
+                          background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                          color: "white",
+                          border: "none",
+                        }}
+                      >
+                        🔑 Resetear
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={() => void onToggleActive(item)}
+                        style={{
+                          background: item.isActive ? "#ef4444" : "#10b981",
+                          color: "white",
+                          border: "none",
+                        }}
+                      >
+                        {item.isActive ? "⏸ Suspender" : "▶ Activar"}
                       </button>
                     </div>
                   </td>
@@ -180,6 +482,494 @@ export default function AdminUsersPage() {
           </table>
         </div>
       </section>
+      )}
+
+      {/* Modal de Edición */}
+      {editModalUser && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            animation: "fadeIn 0.2s ease-out",
+          }}
+          onClick={closeEditModal}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "16px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              maxWidth: "520px",
+              width: "90%",
+              padding: "0",
+              position: "relative",
+              overflow: "hidden",
+              animation: "slideUp 0.3s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header con gradiente */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                padding: "32px 32px 24px 32px",
+                color: "white",
+                position: "relative",
+              }}
+            >
+              <button
+                onClick={closeEditModal}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                  color: "white",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  background: "rgba(255, 255, 255, 0.2)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.8rem",
+                  marginBottom: "16px",
+                }}
+              >
+                ✏️
+              </div>
+
+              <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700 }}>
+                Editar Usuario
+              </h2>
+              <p style={{ margin: "8px 0 0 0", opacity: 0.95, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                Actualiza el nombre o correo del usuario.
+              </p>
+            </div>
+
+            {/* Contenido */}
+            <div style={{ padding: "32px" }}>
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    color: "#6b7280",
+                    marginBottom: "8px",
+                    fontWeight: 600,
+                  }}
+                >
+                  👤 Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Ej: Juan Pérez"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "1rem",
+                    border: "2px solid #e5e7eb",
+                    borderRadius: "10px",
+                    outline: "none",
+                    transition: "all 0.2s",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#3b82f6";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "28px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "0.85rem",
+                    color: "#6b7280",
+                    marginBottom: "8px",
+                    fontWeight: 600,
+                  }}
+                >
+                  ✉️ Correo Electrónico
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="Ej: juan@example.com"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "1rem",
+                    border: "2px solid #e5e7eb",
+                    borderRadius: "10px",
+                    outline: "none",
+                    transition: "all 0.2s",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#3b82f6";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  background: "#eff6ff",
+                  border: "1px solid #3b82f6",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  marginBottom: "24px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>ℹ️</span>
+                  <div style={{ fontSize: "0.9rem", color: "#1e40af", lineHeight: 1.5 }}>
+                    <strong>Nota:</strong> Si cambias el email, el usuario deberá iniciar sesión nuevamente con el nuevo correo.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={closeEditModal}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: "12px 20px",
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    border: "2px solid #e5e7eb",
+                    borderRadius: "10px",
+                    background: "white",
+                    color: "#6b7280",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    opacity: saving ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving) {
+                      e.currentTarget.style.background = "#f9fafb";
+                      e.currentTarget.style.borderColor = "#d1d5db";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "white";
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => void onSaveEdit()}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: "12px 20px",
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    border: "none",
+                    borderRadius: "10px",
+                    background: saving
+                      ? "#9ca3af"
+                      : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                    color: "white",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving) {
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow =
+                      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+                  }}
+                >
+                  {saving ? "Guardando..." : "💾 Guardar Cambios"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Contraseña Temporal */}
+      {resetModalUser && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            animation: "fadeIn 0.2s ease-out",
+          }}
+          onClick={() => setResetModalUser(null)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "16px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              maxWidth: "520px",
+              width: "90%",
+              padding: "0",
+              position: "relative",
+              overflow: "hidden",
+              animation: "slideUp 0.3s ease-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header con gradiente */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                padding: "32px 32px 24px 32px",
+                color: "white",
+                position: "relative",
+              }}
+            >
+              <button
+                onClick={() => setResetModalUser(null)}
+                style={{
+                  position: "absolute",
+                  top: "16px",
+                  right: "16px",
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  fontSize: "1.5rem",
+                  color: "white",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  background: "rgba(255, 255, 255, 0.2)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "1.8rem",
+                  marginBottom: "16px",
+                }}
+              >
+                🔑
+              </div>
+
+              <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700 }}>
+                Contraseña Temporal Generada
+              </h2>
+              <p style={{ margin: "8px 0 0 0", opacity: 0.95, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                Copia la contraseña y envíala al usuario de forma segura.
+              </p>
+            </div>
+
+            {/* Contenido */}
+            <div style={{ padding: "32px" }}>
+              <div style={{ marginBottom: "24px" }}>
+                <div style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", fontWeight: 600 }}>
+                  👤 Usuario
+                </div>
+                <div style={{ fontSize: "1rem", color: "#111827", fontWeight: 500 }}>
+                  {resetModalUser.fullName}
+                </div>
+                <div style={{ fontSize: "0.9rem", color: "#6b7280", marginTop: "2px" }}>
+                  {resetModalUser.email}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "24px" }}>
+                <div style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "8px", fontWeight: 600 }}>
+                  🔐 Contraseña Temporal
+                </div>
+                <div
+                  style={{
+                    background: "#f9fafb",
+                    border: "2px solid #10b981",
+                    borderRadius: "10px",
+                    padding: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                  }}
+                >
+                  <code
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: 700,
+                      fontFamily: "monospace",
+                      color: "#059669",
+                      letterSpacing: "2px",
+                      userSelect: "all",
+                    }}
+                  >
+                    {resetModalUser.temporaryPassword}
+                  </code>
+                  <button
+                    onClick={() => {
+                      void navigator.clipboard.writeText(resetModalUser.temporaryPassword);
+                      showSuccess("Contraseña copiada al portapapeles");
+                    }}
+                    style={{
+                      background: "#10b981",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "10px 16px",
+                      color: "white",
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#059669";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#10b981";
+                    }}
+                  >
+                    📋 Copiar
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: "#fffbeb",
+                  border: "1px solid #fbbf24",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  marginBottom: "24px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>⚠️</span>
+                  <div style={{ fontSize: "0.9rem", color: "#92400e", lineHeight: 1.5 }}>
+                    <strong>Importante:</strong> El usuario deberá cambiar esta contraseña al iniciar sesión por primera vez.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setResetModalUser(null)}
+                style={{
+                  width: "100%",
+                  padding: "12px 20px",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  border: "none",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+                }}
+              >
+                ✓ Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        confirmVariant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirm}
+      />
+
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

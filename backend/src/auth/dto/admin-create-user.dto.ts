@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from "class-validator";
 
 export class AdminCreateUserDto {
   @IsString()
@@ -10,11 +10,14 @@ export class AdminCreateUserDto {
   fullName!: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(8, { message: "La contraseña debe tener al menos 8 caracteres" })
+  @Matches(/^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/`~])/, {
+    message: "La contraseña debe incluir al menos una letra mayúscula y un carácter especial (!@#$%&*...)"
+  })
   password!: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(["AGENT", "ADMIN", "agent", "admin"])
+  @IsIn(["AGENT", "ADMIN", "CONTADOR", "agent", "admin", "contador"])
   role?: string;
 }

@@ -9,6 +9,10 @@ import {
   resendSignedEmail,
   searchContracts,
 } from "@/lib/contracts-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { ConfirmationModal } from "@/components/confirmation-modal";
+import { PageLoader } from "@/components/loading-spinner";
+import AttachmentViewer from "@/components/attachment-viewer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -31,7 +35,6 @@ export default function HistoryPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [items, setItems] = useState<HistoryContractItem[]>([]);
   const [busyAction, setBusyAction] = useState<string>("");
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -40,6 +43,8 @@ export default function HistoryPage() {
   const [viewerHtml, setViewerHtml] = useState("");
   const [viewerDocs, setViewerDocs] = useState<ContractFileDocument[]>([]);
   const [draftToDelete, setDraftToDelete] = useState<{ id: string; contractNumber: string; clientFullName: string } | null>(null);
+  const [attachmentViewerData, setAttachmentViewerData] = useState<{ attachments: Array<{ id: string; originalFileName: string; url: string; mimeType: string }>; initialIndex: number } | null>(null);
+  const { toasts, showSuccess, showError, showInfo, dismissToast } = useToast();
 
   const closeViewer = () => {
     setViewerOpen(false);
@@ -64,12 +69,11 @@ export default function HistoryPage() {
 
   const load = async (q = "") => {
     setLoading(true);
-    setError("");
     try {
       const result = await searchContracts({ q, limit: 50 });
       setItems(result);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar historial.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar historial.");
     } finally {
       setLoading(false);
     }
@@ -144,20 +148,15 @@ export default function HistoryPage() {
       const files = await getContractFiles(contractId);
       const url = files.signedPdf?.url || files.pdf?.url || "";
       if (!url) {
-        setViewerTitle("Contrato");
-        setViewerMode("html");
-        setViewerHtml('<p class="history-empty">No hay contrato disponible.</p>');
+        showError("No hay contrato disponible.");
       } else {
         setViewerTitle("Contrato");
         setViewerMode("html");
         setViewerHtml(`<iframe src="${url}" title="Contrato" class="viewer-iframe"></iframe>`);
+        setViewerOpen(true);
       }
-      setViewerOpen(true);
     } catch (actionError) {
-      setViewerTitle("Error");
-      setViewerMode("html");
-      setViewerHtml(`<p class="history-empty">${actionError instanceof Error ? actionError.message : "No se pudo abrir el contrato."}</p>`);
-      setViewerOpen(true);
+      showError(actionError instanceof Error ? actionError.message : "No se pudo abrir el contrato.");
     } finally {
       setBusyAction("");
     }
@@ -172,10 +171,7 @@ export default function HistoryPage() {
       setViewerDocs(files.documents || []);
       setViewerOpen(true);
     } catch (actionError) {
-      setViewerTitle("Error");
-      setViewerMode("html");
-      setViewerHtml(`<p class="history-empty">${actionError instanceof Error ? actionError.message : "No se pudieron abrir los documentos."}</p>`);
-      setViewerOpen(true);
+      showError(actionError instanceof Error ? actionError.message : "No se pudieron abrir los documentos.");
     } finally {
       setBusyAction("");
     }
@@ -197,18 +193,12 @@ export default function HistoryPage() {
               : item,
           ),
         );
+        showSuccess("Contrato reenviado exitosamente.");
+      } else {
+        showInfo("No se enviaron correos.");
       }
-      setViewerTitle("Reenvio de contrato firmado");
-      setViewerMode("html");
-      setViewerHtml(
-        `<article class="viewer-doc"><p>${result.sentCount > 0 ? "Contrato reenviado exitosamente." : "No se enviaron correos."}</p></article>`,
-      );
-      setViewerOpen(true);
     } catch (actionError) {
-      setViewerTitle("Error");
-      setViewerMode("html");
-      setViewerHtml(`<p class="history-empty">${actionError instanceof Error ? actionError.message : "No se pudo reenviar."}</p>`);
-      setViewerOpen(true);
+      showError(actionError instanceof Error ? actionError.message : "No se pudo reenviar.");
     } finally {
       setBusyAction("");
     }
@@ -235,16 +225,14 @@ export default function HistoryPage() {
     try {
       await deleteContractDraft(draftId);
       setItems((prev) => prev.filter((item) => item.id !== draftId));
-      setStatusMessage("Borrador eliminado correctamente.");
+      showSuccess("Borrador eliminado correctamente.");
       setDraftToDelete(null);
     } catch (actionError) {
-      setStatusMessage(actionError instanceof Error ? actionError.message : "No se pudo eliminar el borrador.");
+      showError(actionError instanceof Error ? actionError.message : "No se pudo eliminar el borrador.");
     } finally {
       setBusyAction("");
     }
   };
-
-  const [statusMessage, setStatusMessage] = useState("");
 
   const groupedDocuments = useMemo(() => {
     const byGroup: Record<string, ContractFileDocument[]> = {};
@@ -263,129 +251,141 @@ export default function HistoryPage() {
 
   return (
     <main className="app-shell">
-      <section className="card contracts-card">
-        <h1>Historial de contratos</h1>
+      {loading && items.length === 0 ? (
+        <PageLoader />
+      ) : (
+        <section className="card contracts-card">
+          <h1>Historial de contratos</h1>
 
-        <div className="inline-row history-search-row">
-          <input
-            value={query}
-            placeholder="Buscar por numero, cliente, cedula o correo"
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              void load(query);
-            }}
-            disabled={loading}
-          >
-            Buscar
-          </button>
-        </div>
+          <div className="inline-row history-search-row">
+            <input
+              value={query}
+              placeholder="Buscar por numero, cliente, cedula o correo"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                void load(query);
+              }}
+              disabled={loading}
+            >
+              Buscar
+            </button>
+          </div>
 
-        {loading ? <p className="muted">Cargando historial...</p> : null}
-        {error ? <p className="form-error">{error}</p> : null}
-        {!error && statusMessage ? <p className="muted">{statusMessage}</p> : null}
-
-        {!loading && !error && items.length === 0 ? <p className="muted">No se encontraron contratos.</p> : null}
-
-        <div className="history-table-wrap">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Cedula</th>
-                <th>Correo</th>
-                <th>Telefono</th>
-                <th>Numero contrato</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const status = statusInfo(item.status);
-                const isSigned = String(item.status || "").toUpperCase() === STATUS_SIGNED;
-                const isDraft = String(item.status || "").toUpperCase() === "DRAFT";
-                const isResendDone = Boolean(item.signedContractResent);
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="history-col-name">{item.clientFullName}</div>
-                      <div className="history-col-muted">{formatDateTime(item.createdAt)}</div>
-                    </td>
-                    <td>{item.clientIdNumber || "-"}</td>
-                    <td>{item.clientEmail || "-"}</td>
-                    <td>{item.clientPhone || "-"}</td>
-                    <td>{item.contractNumber}</td>
-                    <td>
-                      <span className={`contract-status ${status.className}`}>{status.label}</span>
-                    </td>
-                    <td>
-                      <div className="history-actions">
-                        {isDraft ? (
-                          <>
-                            <Link href={`/contracts?draftId=${encodeURIComponent(item.id)}`} className="btn btn-secondary">
-                              Continuar borrador
-                            </Link>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={() => openDeleteDraftModal(item)}
-                              disabled={busyAction === "delete-draft:confirm"}
-                            >
-                              Eliminar borrador
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={() => void openContractPdf(item.id)}
-                              disabled={busyAction === `contract:${item.id}`}
-                            >
-                              {busyAction === `contract:${item.id}` ? "Abriendo..." : "Contrato"}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={() => void openDocuments(item.id)}
-                              disabled={busyAction === `documents:${item.id}`}
-                            >
-                              {busyAction === `documents:${item.id}` ? "Abriendo..." : "Documentos"}
-                            </button>
-                          </>
-                        )}
-                        {isSigned ? (
-                          <button
-                            type="button"
-                            className={`btn ${isResendDone ? "btn-success" : "btn-secondary"}`}
-                            onClick={() => void onResendSigned(item.id)}
-                            disabled={busyAction === `resend:${item.id}` || isResendDone}
-                          >
-                            {busyAction === `resend:${item.id}`
-                              ? "Enviando..."
-                              : isResendDone
-                                ? "Contrato firmado enviado"
-                                : "Reenviar firmado"}
-                          </button>
-                        ) : null}
-                        {isSigned ? (
-                          <Link href={`/billing/${encodeURIComponent(item.id)}`} className="btn btn-secondary">
-                            Estado de cuenta
-                          </Link>
-                        ) : null}
-                      </div>
-                    </td>
+          {!loading && items.length === 0 ? (
+            <div className="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <h3>No se encontraron contratos</h3>
+              <p>Intenta con otros terminos de busqueda o revisa los filtros aplicados.</p>
+            </div>
+          ) : (
+            <div className="history-table-wrap">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Cedula</th>
+                    <th>Correo</th>
+                    <th>Telefono</th>
+                    <th>Numero contrato</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const status = statusInfo(item.status);
+                    const isSigned = String(item.status || "").toUpperCase() === STATUS_SIGNED;
+                    const isDraft = String(item.status || "").toUpperCase() === "DRAFT";
+                    const isResendDone = Boolean(item.signedContractResent);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="history-col-name">{item.clientFullName}</div>
+                          <div className="history-col-muted">{formatDateTime(item.createdAt)}</div>
+                        </td>
+                        <td>{item.clientIdNumber || "-"}</td>
+                        <td>{item.clientEmail || "-"}</td>
+                        <td>{item.clientPhone || "-"}</td>
+                        <td>{item.contractNumber}</td>
+                        <td>
+                          <span className={`contract-status ${status.className}`}>{status.label}</span>
+                        </td>
+                        <td>
+                          <div className="history-actions">
+                            {isDraft ? (
+                              <>
+                                <Link href={`/contracts?draftId=${encodeURIComponent(item.id)}`} className="btn btn-secondary">
+                                  Continuar borrador
+                                </Link>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => openDeleteDraftModal(item)}
+                                  disabled={busyAction === "delete-draft:confirm"}
+                                >
+                                  Eliminar borrador
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => void openContractPdf(item.id)}
+                                  disabled={busyAction === `contract:${item.id}`}
+                                >
+                                  {busyAction === `contract:${item.id}` ? "Abriendo..." : "Contrato"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => void openDocuments(item.id)}
+                                  disabled={busyAction === `documents:${item.id}`}
+                                >
+                                  {busyAction === `documents:${item.id}` ? "Abriendo..." : "Documentos"}
+                                </button>
+                              </>
+                            )}
+                            {isSigned ? (
+                              <button
+                                type="button"
+                                className={`btn ${isResendDone ? "btn-success" : "btn-secondary"}`}
+                                onClick={() => void onResendSigned(item.id)}
+                                disabled={busyAction === `resend:${item.id}` || isResendDone}
+                              >
+                                {busyAction === `resend:${item.id}`
+                                  ? "Enviando..."
+                                  : isResendDone
+                                    ? "Contrato firmado enviado"
+                                    : "Reenviar firmado"}
+                              </button>
+                            ) : null}
+                            {isSigned ? (
+                              <Link href={`/billing/${encodeURIComponent(item.id)}`} className="btn btn-secondary">
+                                Estado de cuenta
+                              </Link>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {viewerOpen ? (
         <section className="viewer-modal" onClick={closeViewer}>
@@ -405,21 +405,70 @@ export default function HistoryPage() {
                   <section key={group} className="doc-person-group">
                     <h4>{group}</h4>
                     <div className="doc-grid">
-                      {docs.map((doc) => (
-                        <article key={doc.id} className="viewer-doc-card">
-                          <p className="viewer-doc-card-title">{doc.originalFileName}</p>
-                          {String(doc.mimeType || "").startsWith("image/") ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={doc.url} alt={doc.originalFileName} loading="lazy" />
-                          ) : String(doc.mimeType || "").toLowerCase() === "application/pdf" ? (
-                            <embed src={doc.url} type="application/pdf" />
-                          ) : (
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                              Ver documento
-                            </a>
-                          )}
-                        </article>
-                      ))}
+                      {docs.map((doc, docIndex) => {
+                        const isImage = String(doc.mimeType || "").startsWith("image/");
+                        const isPDF = String(doc.mimeType || "").toLowerCase() === "application/pdf";
+                        
+                        return (
+                          <article key={doc.id} className="viewer-doc-card">
+                            <p className="viewer-doc-card-title">{doc.originalFileName}</p>
+                            {isImage || isPDF ? (
+                              <div
+                                onClick={() => {
+                                  // Encontrar el índice global del documento en todos los docs
+                                  const allDocs = viewerDocs.filter(d => 
+                                    String(d.mimeType || "").startsWith("image/") || 
+                                    String(d.mimeType || "").toLowerCase() === "application/pdf"
+                                  );
+                                  const globalIndex = allDocs.findIndex(d => d.id === doc.id);
+                                  
+                                  setAttachmentViewerData({
+                                    attachments: allDocs.map(d => ({
+                                      id: d.id,
+                                      originalFileName: d.originalFileName,
+                                      url: d.url,
+                                      mimeType: d.mimeType
+                                    })),
+                                    initialIndex: globalIndex >= 0 ? globalIndex : 0
+                                  });
+                                }}
+                                style={{ cursor: "pointer", position: "relative" }}
+                              >
+                                {isImage ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={doc.url} alt={doc.originalFileName} loading="lazy" />
+                                ) : (
+                                  <div style={{
+                                    padding: "20px",
+                                    textAlign: "center",
+                                    background: "#f5f5f5",
+                                    borderRadius: "8px",
+                                    border: "2px dashed #ddd"
+                                  }}>
+                                    <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📄</div>
+                                    <div style={{ fontSize: "0.9rem", color: "#666" }}>Click para ver PDF</div>
+                                  </div>
+                                )}
+                                <div style={{
+                                  position: "absolute",
+                                  top: "8px",
+                                  right: "8px",
+                                  background: "rgba(0, 0, 0, 0.7)",
+                                  color: "white",
+                                  padding: "4px 8px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: "500"
+                                }}>🔍 Click para zoom</div>
+                              </div>
+                            ) : (
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                                Ver documento
+                              </a>
+                            )}
+                          </article>
+                        );
+                      })}
                     </div>
                   </section>
                 ))
@@ -429,35 +478,32 @@ export default function HistoryPage() {
         </section>
       ) : null}
 
-      {draftToDelete ? (
-        <section className="viewer-modal" onClick={closeDeleteDraftModal}>
-          <div className="viewer-panel draft-delete-modal-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="viewer-head">
-              <h2>Confirmar eliminacion de borrador</h2>
-              <button type="button" className="btn btn-secondary" onClick={closeDeleteDraftModal} disabled={busyAction === "delete-draft:confirm"}>
-                Cerrar
-              </button>
-            </div>
+      <ConfirmationModal
+        isOpen={draftToDelete !== null}
+        onClose={closeDeleteDraftModal}
+        onConfirm={() => void confirmDeleteDraft()}
+        title="Confirmar eliminacion de borrador"
+        message={
+          draftToDelete
+            ? `Vas a eliminar el borrador ${draftToDelete.contractNumber}${draftToDelete.clientFullName && draftToDelete.clientFullName !== "-" ? ` de ${draftToDelete.clientFullName}` : ""}. Esta accion no se puede deshacer.`
+            : ""
+        }
+        confirmText="Eliminar borrador"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={busyAction === "delete-draft:confirm"}
+      />
 
-            <div className="viewer-body draft-delete-modal-body">
-              <p>
-                Vas a eliminar el borrador <strong>{draftToDelete.contractNumber}</strong>
-                {draftToDelete.clientFullName && draftToDelete.clientFullName !== "-" ? ` de ${draftToDelete.clientFullName}` : ""}.
-              </p>
-              <p className="form-error">Esta accion no se puede deshacer.</p>
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
 
-              <div className="history-actions">
-                <button type="button" className="btn btn-secondary" onClick={closeDeleteDraftModal} disabled={busyAction === "delete-draft:confirm"}>
-                  Cancelar
-                </button>
-                <button type="button" className="btn" onClick={() => void confirmDeleteDraft()} disabled={busyAction === "delete-draft:confirm"}>
-                  {busyAction === "delete-draft:confirm" ? "Eliminando..." : "Eliminar borrador"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {/* Visor de Attachments con Zoom */}
+      {attachmentViewerData && (
+        <AttachmentViewer
+          attachments={attachmentViewerData.attachments}
+          initialIndex={attachmentViewerData.initialIndex}
+          onClose={() => setAttachmentViewerData(null)}
+        />
+      )}
     </main>
   );
 }

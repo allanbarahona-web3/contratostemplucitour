@@ -1,10 +1,11 @@
-import { getStoredToken } from "@/lib/auth-api";
+import { authenticatedFetch, getStoredToken } from "@/lib/auth-api";
 import { resolveApiBase } from "@/lib/runtime-config";
 
 export type BillingListItem = {
   id: string;
   contractId: string;
   contractNumber: string;
+  paymentReference?: string | null;
   invoiceNumber: string;
   status: string;
   paymentDueDate?: string | null;
@@ -38,6 +39,7 @@ export type BillingAccount = {
     id: string;
     contractId: string;
     contractNumber: string;
+    paymentReference?: string | null;
     invoiceNumber: string;
     status: string;
     issuedAt: string;
@@ -86,6 +88,9 @@ export type BillingAccount = {
     createdByName?: string | null;
     bankReference: string | null;
     payerName: string | null;
+    originBank?: string | null;
+    destinationBank?: string | null;
+    destinationAccount?: string | null;
     notes: string | null;
     verifiedAt: string | null;
     verifiedByName: string | null;
@@ -220,6 +225,13 @@ export type BillingAdminReportData = {
     createdByName: string;
     verifiedByName: string | null;
     rejectionReason: string | null;
+    attachments?: Array<{
+      id: string;
+      originalFileName: string;
+      size: number;
+      mimeType: string;
+      url: string;
+    }>;
     invoice: {
       invoiceNumber: string;
       contractNumber: string;
@@ -249,6 +261,48 @@ export type BillingAdminReportData = {
   }>;
 };
 
+export type DashboardMetrics = {
+  period: string;
+  startDate: string;
+  currentDate: string;
+  summary: {
+    invoices: {
+      byStatus: Array<{ status: string; count: number }>;
+      overdue: number;
+    };
+    pendingTasks: {
+      payments: number;
+      receipts: number;
+      creditNotes: number;
+      total: number;
+    };
+    period: {
+      invoicesCount: number;
+      invoicedAmount: number;
+      collectedAmount: number;
+      balanceAmount: number;
+      paymentsCount: number;
+      paymentsAmount: number;
+    };
+  };
+  charts: {
+    dailyPayments: Array<{
+      day: string;
+      total: number;
+      count: number;
+    }>;
+  };
+  alerts: {
+    topOverdueClients: Array<{
+      id: string;
+      fullName: string;
+      email: string;
+      totalBalance: number;
+      invoiceCount: number;
+    }>;
+  };
+};
+
 const parseErrorMessage = (payload: unknown, fallback: string): string => {
   const message = (payload as { message?: unknown })?.message;
   if (Array.isArray(message)) {
@@ -276,7 +330,7 @@ const getApiBaseAndToken = () => {
 
 const apiFetchJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const { token, apiBase } = getApiBaseAndToken();
-  const response = await fetch(`${apiBase}${path}`, {
+  const response = await authenticatedFetch(`${apiBase}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -325,6 +379,10 @@ export const reportBillingPayment = async (input: {
   paymentDate?: string;
   bankReference?: string;
   payerName?: string;
+  originBank?: string;
+  destinationBank?: string;
+  destinationAccount?: string;
+  paymentReference?: string;
   notes?: string;
   attachments?: File[];
 }): Promise<{ paymentId: string; receiptId: string; receiptNumber: string }> => {
@@ -336,10 +394,14 @@ export const reportBillingPayment = async (input: {
   if (input.paymentDate) formData.append("paymentDate", input.paymentDate);
   if (input.bankReference) formData.append("bankReference", input.bankReference);
   if (input.payerName) formData.append("payerName", input.payerName);
+  if (input.originBank) formData.append("originBank", input.originBank);
+  if (input.destinationBank) formData.append("destinationBank", input.destinationBank);
+  if (input.destinationAccount) formData.append("destinationAccount", input.destinationAccount);
+  if (input.paymentReference) formData.append("paymentReference", input.paymentReference);
   if (input.notes) formData.append("notes", input.notes);
   (input.attachments || []).forEach((file) => formData.append("attachments", file, file.name));
 
-  const response = await fetch(`${apiBase}/billing/contracts/${encodeURIComponent(input.contractId)}/payments/report`, {
+  const response = await authenticatedFetch(`${apiBase}/billing/contracts/${encodeURIComponent(input.contractId)}/payments/report`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -482,6 +544,22 @@ export const getBillingCreditNotePdfUrl = async (creditNoteId: string): Promise<
     },
   );
 
+export type PendingCounts = {
+  pendingReceipts: number;
+  pendingCreditNotes: number;
+};
+
+export const getPendingApprovalsCount = async (): Promise<PendingCounts> => {
+  try {
+    const data = await apiFetchJson<PendingCounts>("/billing/admin/pending-counts", {
+      method: "GET",
+    });
+    return data;
+  } catch {
+    return { pendingReceipts: 0, pendingCreditNotes: 0 };
+  }
+};
+
 export const sendBillingCreditNoteEmail = async (
   creditNoteId: string,
   toEmail?: string,
@@ -567,6 +645,17 @@ export const rejectBillingCreditNote = async (
       body: JSON.stringify({ reason }),
     },
   );
+
+export const getBillingDashboardMetrics = async (params: { period?: string; from?: string; to?: string } = {}): Promise<DashboardMetrics> => {
+  const query = new URLSearchParams();
+  if (params.period) query.set("period", params.period);
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
+
+  return apiFetchJson<DashboardMetrics>(`/billing/admin/dashboard-metrics?${query.toString()}`, {
+    method: "GET",
+  });
+};
 
 export const getBillingAdminReports = async (params: {
   from?: string;

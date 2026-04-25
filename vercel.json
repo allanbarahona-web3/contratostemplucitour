@@ -1,6 +1,7 @@
 {
-  "buildCommand": "echo 'No build needed for static site'",
-  "outputDirectory": "frontend",
+  "buildCommand": "cd frontend-next && pnpm install && pnpm build",
+  "outputDirectory": "frontend-next/.next",
+  "framework": "nextjs",
   "cleanUrls": true,
   "trailingSlash": false
 }

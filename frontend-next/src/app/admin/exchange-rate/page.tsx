@@ -9,6 +9,8 @@ import {
   setExchangeRate,
   type ExchangeRate,
 } from "@/lib/exchange-rate-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { PageLoader } from "@/components/loading-spinner";
 
 export default function AdminExchangeRatePage() {
   const router = useRouter();
@@ -18,8 +20,7 @@ export default function AdminExchangeRatePage() {
   const [saving, setSaving] = useState(false);
   const [currentRate, setCurrentRate] = useState<ExchangeRate | null>(null);
   const [history, setHistory] = useState<ExchangeRate[]>([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { toasts, showSuccess, showError, dismissToast } = useToast();
 
   const [date, setDate] = useState("");
   const [buyRate, setBuyRate] = useState("");
@@ -51,7 +52,6 @@ export default function AdminExchangeRatePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      setError("");
 
       const [current, hist] = await Promise.all([
         getCurrentExchangeRate(),
@@ -68,7 +68,7 @@ export default function AdminExchangeRatePage() {
         setNotes(current.notes || "");
       }
     } catch (err: any) {
-      setError(err.message || "Error cargando datos");
+      showError(err.message || "Error cargando datos");
     } finally {
       setLoading(false);
     }
@@ -76,29 +76,27 @@ export default function AdminExchangeRatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
     const buy = parseFloat(buyRate);
     const sell = parseFloat(sellRate);
 
     if (!date) {
-      setError("Debe seleccionar una fecha");
+      showError("Debe seleccionar una fecha");
       return;
     }
 
     if (isNaN(buy) || buy <= 0) {
-      setError("El tipo de cambio de compra debe ser mayor a 0");
+      showError("El tipo de cambio de compra debe ser mayor a 0");
       return;
     }
 
     if (isNaN(sell) || sell <= 0) {
-      setError("El tipo de cambio de venta debe ser mayor a 0");
+      showError("El tipo de cambio de venta debe ser mayor a 0");
       return;
     }
 
     if (sell < buy) {
-      setError("El tipo de cambio de venta debe ser mayor o igual al de compra");
+      showError("El tipo de cambio de venta debe ser mayor o igual al de compra");
       return;
     }
 
@@ -111,7 +109,7 @@ export default function AdminExchangeRatePage() {
         notes: notes.trim() || undefined,
       });
 
-      setSuccess("Tipo de cambio guardado exitosamente");
+      showSuccess("Tipo de cambio guardado exitosamente");
       await loadData();
 
       // Reset form
@@ -121,7 +119,7 @@ export default function AdminExchangeRatePage() {
       setSellRate("");
       setNotes("");
     } catch (err: any) {
-      setError(err.message || "Error guardando tipo de cambio");
+      showError(err.message || "Error guardando tipo de cambio");
     } finally {
       setSaving(false);
     }
@@ -134,12 +132,7 @@ export default function AdminExchangeRatePage() {
   };
 
   if (loading) {
-    return (
-      <main>
-        <h1>Configuración de Tipo de Cambio</h1>
-        <p>Cargando...</p>
-      </main>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -160,7 +153,7 @@ export default function AdminExchangeRatePage() {
       }}>
         <h2 style={{ margin: "0 0 20px 0", fontSize: "1.3rem", fontWeight: 600 }}>📊 Tipo de Cambio Vigente</h2>
         {currentRate ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 20 }}>
             <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: 16, backdropFilter: "blur(10px)" }}>
               <div style={{ fontSize: "0.85rem", opacity: 0.9, marginBottom: 6 }}>📅 Fecha</div>
               <div style={{ fontSize: "1.3rem", fontWeight: "bold" }}>{formatDate(currentRate.date)}</div>
@@ -190,19 +183,8 @@ export default function AdminExchangeRatePage() {
         <h2 style={{ margin: "0 0 6px 0", fontSize: "1.3rem", fontWeight: 600 }}>✏️ Configurar Tipo de Cambio</h2>
         <p style={{ color: "#6b7280", marginBottom: 24, fontSize: "0.9rem" }}>Establece o actualiza el tipo de cambio para una fecha específica</p>
 
-        {error && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: 12, marginBottom: 16, color: "#dc2626" }}>
-            ⚠️ {error}
-          </div>
-        )}
-        {success && (
-          <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: 12, marginBottom: 16, color: "#16a34a" }}>
-            ✅ {success}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
             <div className="form-group">
               <label htmlFor="date" style={{ fontWeight: 500, marginBottom: 8, display: "block" }}>📅 Fecha</label>
               <input
@@ -315,6 +297,7 @@ export default function AdminExchangeRatePage() {
           </div>
         )}
       </section>
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

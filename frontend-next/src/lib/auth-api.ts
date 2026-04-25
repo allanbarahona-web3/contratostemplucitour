@@ -7,6 +7,7 @@ export type LoginResponse = {
     email: string;
     fullName: string;
     role?: string;
+    mustChangePassword?: boolean;
   };
 };
 
@@ -17,6 +18,7 @@ export type AuthSession = {
     email: string;
     fullName: string;
     role?: string;
+    mustChangePassword?: boolean;
   };
   loginAt: string;
 };
@@ -149,6 +151,7 @@ export const getStoredSession = (): AuthSession | null => {
         email: String(user.email),
         fullName: String(user.fullName),
         role: user.role ? String(user.role) : undefined,
+        mustChangePassword: user.mustChangePassword === true,
       },
     };
   } catch {
@@ -167,13 +170,54 @@ const authHeaders = (): HeadersInit => {
   };
 };
 
+/**
+ * Wrapper for authenticated fetch that automatically handles 401 responses
+ * by clearing the session and redirecting to login.
+ */
+export const authenticatedFetch = async (url: string, options: RequestInit): Promise<Response> => {
+  const response = await fetch(url, options);
+  
+  // If unauthorized, clear session and redirect to login
+  if (response.status === 401) {
+    clearStoredToken();
+    
+    // Try to get error message from response
+    let errorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
+    try {
+      const payload = await response.clone().json();
+      const message = payload?.message;
+      
+      // Check if it's a suspension message
+      if (typeof message === "string" && message.toLowerCase().includes("suspendido")) {
+        errorMessage = message; // Use the exact backend message: "Tu usuario ha sido suspendido. Contacta al administrador."
+      } else if (typeof message === "string" && message.toLowerCase().includes("rol")) {
+        errorMessage = "Tu rol ha sido cambiado. Por favor, inicia sesión nuevamente.";
+      } else if (typeof message === "string" && message.trim()) {
+        errorMessage = message;
+      }
+    } catch {
+      // Ignore JSON parsing errors, use default message
+    }
+    
+    // Show alert explaining session was invalidated
+    if (typeof window !== "undefined") {
+      alert(errorMessage);
+      window.location.href = "/";
+    }
+    
+    throw new Error(errorMessage);
+  }
+  
+  return response;
+};
+
 export const adminListUsers = async (): Promise<AdminUserListItem[]> => {
   const apiBase = resolveApiBase();
   if (!apiBase) {
     throw new Error("No hay API configurada.");
   }
 
-  const response = await fetch(`${apiBase}/auth/users`, {
+  const response = await authenticatedFetch(`${apiBase}/auth/users`, {
     method: "GET",
     headers: authHeaders(),
   });
@@ -190,14 +234,14 @@ export const adminCreateUser = async (input: {
   email: string;
   fullName: string;
   password: string;
-  role: "AGENT" | "ADMIN";
+  role: "AGENT" | "ADMIN" | "CONTADOR";
 }): Promise<AdminUserListItem> => {
   const apiBase = resolveApiBase();
   if (!apiBase) {
     throw new Error("No hay API configurada.");
   }
 
-  const response = await fetch(`${apiBase}/auth/users`, {
+  const response = await authenticatedFetch(`${apiBase}/auth/users`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(input),
@@ -213,14 +257,14 @@ export const adminCreateUser = async (input: {
 
 export const adminUpdateUser = async (
   userId: string,
-  input: Partial<{ fullName: string; role: "AGENT" | "ADMIN"; isActive: boolean }>,
+  input: Partial<{ fullName: string; email: string; role: "AGENT" | "ADMIN" | "CONTADOR"; isActive: boolean }>,
 ): Promise<AdminUserListItem> => {
   const apiBase = resolveApiBase();
   if (!apiBase) {
     throw new Error("No hay API configurada.");
   }
 
-  const response = await fetch(`${apiBase}/auth/users/${encodeURIComponent(userId)}`, {
+  const response = await authenticatedFetch(`${apiBase}/auth/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     headers: authHeaders(),
     body: JSON.stringify(input),
@@ -233,3 +277,105 @@ export const adminUpdateUser = async (
 
   return payload as AdminUserListItem;
 };
+
+export const requestPasswordReset = async (email: string): Promise<{ ok: boolean; message: string }> => {
+  const apiBase = resolveApiBase();
+  if (!apiBase) {
+    throw new Error("No hay API configurada.");
+  }
+
+  const response = await fetch(`${apiBase}/auth/request-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: String(email || "").trim(),
+      website: "", // Honeypot
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseErrorMessage(payload, "No se pudo procesar la solicitud."));
+  }
+
+  return payload as { ok: boolean; message: string };
+};
+
+export const confirmPasswordReset = async (
+  token: string,
+  newPassword: string,
+): Promise<{ ok: boolean; message: string }> => {
+  const apiBase = resolveApiBase();
+  if (!apiBase) {
+    throw new Error("No hay API configurada.");
+  }
+
+  const response = await fetch(`${apiBase}/auth/confirm-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      token: String(token || "").trim(),
+      newPassword: String(newPassword || ""),
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseErrorMessage(payload, "No se pudo resetear la contraseña."));
+  }
+
+  return payload as { ok: boolean; message: string };
+};
+
+export const adminResetPassword = async (
+  userId: string,
+): Promise<{ ok: boolean; message: string; temporaryPassword: string; email: string; fullName: string }> => {
+  const apiBase = resolveApiBase();
+  if (!apiBase) {
+    throw new Error("No hay API configurada.");
+  }
+
+  const response = await authenticatedFetch(`${apiBase}/auth/users/reset-password`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ userId }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseErrorMessage(payload, "No se pudo resetear la contraseña."));
+  }
+
+  return payload as { ok: boolean; message: string; temporaryPassword: string; email: string; fullName: string };
+};
+
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: boolean; message: string }> => {
+  const apiBase = resolveApiBase();
+  if (!apiBase) {
+    throw new Error("No hay API configurada.");
+  }
+
+  const response = await authenticatedFetch(`${apiBase}/auth/change-password`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      currentPassword: String(currentPassword || ""),
+      newPassword: String(newPassword || ""),
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseErrorMessage(payload, "No se pudo cambiar la contraseña."));
+  }
+
+  return payload as { ok: boolean; message: string };
+};
+

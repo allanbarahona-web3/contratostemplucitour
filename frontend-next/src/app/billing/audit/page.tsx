@@ -2,6 +2,8 @@
 
 import { getStoredSession, getStoredToken } from "@/lib/auth-api";
 import { listBillingAudit, type BillingAuditItem } from "@/lib/billing-api";
+import { ToastNotification, useToast } from "@/components/toast-notification";
+import { PageLoader } from "@/components/loading-spinner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -21,15 +23,14 @@ const formatDateTime = (value: string): string => {
 export default function BillingAuditPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [entityType, setEntityType] = useState("");
   const [contractId, setContractId] = useState("");
   const [items, setItems] = useState<BillingAuditItem[]>([]);
+  const { toasts, showError, dismissToast } = useToast();
 
   const load = async () => {
     setLoading(true);
-    setError("");
     try {
       const result = await listBillingAudit({
         q: q.trim() || undefined,
@@ -39,7 +40,7 @@ export default function BillingAuditPage() {
       });
       setItems(result);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar auditoria.");
+      showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar auditoria.");
     } finally {
       setLoading(false);
     }
@@ -64,9 +65,12 @@ export default function BillingAuditPage() {
 
   return (
     <main className="app-shell">
-      <section className="card contracts-card">
-        <h1>Auditoria de Estados de Cuenta</h1>
-        <p className="muted">Todos los eventos de estados de cuenta, abonos, recibos y notas de credito.</p>
+      {loading && items.length === 0 ? (
+        <PageLoader />
+      ) : (
+        <section className="card contracts-card">
+          <h1>Auditoria de Estados de Cuenta</h1>
+          <p className="muted">Todos los eventos de estados de cuenta, abonos, recibos y notas de credito.</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>
@@ -104,8 +108,6 @@ export default function BillingAuditPage() {
             {loading ? "Cargando..." : "Aplicar filtros"}
           </button>
         </div>
-
-        {error ? <p className="form-error" style={{ marginTop: 10 }}>{error}</p> : null}
 
         <div className="history-table-wrap" style={{ marginTop: 14 }}>
           <table className="history-table">
@@ -150,6 +152,9 @@ export default function BillingAuditPage() {
           </table>
         </div>
       </section>
+      )}
+
+      <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

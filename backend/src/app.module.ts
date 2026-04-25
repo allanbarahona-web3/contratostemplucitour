@@ -5,8 +5,10 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
+import { CompanyBankAccountsModule } from "./company-bank-accounts/company-bank-accounts.module";
 import { ContractsModule } from "./contracts/contracts.module";
 import { ExchangeRateModule } from "./exchange-rate/exchange-rate.module";
+import { PaymentVerificationModule } from "./payment-verification/payment-verification.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -26,6 +28,8 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuthModule,
     ContractsModule,
     BillingModule,
+    CompanyBankAccountsModule,
+    PaymentVerificationModule,
     ExchangeRateModule,
   ],
   providers: [

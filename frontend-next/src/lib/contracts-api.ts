@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-api";
+import { authenticatedFetch, getStoredToken } from "@/lib/auth-api";
 import { resolveApiBase } from "@/lib/runtime-config";
 
 export type HistoryContractItem = {
@@ -139,7 +139,7 @@ export const reserveNextContractNumber = async (): Promise<string> => {
     throw new Error("No hay API configurada.");
   }
 
-  const response = await fetch(`${apiBase}/contracts/next-number`, {
+  const response = await authenticatedFetch(`${apiBase}/contracts/next-number`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -191,7 +191,7 @@ const getApiBaseAndToken = () => {
 
 const apiFetchJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const { token, apiBase } = getApiBaseAndToken();
-  const response = await fetch(`${apiBase}${path}`, {
+  const response = await authenticatedFetch(`${apiBase}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -230,7 +230,7 @@ export const archiveContract = async (input: ArchiveContractInput): Promise<Arch
     formData.append("documents", doc, doc.name);
   });
 
-  const response = await fetch(`${apiBase}/contracts/archive`, {
+  const response = await authenticatedFetch(`${apiBase}/contracts/archive`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

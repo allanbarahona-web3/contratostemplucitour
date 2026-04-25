@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -12,6 +13,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Resend } from "resend";
 import * as path from "path";
 import { readFile } from "fs/promises";
+import * as sharp from "sharp";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApplyCreditNoteDto } from "./dto/apply-credit-note.dto";
 import { CreateCreditNoteDto } from "./dto/create-credit-note.dto";
@@ -20,6 +22,7 @@ import { ReportPaymentDto } from "./dto/report-payment.dto";
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
   private s3Client: S3Client | null = null;
   private readonly maxAttachmentCount = 10;
   private readonly maxAttachmentSizeBytes = 6 * 1024 * 1024;
@@ -387,6 +390,7 @@ export class BillingService {
   private async createInvoicePdfBuffer(params: {
     invoiceNumber: string;
     contractNumber: string;
+    paymentReference: string;
     invoiceDate: Date | string | null;
     contractIssuedAt: Date | string | null;
     contractStartDate: Date | string | null;
@@ -526,7 +530,8 @@ export class BillingService {
 
     placeRight("Contrato", 19, 777, true, brand);
     placeRight(`Numero: ${this.toShortText(params.contractNumber, 34)}`, 9.8, 759);
-    placeRight(`Fecha: ${this.formatDate(params.contractIssuedAt || params.invoiceDate)}`, 9.3, 744);
+    placeRight(`Codigo pago: ${this.toShortText(params.paymentReference, 10)}`, 9.8, 744, true, rgb(0.8, 0.15, 0.15));
+    placeRight(`Fecha: ${this.formatDate(params.contractIssuedAt || params.invoiceDate)}`, 9.3, 729);
 
     page.drawText(this.toShortText(params.company.legalName, 38), {
       x: 42,
@@ -1207,6 +1212,55 @@ export class BillingService {
     );
   }
 
+  private async convertImageToWebP(params: {
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
+  }): Promise<{
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
+  }> {
+    // Si es PDF, retornar sin cambios
+    if (params.mimetype === "application/pdf") {
+      return params;
+    }
+
+    // Si ya es WebP, retornar sin cambios
+    if (params.mimetype === "image/webp") {
+      return params;
+    }
+
+    // Convertir JPEG/PNG a WebP
+    if (params.mimetype === "image/jpeg" || params.mimetype === "image/png") {
+      try {
+        const webpBuffer = await sharp(params.buffer)
+          .webp({ quality: 85 }) // 85% calidad para balance entre tamaño y calidad
+          .toBuffer();
+
+        // Cambiar la extensión del nombre del archivo
+        const nameWithoutExt = params.originalname.replace(/\.(jpe?g|png)$/i, "");
+        const newName = `${nameWithoutExt}.webp`;
+
+        return {
+          buffer: webpBuffer,
+          mimetype: "image/webp",
+          originalname: newName,
+          size: webpBuffer.length,
+        };
+      } catch (error) {
+        // Si falla la conversión, retornar el archivo original
+        console.error("Error convirtiendo imagen a WebP:", error);
+        return params;
+      }
+    }
+
+    // Para otros tipos, retornar sin cambios
+    return params;
+  }
+
   private async buildSignedObjectUrl(objectKey: string, expiresInSeconds = 900) {
     const cfg = this.getSpacesConfig();
     const client = this.getSpacesClient();
@@ -1333,6 +1387,7 @@ export class BillingService {
     const pdfBuffer = await this.createInvoicePdfBuffer({
       invoiceNumber: String(invoice.invoiceNumber),
       contractNumber: String(invoice.contractNumber),
+      paymentReference: String(invoice.contract?.paymentReference || "N/A"),
       invoiceDate: invoice.issuedAt,
       contractIssuedAt: invoice.contract?.issuedAt,
       contractStartDate: invoice.contract?.startDate,
@@ -1730,6 +1785,7 @@ export class BillingService {
     const logoSrc = await this.loadCompanyLogoEmailSrc();
     const currency = String(invoice.currency || "USD").trim().toUpperCase() || "USD";
     const amount = (value: unknown) => `${currency} ${this.toNumber(value, 0).toFixed(2)}`;
+    const paymentRef = String(contract.paymentReference || "N/A");
     
     const resend = new Resend(apiKey);
 
@@ -1746,7 +1802,11 @@ Tu contrato ha sido procesado exitosamente y se ha generado tu estado de cuenta 
 
 DETALLES DEL CONTRATO
 • Número de contrato: ${String(invoice.contractNumber || "-")}
+• CÓDIGO DE PAGO (úsalo en comprobantes): ${paymentRef}
 • Monto total del viaje: ${amount(invoice.totalAmount)}
+
+IMPORTANTE: Cuando hagas transferencias o depósitos, SIEMPRE incluye tu código de pago: ${paymentRef}
+Esto nos ayuda a identificar tus pagos de forma inmediata.
 
 Descarga tu estado de cuenta inicial aquí:
 ${invoicePdfUrl}
@@ -1817,6 +1877,20 @@ contratos@viajesalmanova.com
                       </td>
                     </tr>
                   </table>
+                </div>
+
+                <!-- Payment Reference Box - DESTACADO -->
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border:3px solid #f59e0b; border-radius:12px; padding:20px; margin:0 0 24px; text-align:center;">
+                  <p style="margin:0 0 8px; font-size:14px; color:#78350f; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+                    ⚠️ Tu Código de Pago Personal
+                  </p>
+                  <p style="margin:0 0 12px; font-size:38px; font-weight:900; color:#92400e; letter-spacing:2px; font-family:Monaco,Consolas,monospace;">
+                    ${paymentRef}
+                  </p>
+                  <p style="margin:0; font-size:13px; color:#78350f; line-height:1.6;">
+                    <strong>Úsalo en TODOS tus pagos</strong> (transferencias, SINPE, depósitos)<br/>
+                    para que identifiquemos tu pago de inmediato.
+                  </p>
                 </div>
 
                 <!-- CTA Button -->
@@ -2496,6 +2570,12 @@ contratos@viajesalmanova.com
       take: limit,
       include: {
         client: true,
+        contract: {
+          select: {
+            id: true,
+            paymentReference: true,
+          },
+        },
         creditNotes: {
           where: { status: "NC_APLICADA" },
           select: { amount: true },
@@ -2527,6 +2607,7 @@ contratos@viajesalmanova.com
         id: item.id,
         contractId: item.contractId,
         contractNumber: item.contractNumber,
+        paymentReference: item.contract?.paymentReference || null,
         invoiceNumber: item.invoiceNumber,
         status: effectiveStatus,
         paymentDueDate: item.paymentDueDate,
@@ -2680,11 +2761,21 @@ contratos@viajesalmanova.com
     }
 
     if (invoiceStatus) {
-      invoiceWhere.status = invoiceStatus;
+      const invoiceStatuses = invoiceStatus.split(',').map(s => s.trim()).filter(Boolean);
+      if (invoiceStatuses.length === 1) {
+        invoiceWhere.status = invoiceStatuses[0];
+      } else if (invoiceStatuses.length > 1) {
+        invoiceWhere.status = { in: invoiceStatuses };
+      }
     }
 
     if (paymentStatus) {
-      paymentWhere.status = paymentStatus;
+      const paymentStatuses = paymentStatus.split(',').map(s => s.trim()).filter(Boolean);
+      if (paymentStatuses.length === 1) {
+        paymentWhere.status = paymentStatuses[0];
+      } else if (paymentStatuses.length > 1) {
+        paymentWhere.status = { in: paymentStatuses };
+      }
     }
 
     if (q) {
@@ -2786,6 +2877,15 @@ contratos@viajesalmanova.com
               client: true,
             },
           },
+          attachments: {
+            select: {
+              id: true,
+              objectKey: true,
+              originalFileName: true,
+              size: true,
+              mimeType: true,
+            },
+          },
         },
       }),
     ]);
@@ -2851,16 +2951,16 @@ contratos@viajesalmanova.com
         const effectiveStatus = overdueDays > 0 && balance > 0 ? "FACTURA_VENCIDA" : item.status;
 
         return {
-        id: item.id,
-        contractId: item.contractId,
-        contractNumber: item.contractNumber,
-        invoiceNumber: item.invoiceNumber,
-        status: effectiveStatus,
-        issuedAt: item.issuedAt,
-        paymentDueDate: item.paymentDueDate,
-        isOverdue: overdueDays > 0,
-        overdueDays,
-        amounts: {
+          id: item.id,
+          contractId: item.contractId,
+          contractNumber: item.contractNumber,
+          invoiceNumber: item.invoiceNumber,
+          status: effectiveStatus,
+          issuedAt: item.issuedAt,
+          paymentDueDate: item.paymentDueDate,
+          isOverdue: overdueDays > 0,
+          overdueDays,
+          amounts: {
           grossInvoiced: grossInvoicedAmount,
           creditNotesApplied: ncAppliedAmount,
           total: this.toNumber(item.totalAmount),
@@ -2877,33 +2977,47 @@ contratos@viajesalmanova.com
         },
         };
       }),
-      payments: (payments || []).map((item: any) => ({
-        id: item.id,
-        invoiceId: item.invoiceId,
-        contractId: item.contractId,
-        type: item.type,
-        status: item.status,
-        amount: this.toNumber(item.amount),
-        currency: item.currency,
-        reportedAt: item.reportedAt,
-        verifiedAt: item.verifiedAt,
-        bankReference: item.bankReference,
-        payerName: item.payerName,
-        voucherDate: this.extractVoucherDateFromNotes(item.notes),
-        createdByName: item.createdByName,
-        verifiedByName: item.verifiedByName,
-        rejectionReason: item.rejectionReason,
-        invoice: {
-          invoiceNumber: item.invoice?.invoiceNumber || "-",
-          contractNumber: item.invoice?.contractNumber || "-",
-          status: item.invoice?.status || "-",
-        },
-        client: {
-          id: item.invoice?.client?.id,
-          fullName: item.invoice?.client?.fullName || "-",
-          idNumber: item.invoice?.client?.idNumber || "-",
-          email: item.invoice?.client?.email || "-",
-        },
+      payments: await Promise.all((payments || []).map(async (item: any) => {
+        // Generar URLs firmadas para attachments
+        const attachmentsWithUrls = await Promise.all(
+          (item.attachments || []).map(async (att: any) => ({
+            id: att.id,
+            originalFileName: att.originalFileName,
+            size: att.size,
+            mimeType: att.mimeType,
+            url: await this.buildSignedObjectUrl(att.objectKey, 3600), // 1 hora de validez
+          }))
+        );
+
+        return {
+          id: item.id,
+          invoiceId: item.invoiceId,
+          contractId: item.contractId,
+          type: item.type,
+          status: item.status,
+          amount: this.toNumber(item.amount),
+          currency: item.currency,
+          reportedAt: item.reportedAt,
+          verifiedAt: item.verifiedAt,
+          bankReference: item.bankReference,
+          payerName: item.payerName,
+          voucherDate: this.extractVoucherDateFromNotes(item.notes),
+          createdByName: item.createdByName,
+          verifiedByName: item.verifiedByName,
+          rejectionReason: item.rejectionReason,
+          attachments: attachmentsWithUrls,
+          invoice: {
+            invoiceNumber: item.invoice?.invoiceNumber || "-",
+            contractNumber: item.invoice?.contractNumber || "-",
+            status: item.invoice?.status || "-",
+          },
+          client: {
+            id: item.invoice?.client?.id,
+            fullName: item.invoice?.client?.fullName || "-",
+            idNumber: item.invoice?.client?.idNumber || "-",
+            email: item.invoice?.client?.email || "-",
+          },
+        };
       })),
       overdueAlerts: overdueInvoices.slice(0, 200).map((item: any) => ({
         invoiceId: item.id,
@@ -2988,6 +3102,9 @@ contratos@viajesalmanova.com
           createdByName: payment.createdByName,
           bankReference: payment.bankReference,
           payerName: payment.payerName,
+          originBank: payment.originBank,
+          destinationBank: payment.destinationBank,
+          destinationAccount: payment.destinationAccount,
           notes: payment.notes,
           verifiedAt: payment.verifiedAt,
           verifiedByName: payment.verifiedByName,
@@ -3029,6 +3146,7 @@ contratos@viajesalmanova.com
         contractId: invoice.contractId,
         contractNumber: invoice.contractNumber,
         invoiceNumber: invoice.invoiceNumber,
+        paymentReference: invoice.contract?.paymentReference || null,
         status: effectiveInvoiceStatus,
         issuedAt: invoice.issuedAt,
         paymentDueDate: invoice.paymentDueDate,
@@ -3093,11 +3211,13 @@ contratos@viajesalmanova.com
     }
 
     const normalizedPaymentDate = String(dto.paymentDate || "").trim();
+    let receiptDateObject: Date | null = null;
     if (normalizedPaymentDate) {
       const parsed = new Date(`${normalizedPaymentDate}T00:00:00`);
       if (Number.isNaN(parsed.getTime())) {
         throw new BadRequestException("La fecha del abono no es valida.");
       }
+      receiptDateObject = parsed;
     }
 
     for (const file of attachments) {
@@ -3127,6 +3247,24 @@ contratos@viajesalmanova.com
       throw new NotFoundException("No existe expediente de cobro para este contrato.");
     }
 
+    // Validar paymentReference si fue proporcionado
+    if (dto.paymentReference) {
+      const providedRef = String(dto.paymentReference || "").trim().toUpperCase();
+      const contractRef = String(invoice.contract?.paymentReference || "").trim().toUpperCase();
+      
+      if (!contractRef) {
+        throw new BadRequestException(
+          "Este contrato no tiene un código de pago asignado. Contacta a soporte."
+        );
+      }
+      
+      if (providedRef !== contractRef) {
+        throw new BadRequestException(
+          `El código de pago "${dto.paymentReference}" no coincide con el código del contrato "${invoice.contract.paymentReference}". Verifica e intenta nuevamente.`
+        );
+      }
+    }
+
     if (invoice.status === "FACTURA_ANULADA") {
       throw new BadRequestException("La factura esta anulada y no acepta abonos.");
     }
@@ -3151,8 +3289,65 @@ contratos@viajesalmanova.com
       }
     }
 
+    // Validar cuenta destino si fue proporcionada (REGLA DURA)
+    if (dto.destinationAccount) {
+      const accountNumber = String(dto.destinationAccount).trim();
+      const detectedAccount = await (this.prisma as any).companyBankAccount.findFirst({
+        where: {
+          OR: [
+            { accountNumber },
+            { ibanNumber: accountNumber },
+            { sinpeNumber: accountNumber },
+          ],
+        },
+      });
+
+      if (!detectedAccount) {
+        throw new BadRequestException(
+          `❌ CUENTA DESTINO NO REGISTRADA: La cuenta "${accountNumber}" no está registrada en el sistema. Por favor, registre esta cuenta bancaria antes de procesar el pago, o verifique que el número de cuenta sea correcto.`,
+        );
+      }
+
+      if (!detectedAccount.isActive) {
+        throw new BadRequestException(
+          `❌ CUENTA DESTINO INACTIVA: La cuenta "${accountNumber}" (${detectedAccount.bankName}) está marcada como inactiva. Active la cuenta o use otra cuenta destino.`,
+        );
+      }
+
+      // Si la cuenta es válida, usar su banco registrado
+      if (!dto.destinationBank || dto.destinationBank.trim() === '') {
+        dto.destinationBank = detectedAccount.bankName;
+      }
+    }
+
+    // Validar duplicados: buscar pagos idénticos
+    if (dto.bankReference) {
+      const duplicatePayment = await (this.prisma as any).billingPayment.findFirst({
+        where: {
+          contractId,
+          bankReference: dto.bankReference,
+          amount: this.toDecimalString(amount),
+          status: { not: "ABONO_RECHAZADO" },
+        },
+        select: {
+          id: true,
+          reportedAt: true,
+          createdByName: true,
+          amount: true,
+        },
+      });
+
+      if (duplicatePayment) {
+        throw new BadRequestException(
+          `⚠️ PAGO DUPLICADO DETECTADO: Ya existe un pago con la misma referencia bancaria "${dto.bankReference}" por $${duplicatePayment.amount} USD registrado el ${this.formatDateTime(duplicatePayment.reportedAt)} por ${duplicatePayment.createdByName}. Por favor verifica que no sea un duplicado.`,
+        );
+      }
+    }
+
     const metadataNotes = [
       normalizedPaymentDate ? `Fecha comprobante: ${normalizedPaymentDate}` : "",
+      dto.paymentReference ? `Codigo de pago usado: ${dto.paymentReference}` : "",
+      dto.destinationAccount ? `Cuenta destino: ${dto.destinationAccount}` : "",
       `Registro sistema: ${this.formatDateTime(new Date())}`,
       `Registrado por: ${user.fullName}`,
       String(dto.notes || "").trim(),
@@ -3170,6 +3365,10 @@ contratos@viajesalmanova.com
         status: "ABONO_REPORTADO",
         bankReference: dto.bankReference || null,
         payerName: dto.payerName || null,
+        originBank: dto.originBank || null,
+        destinationBank: dto.destinationBank || null,
+        paymentCode: dto.paymentReference || null,
+        receiptDate: receiptDateObject || null,
         notes: metadataNotes || null,
         createdByUserId: user.id,
         createdByName: user.fullName,
@@ -3215,27 +3414,30 @@ contratos@viajesalmanova.com
       }
     } else {
       for (const file of attachments) {
+        // Convertir imágenes a WebP automáticamente
+        const processedFile = await this.convertImageToWebP(file);
+
         const objectKey = [
           "billing",
           this.sanitizeSegment(invoice.contractNumber),
           "payments",
           payment.id,
-          `${Date.now()}-${this.sanitizeSegment(file.originalname)}`,
+          `${Date.now()}-${this.sanitizeSegment(processedFile.originalname)}`,
         ].join("/");
 
         await this.uploadToSpaces({
           objectKey,
-          contentType: file.mimetype,
-          body: file.buffer,
+          contentType: processedFile.mimetype,
+          body: processedFile.buffer,
         });
 
         const row = await (this.prisma as any).billingPaymentAttachment.create({
           data: {
             paymentId: payment.id,
             objectKey,
-            originalFileName: file.originalname,
-            mimeType: file.mimetype,
-            size: file.size,
+            originalFileName: processedFile.originalname,
+            mimeType: processedFile.mimetype,
+            size: processedFile.size,
           },
         });
 
@@ -3336,7 +3538,14 @@ contratos@viajesalmanova.com
   ) {
     const payment = await (this.prisma as any).billingPayment.findUnique({
       where: { id: paymentId },
-      include: { receipt: true },
+      include: { 
+        receipt: true,
+        invoice: {
+          include: {
+            client: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -3376,6 +3585,34 @@ contratos@viajesalmanova.com
       sourceIp,
       userAgent,
     });
+
+    // Envío automático del recibo al cliente
+    if (payment.receipt && payment.invoice?.client?.email) {
+      try {
+        const clientEmail = String(payment.invoice.client.email).trim();
+        this.logger.log(`[verifyPayment] Enviando recibo automático al cliente: ${clientEmail}`);
+        
+        await this.approveAndSendReceipt(
+          { ...user, role: "ADMIN" }, // Forzar rol ADMIN para permitir el primer envío
+          payment.receipt.id,
+          clientEmail,
+          undefined,
+          sourceIp,
+          userAgent,
+        );
+        
+        this.logger.log(`[verifyPayment] ✅ Recibo enviado automáticamente a ${clientEmail}`);
+      } catch (emailError) {
+        // No revertir la aprobación si falla el email, solo registrar el error
+        this.logger.error(
+          `[verifyPayment] ⚠️ No se pudo enviar el recibo automáticamente: ${emailError instanceof Error ? emailError.message : String(emailError)}`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        `[verifyPayment] ⚠️ No se pudo enviar recibo: receiptId=${payment.receipt?.id || "N/A"}, clientEmail=${payment.invoice?.client?.email || "N/A"}`,
+      );
+    }
 
     return { ok: true, paymentId: updated.id, status: updated.status };
   }
@@ -3450,6 +3687,76 @@ contratos@viajesalmanova.com
     });
 
     return { ok: true, paymentId: updated.id, status: updated.status };
+  }
+
+  async getPaymentAttachment(
+    user: { id: string; email: string; fullName: string; role?: string },
+    paymentId: string,
+    attachmentId: string,
+  ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
+    // Verificar que el attachment existe y pertenece al payment
+    const attachment = await (this.prisma as any).billingPaymentAttachment.findUnique({
+      where: { id: attachmentId },
+      include: {
+        payment: {
+          include: {
+            invoice: {
+              include: {
+                client: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attachment) {
+      throw new NotFoundException("Archivo adjunto no encontrado.");
+    }
+
+    if (attachment.paymentId !== paymentId) {
+      throw new BadRequestException("El archivo no pertenece a este pago.");
+    }
+
+    // Solo Admin/Contador pueden ver todos los attachments
+    // Agentes solo pueden ver attachments de sus propios reportes
+    const role = String(user.role || "").toUpperCase();
+    if (!["ADMIN", "CONTADOR"].includes(role)) {
+      // Si es agente, verificar que sea el creador del payment
+      if (attachment.payment.createdByUserId !== user.id) {
+        throw new BadRequestException("No tienes permiso para ver este archivo.");
+      }
+    }
+
+    // Descargar archivo de S3
+    try {
+      const cfg = this.getSpacesConfig();
+      const client = this.getSpacesClient();
+      
+      const command = new GetObjectCommand({
+        Bucket: cfg.bucket,
+        Key: attachment.objectKey,
+      });
+
+      const response = await client.send(command);
+      const stream = response.Body as any;
+      const chunks: Buffer[] = [];
+
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+
+      const buffer = Buffer.concat(chunks);
+
+      return {
+        buffer,
+        mimeType: attachment.mimeType,
+        fileName: attachment.originalFileName,
+      };
+    } catch (s3Error) {
+      console.error("[getPaymentAttachment] S3 error:", s3Error);
+      throw new BadRequestException("No se pudo descargar el archivo.");
+    }
   }
 
   async createCreditNote(
@@ -3972,6 +4279,217 @@ contratos@viajesalmanova.com
       status: updated.status,
       sentToEmail: updated.sentToEmail,
       ccEmail: normalizedCc || null,
+    };
+  }
+
+  async getPendingPaymentsCount(): Promise<number> {
+    return this.prisma.billingPayment.count({
+      where: {
+        status: {
+          in: ["ABONO_REPORTADO", "ABONO_EN_REVISION"],
+        },
+      },
+    });
+  }
+
+  async getPendingCreditNotesCount(): Promise<number> {
+    return this.prisma.billingCreditNote.count({
+      where: {
+        status: "NC_PENDIENTE_APROBACION",
+      },
+    });
+  }
+
+  async getDashboardMetrics(
+    _user: { id: string; email: string; fullName: string },
+    params: { period?: string; from?: string; to?: string },
+  ) {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+
+    // Si se proporcionan fechas personalizadas, usarlas
+    if (params.from || params.to) {
+      if (params.from) {
+        startDate = new Date(params.from);
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        // Si no hay 'from', usar el inicio del año
+        startDate = new Date(now.getFullYear(), 0, 1);
+      }
+
+      if (params.to) {
+        endDate = new Date(params.to);
+        endDate.setHours(23, 59, 59, 999);
+      }
+    } else {
+      // Usar período predefinido
+      switch (params.period) {
+        case "today":
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case "week":
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case "year":
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case "all":
+          // Sin filtro de fecha - tomar todo
+          startDate = new Date(2000, 0, 1);
+          break;
+        case "month":
+        default:
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 30);
+          startDate.setHours(0, 0, 0, 0);
+      }
+    }
+
+    // Contar facturas por estado
+    const invoicesByStatus = await (this.prisma as any).billingInvoice.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    });
+
+    // Contar pagos pendientes
+    const pendingPayments = await (this.prisma as any).billingPayment.count({
+      where: {
+        status: { in: ["ABONO_REPORTADO", "ABONO_EN_REVISION"] },
+      },
+    });
+
+    // Contar recibos pendientes de envío
+    const pendingReceipts = await (this.prisma as any).billingReceipt.count({
+      where: {
+        status: "RECIBO_PENDIENTE_VERIFICACION",
+      },
+    });
+
+    // Contar notas de crédito pendientes
+    const pendingCreditNotes = await (this.prisma as any).billingCreditNote.count({
+      where: {
+        status: "NC_PENDIENTE_APROBACION",
+      },
+    });
+
+    // Contar cuentas vencidas
+    const overdueInvoices = await (this.prisma as any).billingInvoice.count({
+      where: {
+        paymentDueDate: { lt: now },
+        balanceAmount: { gt: 0 },
+        status: { notIn: ["FACTURA_PAGADA", "FACTURA_ANULADA"] },
+      },
+    });
+
+    // Calcular montos del período
+    const invoicesInPeriod = await (this.prisma as any).billingInvoice.aggregate({
+      where: {
+        issuedAt: { 
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _sum: {
+        totalAmount: true,
+        verifiedAmount: true,
+        balanceAmount: true,
+      },
+      _count: { id: true },
+    });
+
+    // Pagos del período
+    const paymentsInPeriod = await (this.prisma as any).billingPayment.aggregate({
+      where: {
+        reportedAt: { 
+          gte: startDate,
+          lte: endDate,
+        },
+        status: "ABONO_VERIFICADO",
+      },
+      _sum: { amount: true },
+      _count: { id: true },
+    });
+
+    // Gráfico de cobros por día (últimos 30 días)
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    const dailyPayments = await (this.prisma as any).$queryRaw`
+      SELECT 
+        DATE(reported_at) as day,
+        SUM(amount) as total,
+        COUNT(*) as count
+      FROM billing_payment
+      WHERE reported_at >= ${thirtyDaysAgo}
+        AND status = 'ABONO_VERIFICADO'
+      GROUP BY DATE(reported_at)
+      ORDER BY day ASC
+    `;
+
+    // Top clientes por saldo pendiente
+    const topOverdueClients = await (this.prisma as any).$queryRaw`
+      SELECT 
+        c.id,
+        c.full_name,
+        c.email,
+        SUM(bi.balance_amount) as total_balance,
+        COUNT(bi.id) as invoice_count
+      FROM billing_invoice bi
+      INNER JOIN client c ON c.id = bi.client_id
+      WHERE bi.balance_amount > 0
+        AND bi.payment_due_date < ${now}
+      GROUP BY c.id, c.full_name, c.email
+      ORDER BY total_balance DESC
+      LIMIT 10
+    `;
+
+    return {
+      period: params.period || "custom",
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      currentDate: now.toISOString(),
+      summary: {
+        invoices: {
+          byStatus: invoicesByStatus.map((item: any) => ({
+            status: item.status,
+            count: item._count.id,
+          })),
+          overdue: overdueInvoices,
+        },
+        pendingTasks: {
+          payments: pendingPayments,
+          receipts: pendingReceipts,
+          creditNotes: pendingCreditNotes,
+          total: pendingPayments + pendingReceipts + pendingCreditNotes,
+        },
+        period: {
+          invoicesCount: invoicesInPeriod._count.id || 0,
+          invoicedAmount: this.toNumber(invoicesInPeriod._sum.totalAmount, 0),
+          collectedAmount: this.toNumber(invoicesInPeriod._sum.verifiedAmount, 0),
+          balanceAmount: this.toNumber(invoicesInPeriod._sum.balanceAmount, 0),
+          paymentsCount: paymentsInPeriod._count.id || 0,
+          paymentsAmount: this.toNumber(paymentsInPeriod._sum.amount, 0),
+        },
+      },
+      charts: {
+        dailyPayments: dailyPayments.map((item: any) => ({
+          day: item.day,
+          total: this.toNumber(item.total, 0),
+          count: Number(item.count || 0),
+        })),
+      },
+      alerts: {
+        topOverdueClients: topOverdueClients.map((item: any) => ({
+          id: item.id,
+          fullName: item.full_name,
+          email: item.email,
+          totalBalance: this.toNumber(item.total_balance, 0),
+          invoiceCount: Number(item.invoice_count || 0),
+        })),
+      },
     };
   }
 }

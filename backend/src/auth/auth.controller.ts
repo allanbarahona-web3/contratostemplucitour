@@ -1,4 +1,5 @@
-import { Body, Controller, Get, MessageEvent, Param, Patch, Post, Query, Req, Sse, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, MessageEvent, Param, Patch, Post, Query, Req, Request, Sse, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
@@ -7,11 +8,17 @@ import { RolesGuard } from "./roles.guard";
 import { Roles } from "./roles.decorator";
 import { AdminCreateUserDto } from "./dto/admin-create-user.dto";
 import { AdminUpdateUserDto } from "./dto/admin-update-user.dto";
+import { RequestPasswordResetDto } from "./dto/request-password-reset.dto";
+import { ConfirmPasswordResetDto } from "./dto/confirm-password-reset.dto";
+import { AdminResetPasswordDto } from "./dto/admin-reset-password.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Strict rate limiting: only 5 login attempts per minute per IP
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post("login")
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -46,8 +53,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
   @Patch("users/:userId")
-  adminUpdateUser(@Param("userId") userId: string, @Body() dto: AdminUpdateUserDto) {
-    return this.authService.adminUpdateUser(userId, dto);
+  adminUpdateUser(
+    @Param("userId") userId: string,
+    @Body() dto: AdminUpdateUserDto,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.authService.adminUpdateUser(userId, dto, req.user.id);
   }
 
   @Sse("session-stream")
@@ -91,5 +102,32 @@ export class AuthController {
         clearInterval(timer);
       };
     });
+  }
+
+  // Rate limit password reset: 3 attempts per 5 minutes
+  @Throttle({ default: { ttl: 300000, limit: 3 } })
+  @Post("request-password-reset")
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto);
+  }
+
+  // Rate limit password reset confirmation: 5 attempts per 5 minutes
+  @Throttle({ default: { ttl: 300000, limit: 5 } })
+  @Post("confirm-password-reset")
+  confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.authService.confirmPasswordReset(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  @Post("users/reset-password")
+  adminResetPassword(@Body() dto: AdminResetPasswordDto) {
+    return this.authService.adminResetUserPassword(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("change-password")
+  changePassword(@Req() req: { user: { id: string } }, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
   }
 }

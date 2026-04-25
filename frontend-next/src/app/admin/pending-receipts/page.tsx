@@ -1,0 +1,276 @@
+"use client";
+
+import { getStoredSession, getStoredToken } from "@/lib/auth-api";
+import {
+  getBillingContractAccount,
+  approveAndSendBillingReceipt,
+  type BillingAccount,
+} from "@/lib/billing-api";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+const formatMoney = (value: number): string => `₡${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+const formatDateTime = (value: string): string => {
+  try {
+    const date = new Date(value);
+    return date.toLocaleString("es-CR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "-";
+  }
+};
+
+type PendingReceipt = {
+  receiptId: string;
+  receiptNumber: string;
+  contractId: string;
+  contractNumber: string;
+  amount: number;
+  issuedAt: string;
+  clientName: string;
+  clientEmail: string;
+  paymentId: string;
+  paymentDate: string;
+};
+
+export default function PendingReceiptsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [receipts, setReceipts] = useState<PendingReceipt[]>([]);
+  const [actionBusy, setActionBusy] = useState("");
+  const [emailModalReceipt, setEmailModalReceipt] = useState<PendingReceipt | null>(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailCc, setEmailCc] = useState("");
+  const [statusText, setStatusText] = useState("");
+
+  const role = String(getStoredSession()?.user?.role || "").toUpperCase();
+  const isAuthorized = ["ADMIN", "CONTADOR"].includes(role);
+
+  const loadPendingReceipts = async () => {
+    setLoading(true);
+    setStatusText("");
+    try {
+      // Cargar todos los contratos desde la API de billing
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001"}/billing/contracts?limit=500`, {
+        headers: {
+          Authorization: `Bearer ${getStoredToken()}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error("No se pudo cargar los contratos");
+      
+      const data = await response.json();
+      const contracts = Array.isArray(data.items) ? data.items : [];
+      
+      // Cargar detalles de cada contrato para obtener recibos pendientes
+      const pendingReceipts: PendingReceipt[] = [];
+      
+      for (const contract of contracts) {
+        try {
+          const account: BillingAccount = await getBillingContractAccount(contract.contractId);
+          
+          // Buscar pagos verificados con recibos pendientes
+          for (const payment of account.payments) {
+            if (payment.status === "ABONO_VERIFICADO" && payment.receipt?.status === "RECIBO_PENDIENTE_VERIFICACION") {
+              pendingReceipts.push({
+                receiptId: payment.receipt.id,
+                receiptNumber: payment.receipt.receiptNumber,
+                contractId: account.invoice.contractId,
+                contractNumber: account.invoice.contractNumber,
+                amount: payment.amount,
+                issuedAt: payment.receipt.issuedAt,
+                clientName: account.client.fullName,
+                clientEmail: account.client.email,
+                paymentId: payment.id,
+                paymentDate: payment.reportedAt,
+              });
+            }
+          }
+        } catch {
+          // Ignorar errores en contratos individuales
+        }
+      }
+      
+      setReceipts(pendingReceipts);
+    } catch (fetchError) {
+      setStatusText(fetchError instanceof Error ? fetchError.message : "No se pudo cargar los recibos pendientes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token || !isAuthorized) {
+      router.replace("/");
+      return;
+    }
+    void loadPendingReceipts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, isAuthorized]);
+
+  const openEmailModal = (receipt: PendingReceipt) => {
+    setEmailModalReceipt(receipt);
+    setEmailTo(receipt.clientEmail);
+    setEmailCc("");
+  };
+
+  const onApproveAndSend = async () => {
+    if (!emailModalReceipt) return;
+
+    const targetEmail = emailTo.trim() || emailModalReceipt.clientEmail;
+    
+    setActionBusy(`send:${emailModalReceipt.receiptId}`);
+    setStatusText("");
+    try {
+      await approveAndSendBillingReceipt(emailModalReceipt.receiptId, targetEmail, emailCc.trim() || undefined);
+      setStatusText("✅ Recibo aprobado y enviado exitosamente");
+      setEmailModalReceipt(null);
+      await loadPendingReceipts();
+    } catch (actionError) {
+      setStatusText(actionError instanceof Error ? actionError.message : "No se pudo enviar el recibo.");
+    } finally {
+      setActionBusy("");
+    }
+  };
+
+  if (!isAuthorized) {
+    return null;
+  }
+
+  return (
+    <main className="app-shell">
+      <section className="card contracts-card">
+        <h1>🧾 Recibos Pendientes de Envío</h1>
+        <p className="muted">Revisa y envía los recibos de pagos ya verificados.</p>
+
+        {statusText ? <p className="status-line">{statusText}</p> : null}
+
+        {loading ? (
+          <p className="muted">Cargando recibos pendientes...</p>
+        ) : receipts.length === 0 ? (
+          <div className="empty-state" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
+            <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>¡Todo al día!</h3>
+            <p className="muted" style={{ margin: 0 }}>No hay recibos pendientes de envío.</p>
+          </div>
+        ) : (
+          <div className="history-table-wrap" style={{ marginTop: "16px" }}>
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th>Recibo</th>
+                  <th>Contrato</th>
+                  <th>Cliente</th>
+                  <th>Monto</th>
+                  <th>Fecha Pago</th>
+                  <th>Fecha Emisión</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receipts.map((receipt) => (
+                  <tr key={receipt.receiptId}>
+                    <td>
+                      <strong>{receipt.receiptNumber}</strong>
+                    </td>
+                    <td>{receipt.contractNumber}</td>
+                    <td>
+                      <div className="history-col-name">{receipt.clientName}</div>
+                      <div className="history-col-muted">{receipt.clientEmail}</div>
+                    </td>
+                    <td>
+                      <strong style={{ color: "#10b981" }}>{formatMoney(receipt.amount)}</strong>
+                    </td>
+                    <td>{formatDateTime(receipt.paymentDate)}</td>
+                    <td>{formatDateTime(receipt.issuedAt)}</td>
+                    <td>
+                      <div className="history-actions">
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => openEmailModal(receipt)}
+                          disabled={actionBusy === `send:${receipt.receiptId}`}
+                          style={{ marginRight: "8px" }}
+                        >
+                          📧 Aprobar y Enviar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => router.push(`/billing/${receipt.contractId}`)}
+                        >
+                          Ver cuenta
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Modal de Email */}
+      {emailModalReceipt ? (
+        <section
+          className="viewer-modal"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setEmailModalReceipt(null);
+            }
+          }}
+        >
+          <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="viewer-head">
+              <h2>Aprobar y Enviar Recibo</h2>
+              <button type="button" className="btn btn-secondary" onClick={() => setEmailModalReceipt(null)}>
+                Cerrar
+              </button>
+            </div>
+
+            <div className="viewer-body">
+              <p className="muted" style={{ marginBottom: "16px" }}>
+                <strong>Recibo:</strong> {emailModalReceipt.receiptNumber}<br />
+                <strong>Monto:</strong> {formatMoney(emailModalReceipt.amount)}<br />
+                <strong>Cliente:</strong> {emailModalReceipt.clientName}
+              </p>
+
+              <label className="reject-modal-label">
+                Enviar a (email)
+                <input
+                  type="email"
+                  value={emailTo}
+                  onChange={(event) => setEmailTo(event.target.value)}
+                  placeholder="cliente@ejemplo.com"
+                />
+              </label>
+
+              <label className="reject-modal-label" style={{ marginTop: "12px" }}>
+                CC opcional
+                <input
+                  type="email"
+                  value={emailCc}
+                  onChange={(event) => setEmailCc(event.target.value)}
+                  placeholder="copia@ejemplo.com"
+                />
+              </label>
+
+              <div className="actions" style={{ marginTop: "16px" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void onApproveAndSend()}
+                  disabled={actionBusy.startsWith("send:")}
+                >
+                  {actionBusy.startsWith("send:") ? "Enviando..." : "Aprobar y Enviar Recibo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+    </main>
+  );
+}

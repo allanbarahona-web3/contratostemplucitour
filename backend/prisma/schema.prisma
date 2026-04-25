@@ -8,16 +8,34 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  fullName     String
-  role         String   @default("AGENT")
-  passwordHash String
-  isActive     Boolean  @default(true)
-  activeJti    String?
-  activeAt     DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  fullName           String
+  role               String   @default("AGENT")
+  passwordHash       String
+  isActive           Boolean  @default(true)
+  mustChangePassword Boolean  @default(false)
+  activeJti          String?
+  activeAt           DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("password_reset_token")
 }
 
 model ContractNumber {
@@ -34,6 +52,7 @@ model ContractNumber {
 model Contract {
   id                String             @id @default(cuid())
   contractNumber    String             @unique
+  paymentReference  String             @unique
   clientId          String
   destination       String
   status            String             @default("PENDING_SIGNATURE")
@@ -211,6 +230,12 @@ model BillingPayment {
   bankReference     String?
   payerName         String?
   notes             String?
+  // Nuevos campos para procesamiento de comprobantes
+  originBank        String?  // Banco desde donde se hizo el pago
+  destinationBank   String?  // Banco destino (derivado de la cuenta)
+  destinationAccountId String? // Referencia a CompanyBankAccount
+  paymentCode       String?  // Código único de pago (LUC-XXXXX)
+  receiptDate       DateTime? // Fecha del comprobante (puede diferir de reportedAt)
   verifiedAt        DateTime?
   verifiedByUserId  String?
   verifiedByName    String?
@@ -221,11 +246,15 @@ model BillingPayment {
   updatedAt         DateTime @updatedAt
   invoice           BillingInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   contract          Contract       @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  destinationAccount CompanyBankAccount? @relation(fields: [destinationAccountId], references: [id], onDelete: Restrict)
   attachments       BillingPaymentAttachment[]
   receipt           BillingReceipt?
+  receiptImage      PaymentReceiptImage?
 
   @@index([invoiceId])
   @@index([contractId])
+  @@index([destinationAccountId])
+  @@index([paymentCode])
   @@index([status])
   @@index([reportedAt])
 }
@@ -343,4 +372,63 @@ model ExchangeRate {
   @@unique([date])
   @@index([date])
   @@index([setByUserId])
+}
+
+// Cuentas bancarias de la empresa para recibir pagos
+model CompanyBankAccount {
+  id                String   @id @default(cuid())
+  bankName          String   // BAC, BCR, Promerica, etc.
+  accountNumber     String   @unique // Número de cuenta o IBAN
+  accountType       String   // "CUENTA_CORRIENTE", "CUENTA_AHORRO"
+  currency          String   // "CRC", "USD"
+  sinpeNumber       String?  // Número SINPE móvil (opcional)
+  accountHolderName String   // Nombre del titular (Empresa)
+  companyName       String   @default("Viajes Alma Nova") // Nombre de la empresa (ej: "Viajes Alma Nova", "Lucitours")
+  isActive          Boolean  @default(true)
+  notes             String?
+  createdByUserId   String
+  createdByName     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  payments          BillingPayment[]
+
+  @@index([bankName])
+  @@index([currency])
+  @@index([isActive])
+  @@index([companyName])
+  @@index([createdAt])
+}
+
+// Imágenes de comprobantes procesados con Vision AI
+model PaymentReceiptImage {
+  id                      String   @id @default(cuid())
+  paymentId               String?  @unique
+  objectKey               String   @unique // Spaces/S3 key
+  originalFileName        String
+  mimeType                String
+  size                    Int
+  // Datos extraídos por Vision AI
+  extractedData           Json     // Raw JSON de OpenAI
+  extractedAmount         Decimal? @db.Decimal(14, 2)
+  extractedCurrency       String?
+  extractedDate           DateTime?
+  extractedReference      String?
+  extractedOriginBank     String?
+  extractedDestinationBank String?
+  extractedDestinationAccount String?
+  extractedPayerName      String?
+  extractedPaymentCode    String?  // Código único de pago
+  extractedNotes          String?  // Resto del detalle
+  confidenceScore         Decimal? @db.Decimal(5, 4) // 0.0000 - 1.0000
+  processingStatus        String   @default("PENDING") // PENDING, PROCESSED, ERROR
+  processingError         String?
+  processedAt             DateTime?
+  uploadedByUserId        String
+  uploadedByName          String
+  createdAt               DateTime @default(now())
+  payment                 BillingPayment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+  @@index([processingStatus])
+  @@index([createdAt])
 }

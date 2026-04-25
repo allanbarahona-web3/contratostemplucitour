@@ -1,4 +1,4 @@
-import { getStoredToken } from "@/lib/auth-api";
+import { authenticatedFetch, getStoredToken } from "@/lib/auth-api";
 import { resolveApiBase } from "@/lib/runtime-config";
 
 export type ExchangeRate = {
@@ -27,7 +27,7 @@ export async function getCurrentExchangeRate(): Promise<ExchangeRate | null> {
   const token = getStoredToken();
   const base = await resolveApiBase();
 
-  const res = await fetch(`${base}/exchange-rate/current`, {
+  const res = await authenticatedFetch(`${base}/exchange-rate/current`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ export async function getExchangeRateByDate(date: string): Promise<ExchangeRate 
   const token = getStoredToken();
   const base = await resolveApiBase();
 
-  const res = await fetch(`${base}/exchange-rate?date=${encodeURIComponent(date)}`, {
+  const res = await authenticatedFetch(`${base}/exchange-rate?date=${encodeURIComponent(date)}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -75,7 +75,7 @@ export async function getExchangeRateHistory(days = 30): Promise<ExchangeRate[]>
   const token = getStoredToken();
   const base = await resolveApiBase();
 
-  const res = await fetch(`${base}/exchange-rate/history?days=${days}`, {
+  const res = await authenticatedFetch(`${base}/exchange-rate/history?days=${days}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -98,7 +98,7 @@ export async function setExchangeRate(input: SetExchangeRateInput): Promise<Exch
   const token = getStoredToken();
   const base = await resolveApiBase();
 
-  const res = await fetch(`${base}/exchange-rate/set`, {
+  const res = await authenticatedFetch(`${base}/exchange-rate/set`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
