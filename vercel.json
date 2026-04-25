@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd frontend-next && pnpm install && pnpm build",
-  "outputDirectory": "frontend-next/.next",
+  "buildCommand": "pnpm install && pnpm build",
+  "outputDirectory": ".next",
   "framework": "nextjs",
   "cleanUrls": true,
   "trailingSlash": false
