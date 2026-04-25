@@ -53,7 +53,6 @@ RUN pnpm install --frozen-lockfile
 COPY backend/ ./
 RUN pnpm exec prisma generate
 RUN pnpm run build
-RUN pnpm prune --prod
 
 ENV NODE_ENV=production
 
