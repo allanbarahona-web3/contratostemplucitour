@@ -2,6 +2,9 @@ FROM node:20-bookworm-slim AS base
 
 WORKDIR /app
 
+# Install pnpm globally
+RUN npm install -g pnpm@10.28.0
+
 # Chromium and required system libraries for Puppeteer PDF rendering.
 RUN apt-get update && apt-get install -y --no-install-recommends \
   chromium \
@@ -42,15 +45,15 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV PUPPETEER_DISABLE_SANDBOX=true
 
-# Copy backend package files
-COPY backend/package*.json ./
-RUN npm ci --include=dev
+# Copy backend package files and pnpm lock
+COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy backend source and build
 COPY backend/ ./
-RUN npx prisma generate
-RUN npm run build
-RUN npm prune --omit=dev
+RUN pnpm exec prisma generate
+RUN pnpm run build
+RUN pnpm prune --prod
 
 ENV NODE_ENV=production
 
