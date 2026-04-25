@@ -48,8 +48,11 @@ ENV PUPPETEER_DISABLE_SANDBOX=true
 # Copy all backend files FIRST
 COPY backend/ ./
 
-# Install dependencies (now package.json is in the right place)
-RUN pnpm install --frozen-lockfile
+# Install dependencies with explicit error checking
+RUN pnpm install --frozen-lockfile && \
+    echo "✓ Dependencies installed" && \
+    ls -la node_modules | head -20 && \
+    test -d node_modules/express || (echo "ERROR: express not installed" && exit 1)
 
 # Generate Prisma client and build
 RUN pnpm exec prisma generate

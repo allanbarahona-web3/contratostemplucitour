@@ -1,0 +1,34 @@
+# Ignorar node_modules (se instalarán dentro del contenedor)
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Ignorar archivos de build
+dist/
+build/
+*.log
+
+# Ignorar archivos de configuración local
+.env
+.env.*
+!.env.example
+
+# Ignorar archivos de Git
+.git/
+.gitignore
+
+# Ignorar archivos de editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignorar archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Ignorar archivos de test
+coverage/
+.nyc_output/
