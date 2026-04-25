@@ -28,8 +28,8 @@ export const resolveApiBase = (): string => {
     : "";
 
   const hostFallbackByDomain: Record<string, string> = {
-    "contratos.lucitour.com": "https://contractstemporal-f8too.ondigitalocean.app",
-    "www.contratos.lucitour.com": "https://contractstemporal-f8too.ondigitalocean.app",
+    "contratos.lucitour.com": "https://lucitourops-vww2w.ondigitalocean.app",
+    "www.contratos.lucitour.com": "https://lucitourops-vww2w.ondigitalocean.app",
   };
 
   const hostFallback = normalizeBase(hostFallbackByDomain[host] || "");
