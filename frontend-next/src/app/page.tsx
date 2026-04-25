@@ -107,7 +107,7 @@ export default function Home() {
             onChange={(e) => setWebsite(e.target.value)}
             style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px" }}
             tabIndex={-1}
-            autoComplete="off"
+            autoComplete="nope"
             aria-hidden="true"
           />
 
