@@ -547,6 +547,7 @@ export const getBillingCreditNotePdfUrl = async (creditNoteId: string): Promise<
 export type PendingCounts = {
   pendingReceipts: number;
   pendingCreditNotes: number;
+  contractsPendingSignature: number;
 };
 
 export const getPendingApprovalsCount = async (): Promise<PendingCounts> => {
@@ -556,7 +557,7 @@ export const getPendingApprovalsCount = async (): Promise<PendingCounts> => {
     });
     return data;
   } catch {
-    return { pendingReceipts: 0, pendingCreditNotes: 0 };
+    return { pendingReceipts: 0, pendingCreditNotes: 0, contractsPendingSignature: 0 };
   }
 };
 

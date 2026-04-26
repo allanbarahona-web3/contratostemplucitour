@@ -4347,6 +4347,14 @@ contratos@viajesalmanova.com
     });
   }
 
+  async getPendingSignatureContractsCount(): Promise<number> {
+    return (this.prisma as any).contract.count({
+      where: {
+        status: "PENDING_SIGNATURE",
+      },
+    });
+  }
+
   async getDashboardMetrics(
     _user: { id: string; email: string; fullName: string },
     params: { period?: string; from?: string; to?: string },

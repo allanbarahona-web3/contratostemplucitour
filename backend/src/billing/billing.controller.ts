@@ -371,10 +371,11 @@ export class BillingController {
   @Get("admin/pending-counts")
   @Roles("ADMIN", "CONTADOR", "AGENTE")
   @UseGuards(RolesGuard)
-  async getPendingCounts(): Promise<{ pendingReceipts: number; pendingCreditNotes: number }> {
+  async getPendingCounts(): Promise<{ pendingReceipts: number; pendingCreditNotes: number; contractsPendingSignature: number }> {
     const pendingReceipts = await this.billingService.getPendingPaymentsCount();
     const pendingCreditNotes = await this.billingService.getPendingCreditNotesCount();
-    return { pendingReceipts, pendingCreditNotes };
+    const contractsPendingSignature = await this.billingService.getPendingSignatureContractsCount();
+    return { pendingReceipts, pendingCreditNotes, contractsPendingSignature };
   }
 
   @Get("admin/dashboard-metrics")

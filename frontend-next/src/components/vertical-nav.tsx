@@ -33,7 +33,7 @@ export function VerticalNav() {
   const pathname = usePathname();
   const [tick, setTick] = useState(Date.now());
   const [showCalculator, setShowCalculator] = useState(false);
-  const [pendingCounts, setPendingCounts] = useState<PendingCounts>({ pendingReceipts: 0, pendingCreditNotes: 0 });
+  const [pendingCounts, setPendingCounts] = useState<PendingCounts>({ pendingReceipts: 0, pendingCreditNotes: 0, contractsPendingSignature: 0 });
   const [mounted, setMounted] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
 
@@ -206,11 +206,12 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Historial (todos)
+    // Historial (todos) — badge de "listos para firmar" solo para agentes
     {
       href: "/history",
       label: "Historial",
       icon: "📅",
+      badge: !isAdminOrContador ? (pendingCounts.contractsPendingSignature || 0) : 0,
     },
   ];
 
