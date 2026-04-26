@@ -188,7 +188,7 @@ export default function PendingReceiptsPage() {
                       <div className="history-actions">
                         <button
                           type="button"
-                          className="btn"
+                          className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                           onClick={() => openEmailModal(receipt)}
                           disabled={actionBusy === `send:${receipt.receiptId}`}
                           style={{ marginRight: "8px" }}
@@ -197,7 +197,7 @@ export default function PendingReceiptsPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                           onClick={() => router.push(`/billing/${receipt.contractId}`)}
                         >
                           Ver cuenta
@@ -225,7 +225,7 @@ export default function PendingReceiptsPage() {
           <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Aprobar y Enviar Recibo</h2>
-              <button type="button" className="btn btn-secondary" onClick={() => setEmailModalReceipt(null)}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => setEmailModalReceipt(null)}>
                 Cerrar
               </button>
             </div>
@@ -260,7 +260,7 @@ export default function PendingReceiptsPage() {
               <div className="actions" style={{ marginTop: "16px" }}>
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => void onApproveAndSend()}
                   disabled={actionBusy.startsWith("send:")}
                 >

@@ -164,7 +164,7 @@ export default function PendingCreditNotesPage() {
                       <div className="history-actions">
                         <button
                           type="button"
-                          className="btn"
+                          className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                           onClick={() => openApproveModal(note)}
                           disabled={actionBusy === `approve:${note.id}`}
                           style={{ marginRight: "8px" }}
@@ -173,7 +173,7 @@ export default function PendingCreditNotesPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                           onClick={() => openRejectModal(note)}
                           disabled={actionBusy === `reject:${note.id}`}
                           style={{ marginRight: "8px" }}
@@ -182,7 +182,7 @@ export default function PendingCreditNotesPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                           onClick={() => router.push(`/billing/${note.contractId}`)}
                         >
                           Ver cuenta
@@ -210,7 +210,7 @@ export default function PendingCreditNotesPage() {
           <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Aprobar Nota de Crédito</h2>
-              <button type="button" className="btn btn-secondary" onClick={() => setApproveModalCreditNote(null)}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => setApproveModalCreditNote(null)}>
                 Cerrar
               </button>
             </div>
@@ -236,7 +236,7 @@ export default function PendingCreditNotesPage() {
               <div className="actions" style={{ marginTop: "16px" }}>
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => void onApprove()}
                   disabled={actionBusy.startsWith("approve:")}
                 >
@@ -261,7 +261,7 @@ export default function PendingCreditNotesPage() {
           <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Rechazar Nota de Crédito</h2>
-              <button type="button" className="btn btn-secondary" onClick={() => setRejectModalCreditNote(null)}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => setRejectModalCreditNote(null)}>
                 Cerrar
               </button>
             </div>
@@ -286,7 +286,7 @@ export default function PendingCreditNotesPage() {
               <div className="actions" style={{ marginTop: "16px" }}>
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => void onReject()}
                   disabled={actionBusy.startsWith("reject:")}
                 >

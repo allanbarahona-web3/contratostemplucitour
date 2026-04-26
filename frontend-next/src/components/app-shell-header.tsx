@@ -93,7 +93,7 @@ export function AppShellHeader() {
         ))}
         <button
           type="button"
-          className="btn btn-secondary"
+          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           onClick={() => setShowCalculator(true)}
           title="Calculadora de divisas USD/CRC"
         >
@@ -101,7 +101,7 @@ export function AppShellHeader() {
         </button>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           onClick={() => {
             clearStoredToken();
             router.replace("/");

@@ -975,7 +975,7 @@ export default function BillingContractAccountPage() {
                           navigator.clipboard.writeText(account.invoice.paymentReference || '');
                           setStatusText(`Código ${account.invoice.paymentReference} copiado al portapapeles.`);
                         }}
-                        className="btn btn-secondary"
+                        className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                         style={{ padding: '4px 8px', fontSize: '12px' }}
                         title="Copiar código de pago"
                       >
@@ -1130,7 +1130,7 @@ export default function BillingContractAccountPage() {
                         {payment.attachments.length > 0 ? (
                           <div className="history-actions">
                             {payment.attachments.map((file) => (
-                              <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
+                              <a key={file.id} href={file.url} target="_blank" rel="noopener noreferrer" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none">
                                 Ver {file.originalFileName}
                               </a>
                             ))}
@@ -1144,7 +1144,7 @@ export default function BillingContractAccountPage() {
                           {isAdmin && (payment.status === "ABONO_REPORTADO" || payment.status === "ABONO_EN_REVISION") ? (
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                               onClick={() => void onVerify(payment.id)}
                               disabled={actionBusy === `verify:${payment.id}`}
                             >
@@ -1155,7 +1155,7 @@ export default function BillingContractAccountPage() {
                           {isAdmin && (payment.status === "ABONO_REPORTADO" || payment.status === "ABONO_EN_REVISION") ? (
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                               onClick={() => {
                                 setRejectModalPaymentId(payment.id);
                                 setRejectReason("");
@@ -1169,7 +1169,7 @@ export default function BillingContractAccountPage() {
                           {isAdmin && payment.status === "ABONO_VERIFICADO" && payment.receipt && payment.receipt.status !== "RECIBO_ANULADO" ? (
                             <button
                               type="button"
-                              className="btn"
+                              className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                               onClick={() =>
                                 openDocumentEmailModal({
                                   type: "RECEIPT",
@@ -1187,7 +1187,7 @@ export default function BillingContractAccountPage() {
                           {!isAdmin && payment.status === "ABONO_VERIFICADO" && payment.receipt?.status === "RECIBO_APROBADO_ENVIADO" ? (
                             <button
                               type="button"
-                              className="btn"
+                              className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                               onClick={() =>
                                 openDocumentEmailModal({
                                   type: "RECEIPT",
@@ -1205,7 +1205,7 @@ export default function BillingContractAccountPage() {
                           {payment.receipt && payment.status === "ABONO_VERIFICADO" ? (
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                               onClick={() => void onOpenReceiptPdf(payment.receipt!.id)}
                               disabled={actionBusy === `receipt-pdf:${payment.receipt.id}`}
                             >
@@ -1216,7 +1216,7 @@ export default function BillingContractAccountPage() {
                           {payment.receipt && payment.status === "ABONO_VERIFICADO" ? (
                             <button
                               type="button"
-                              className="btn btn-secondary"
+                              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                               onClick={() => void onShareReceiptWhatsApp(payment.receipt!.id)}
                               disabled={actionBusy === `receipt-wa:${payment.receipt.id}`}
                             >
@@ -1278,7 +1278,7 @@ export default function BillingContractAccountPage() {
                             <>
                               <button
                                 type="button"
-                                className="btn btn-secondary"
+                                className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                 onClick={() => void onOpenCreditNotePdf(note.id)}
                                 disabled={actionBusy === `credit-note:pdf:${note.id}`}
                               >
@@ -1286,7 +1286,7 @@ export default function BillingContractAccountPage() {
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-secondary"
+                                className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                 onClick={() => void onShareCreditNoteWhatsApp(note.id)}
                                 disabled={actionBusy === `credit-note:wa:${note.id}`}
                               >
@@ -1295,7 +1295,7 @@ export default function BillingContractAccountPage() {
                               {isAdmin ? (
                                 <button
                                   type="button"
-                                  className="btn"
+                                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                                   onClick={() =>
                                     openDocumentEmailModal({
                                       type: "CREDIT_NOTE",
@@ -1311,7 +1311,7 @@ export default function BillingContractAccountPage() {
                               ) : (
                                 <button
                                   type="button"
-                                  className="btn"
+                                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                                   onClick={() =>
                                     openDocumentEmailModal({
                                       type: "CREDIT_NOTE",
@@ -1352,7 +1352,7 @@ export default function BillingContractAccountPage() {
           <div className="viewer-panel billing-statement-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Estado de cuenta</h2>
-              <button type="button" className="btn btn-secondary" onClick={closeStatementModal}>Cerrar</button>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={closeStatementModal}>Cerrar</button>
             </div>
 
             {account ? (
@@ -1376,7 +1376,7 @@ export default function BillingContractAccountPage() {
                 <div className="actions" style={{ marginTop: 8 }}>
                   <button
                     type="button"
-                    className="btn"
+                    className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                     onClick={onDownloadStatementPdf}
                     disabled={actionBusy === "statement:pdf"}
                   >
@@ -1384,7 +1384,7 @@ export default function BillingContractAccountPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                     onClick={() => void onShareStatementWhatsApp()}
                     disabled={actionBusy === "statement:wa"}
                   >
@@ -1392,7 +1392,7 @@ export default function BillingContractAccountPage() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                     onClick={() => setShowStatementEmailForm((prev) => !prev)}
                     disabled={actionBusy === "statement:email"}
                   >
@@ -1427,7 +1427,7 @@ export default function BillingContractAccountPage() {
                     <div className="actions">
                       <button
                         type="button"
-                        className="btn"
+                        className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                         onClick={() => void onSendStatementEmail()}
                         disabled={actionBusy === "statement:email"}
                       >
@@ -1493,7 +1493,7 @@ export default function BillingContractAccountPage() {
               <h2>
                 {documentEmailModal.mode === "RESEND" ? "Reenviar por correo" : "Enviar por correo"}
               </h2>
-              <button type="button" className="btn btn-secondary" onClick={closeDocumentEmailModal}>Cerrar</button>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={closeDocumentEmailModal}>Cerrar</button>
             </div>
 
             <div className="viewer-body">
@@ -1527,7 +1527,7 @@ export default function BillingContractAccountPage() {
               <div className="actions">
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => void onSendDocumentEmail()}
                   disabled={actionBusy === "document:email"}
                 >
@@ -1554,7 +1554,7 @@ export default function BillingContractAccountPage() {
                 {modalMode === "INSTALLMENT" ? "Registrar abono" : null}
                 {modalMode === "CREDIT_NOTE" ? "Generar nota de credito" : null}
               </h2>
-              <button type="button" className="btn btn-secondary" onClick={closeMainModal}>Cerrar</button>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={closeMainModal}>Cerrar</button>
             </div>
 
             <div className="viewer-body">
@@ -1603,7 +1603,7 @@ export default function BillingContractAccountPage() {
                       {modalMode === "INSTALLMENT" ? (
                         <div className="inline-row">
                           <input value={amount} onChange={(event) => setAmount(event.target.value)} />
-                          <button type="button" className="btn btn-secondary" onClick={setInstallmentToFullBalance}>
+                          <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={setInstallmentToFullBalance}>
                             Saldo total
                           </button>
                         </div>
@@ -1743,7 +1743,7 @@ export default function BillingContractAccountPage() {
                   <div className="actions" style={{ marginTop: 12 }}>
                     <button
                       type="button"
-                      className="btn"
+                      className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                       onClick={() => void onReportPayment("INSTALLMENT")}
                       disabled={saving}
                     >
@@ -1776,7 +1776,7 @@ export default function BillingContractAccountPage() {
                   <div className="actions" style={{ marginTop: 12 }}>
                     <button
                       type="button"
-                      className="btn"
+                      className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                       onClick={() => void onCreateCreditNote()}
                       disabled={actionBusy === "credit-note:create"}
                     >
@@ -1802,7 +1802,7 @@ export default function BillingContractAccountPage() {
           <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Rechazar abono</h2>
-              <button type="button" className="btn btn-secondary" onClick={() => setRejectModalPaymentId("")}>Cerrar</button>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => setRejectModalPaymentId("")}>Cerrar</button>
             </div>
 
             <div className="viewer-body">
@@ -1819,7 +1819,7 @@ export default function BillingContractAccountPage() {
               <div className="actions" style={{ marginTop: 12 }}>
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => void onReject()}
                   disabled={actionBusy === `reject:${rejectModalPaymentId}`}
                 >
@@ -1855,7 +1855,7 @@ export default function BillingContractAccountPage() {
               <h2 style={{ color: 'white', margin: 0 }}>{criticalAlert.title}</h2>
               <button 
                 type="button" 
-                className="btn" 
+                className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" 
                 onClick={() => setCriticalAlert(null)}
                 style={{ background: 'white', color: '#dc2626' }}
               >
@@ -1926,7 +1926,7 @@ export default function BillingContractAccountPage() {
               <div className="actions" style={{ marginTop: '20px' }}>
                 <button
                   type="button"
-                  className="btn"
+                  className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                   onClick={() => setCriticalAlert(null)}
                   style={{ 
                     width: '100%',

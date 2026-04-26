@@ -239,7 +239,7 @@ export default function PendingPaymentsPage() {
                       <div className="history-actions">
                         <button
                           type="button"
-                          className="btn"
+                          className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                           onClick={() => void onVerify(payment.id)}
                           disabled={actionBusy === `verify:${payment.id}`}
                           style={{ marginRight: "8px" }}
@@ -305,7 +305,7 @@ export default function PendingPaymentsPage() {
               </label>
 
               <div className="actions" style={{ marginTop: "12px" }}>
-                <button type="button" className="btn" onClick={() => void onReject()} disabled={actionBusy.startsWith("reject:")}>
+                <button type="button" className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" onClick={() => void onReject()} disabled={actionBusy.startsWith("reject:")}>
                   {actionBusy.startsWith("reject:") ? "Procesando..." : "Confirmar rechazo"}
                 </button>
               </div>

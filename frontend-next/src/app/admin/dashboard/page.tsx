@@ -226,7 +226,7 @@ export default function AdminDashboardPage() {
                 <h3 style={{ fontSize: "16px", color: "#dc2626", marginBottom: "8px" }}>⚠️ {metrics.summary.invoices.overdue} Cuentas Vencidas</h3>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   onClick={() => router.push("/billing?status=FACTURA_VENCIDA")}
                   style={{ marginTop: "8px" }}
                 >
@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
                         <strong style={{ color: "#d97706" }}>{metrics.summary.pendingTasks.payments} Pagos por verificar</strong>
                         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>Requieren revisión bancaria</p>
                       </div>
-                      <button type="button" className="btn btn-secondary" onClick={() => router.push("/admin/pending-payments")}>
+                      <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => router.push("/admin/pending-payments")}>
                         Revisar
                       </button>
                     </article>
@@ -258,7 +258,7 @@ export default function AdminDashboardPage() {
                         <strong style={{ color: "#2563eb" }}>{metrics.summary.pendingTasks.receipts} Recibos por enviar</strong>
                         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>Listos para aprobar y enviar al cliente</p>
                       </div>
-                      <button type="button" className="btn btn-secondary" onClick={() => router.push("/admin/pending-receipts")}>
+                      <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => router.push("/admin/pending-receipts")}>
                         Ver recibos
                       </button>
                     </article>
@@ -270,7 +270,7 @@ export default function AdminDashboardPage() {
                         <strong style={{ color: "#16a34a" }}>{metrics.summary.pendingTasks.creditNotes} Notas de Crédito por aprobar</strong>
                         <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>Requieren aprobación administrativa</p>
                       </div>
-                      <button type="button" className="btn btn-secondary" onClick={() => router.push("/admin/pending-credit-notes")}>
+                      <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => router.push("/admin/pending-credit-notes")}>
                         Aprobar
                       </button>
                     </article>
@@ -349,7 +349,7 @@ export default function AdminDashboardPage() {
                             <strong style={{ color: "#dc2626" }}>{formatMoney(client.totalBalance)}</strong>
                           </td>
                           <td>
-                            <button type="button" className="btn btn-secondary" onClick={() => router.push(`/billing?q=${encodeURIComponent(client.email)}`)}>
+                            <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={() => router.push(`/billing?q=${encodeURIComponent(client.email)}`)}>
                               Ver cuentas
                             </button>
                           </td>

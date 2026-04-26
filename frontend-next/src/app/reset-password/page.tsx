@@ -69,7 +69,7 @@ function ResetPasswordForm() {
         <section className="login-card">
           <h1 className="login-title">Token Inválido</h1>
           <p className="login-error">El enlace de reseteo es inválido o ha expirado.</p>
-          <button type="button" className="btn" onClick={() => router.push("/")}>
+          <button type="button" className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" onClick={() => router.push("/")}>
             Volver al inicio
           </button>
         </section>
@@ -161,7 +161,7 @@ function ResetPasswordForm() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="btn btn-secondary"
+            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
             style={{ marginTop: "12px" }}
           >
             Cancelar

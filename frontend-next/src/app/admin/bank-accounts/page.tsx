@@ -212,7 +212,7 @@ export default function BankAccountsPage() {
             <p style={{ color: "#6b7280", margin: 0 }}>Gestiona las cuentas bancarias de la empresa para recibir pagos</p>
           </div>
           {!showForm && (
-            <button className="btn" onClick={() => setShowForm(true)} style={{ padding: "10px 20px" }}>
+            <button className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" onClick={() => setShowForm(true)} style={{ padding: "10px 20px" }}>
               ➕ Nueva Cuenta
             </button>
           )}
@@ -323,10 +323,10 @@ export default function BankAccountsPage() {
               </div>
 
               <div style={{ display: "flex", gap: 12 }}>
-                <button type="submit" className="btn" disabled={saving}>
+                <button type="submit" className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" disabled={saving}>
                   {saving ? "⏳ Guardando..." : editingAccount ? "💾 Actualizar" : "💾 Crear Cuenta"}
                 </button>
-                <button type="button" onClick={resetForm} className="btn" style={{ background: "#6b7280" }}>
+                <button type="button" onClick={resetForm} className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg" style={{ background: "#6b7280" }}>
                   Cancelar
                 </button>
               </div>
