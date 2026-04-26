@@ -3400,7 +3400,6 @@ contratos@viajesalmanova.com
         where: {
           OR: [
             { accountNumber },
-            { ibanNumber: accountNumber },
             { sinpeNumber: accountNumber },
           ],
         },
