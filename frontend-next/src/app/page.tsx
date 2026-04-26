@@ -124,28 +124,27 @@ export default function Home() {
           </label>
 
           <label className="grid gap-1.5 text-sm font-bold text-blue-900">
-            Contrasena
+            Contraseña
+            <div className="relative w-full">
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                className="w-full border border-blue-900/20 bg-white/90 px-3.5 py-3 pr-11 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[1.3rem] p-0 leading-none flex items-center justify-center w-[30px] h-[30px]"
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </label>
-          <div style={{ position: "relative", width: "100%" }}>
-            <input
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              style={{ paddingRight: "45px", width: "100%" }}
-              className="w-full border border-blue-900/20 bg-white/90 px-3.5 py-3 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[1.3rem] p-0 leading-none flex items-center justify-center w-[30px] h-[30px]"
-              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showPassword ? "🙈" : "👁️"}
-            </button>
-          </div>
 
           <div className="text-right mt-2 mb-2">
             <button
