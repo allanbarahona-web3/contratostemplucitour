@@ -82,9 +82,9 @@ export class BillingService {
     const configuredPath = this.configService.get<string>("COMPANY_LOGO_PATH", "").trim();
     const fileCandidates = [
       configuredPath,
-      path.resolve(process.cwd(), "../frontend-next/public/LOGO ALMANOVA AZUL CON DORADO.png"),
-      path.resolve(process.cwd(), "../../frontend-next/public/LOGO ALMANOVA AZUL CON DORADO.png"),
-      path.resolve(process.cwd(), "frontend-next/public/LOGO ALMANOVA AZUL CON DORADO.png"),
+      path.resolve(process.cwd(), "../frontend-next/public/assets/LOGO ALMANOVA.png"),
+      path.resolve(process.cwd(), "../../frontend-next/public/assets/LOGO ALMANOVA.png"),
+      path.resolve(process.cwd(), "frontend-next/public/assets/LOGO ALMANOVA.png"),
     ].filter(Boolean);
 
     for (const candidate of fileCandidates) {
