@@ -83,22 +83,22 @@ export default function Home() {
   };
 
   return (
-    <main className="shell">
-      <section className="login-card">
+    <main className="min-h-screen grid place-items-center p-5">
+      <section className="w-full max-w-[460px] bg-white/75 border border-blue-900/10 rounded-[26px] p-7 backdrop-blur-[14px] shadow-[0_28px_55px_rgba(15,31,58,0.12),0_2px_0_rgba(255,255,255,0.65)_inset]">
         <Image
           src="/assets/LOGO ALMANOVA.png"
           alt="Viajes Alma Nova"
           width={245}
           height={120}
-          className="login-logo"
-          style={{ width: "clamp(170px, 42vw, 245px)", height: "auto" }}
+          className="h-auto block mx-auto mb-2.5"
+          style={{ width: "clamp(170px, 42vw, 245px)" }}
           priority
         />
 
-        <h1 className="login-title">Ingreso de Agente</h1>
-        <p className="login-subtitle">Primera pantalla migrada a Next.js + TypeScript.</p>
+        <h1 className="m-0 mb-2.5 text-2xl text-center">Ingreso de Agente</h1>
+        <p className="mt-2 mb-4 text-gray-600 text-center text-sm">Primera pantalla migrada a Next.js + TypeScript.</p>
 
-        <form className="login-form" onSubmit={onSubmit}>
+        <form className="grid gap-2.5" onSubmit={onSubmit}>
           {/* Honeypot field - hidden from users but visible to bots */}
           <input
             type="text"
@@ -111,7 +111,7 @@ export default function Home() {
             aria-hidden="true"
           />
 
-          <label>
+          <label className="grid gap-1.5 text-sm font-bold text-blue-900">
             Correo
             <input
               type="email"
@@ -119,10 +119,11 @@ export default function Home() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
+              className="border border-blue-900/20 bg-white/90 px-3.5 py-3 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
             />
           </label>
 
-          <label>
+          <label className="grid gap-1.5 text-sm font-bold text-blue-900">
             Contrasena
           </label>
           <div style={{ position: "relative", width: "100%" }}>
@@ -133,27 +134,12 @@ export default function Home() {
               onChange={(event) => setPassword(event.target.value)}
               required
               style={{ paddingRight: "45px", width: "100%" }}
+              className="w-full border border-blue-900/20 bg-white/90 px-3.5 py-3 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: "absolute",
-                right: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1.3rem",
-                padding: "0",
-                lineHeight: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "30px",
-                height: "30px",
-              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[1.3rem] p-0 leading-none flex items-center justify-center w-[30px] h-[30px]"
               title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
@@ -161,27 +147,23 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ textAlign: "right", marginTop: "8px", marginBottom: "8px" }}>
+          <div className="text-right mt-2 mb-2">
             <button
               type="button"
               onClick={() => setShowResetModal(true)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#0066cc",
-                textDecoration: "underline",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                padding: "0",
-              }}
+              className="bg-transparent border-none text-blue-600 underline cursor-pointer text-sm p-0"
             >
               ¿Olvidaste tu contraseña?
             </button>
           </div>
 
-          {error ? <p className="login-error">{error}</p> : null}
+          {error ? <p className="my-0.5 text-sm text-red-600 font-bold">{error}</p> : null}
 
-          <button type="submit" disabled={loading}>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
+          >
             {loading ? "Ingresando..." : "Entrar"}
           </button>
         </form>
@@ -189,20 +171,7 @@ export default function Home() {
         {/* Modal de Reset de Contraseña */}
         {showResetModal ? (
           <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0, 0, 0, 0.6)",
-              backdropFilter: "blur(4px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000,
-              animation: "fadeIn 0.2s ease-out",
-            }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fadeIn"
             onClick={() => {
               if (!resetLoading) {
                 setShowResetModal(false);
@@ -212,28 +181,11 @@ export default function Home() {
             }}
           >
             <div
-              style={{
-                background: "white",
-                borderRadius: "16px",
-                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-                maxWidth: "480px",
-                width: "90%",
-                padding: "0",
-                position: "relative",
-                overflow: "hidden",
-                animation: "slideUp 0.3s ease-out",
-              }}
+              className="bg-white rounded-2xl shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] max-w-[480px] w-[90%] relative overflow-hidden animate-slideUp"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header con gradiente */}
-              <div
-                style={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  padding: "32px 32px 24px 32px",
-                  color: "white",
-                  position: "relative",
-                }}
-              >
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 pb-6 text-white relative">
                 <button
                   onClick={() => {
                     if (!resetLoading) {
@@ -243,73 +195,28 @@ export default function Home() {
                     }
                   }}
                   disabled={resetLoading}
-                  style={{
-                    position: "absolute",
-                    top: "16px",
-                    right: "16px",
-                    background: "rgba(255, 255, 255, 0.2)",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: "32px",
-                    height: "32px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: resetLoading ? "not-allowed" : "pointer",
-                    fontSize: "1.5rem",
-                    color: "white",
-                    transition: "background 0.2s",
-                    opacity: resetLoading ? 0.5 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!resetLoading) {
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
-                  }}
+                  className="absolute top-4 right-4 bg-white/20 border-none rounded-full w-8 h-8 flex items-center justify-center cursor-pointer text-2xl text-white transition-all duration-200 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Cerrar"
                 >
                   ×
                 </button>
 
-                <div
-                  style={{
-                    width: "56px",
-                    height: "56px",
-                    background: "rgba(255, 255, 255, 0.2)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.8rem",
-                    marginBottom: "16px",
-                  }}
-                >
+                <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-3xl mb-4">
                   🔑
                 </div>
 
-                <h2 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700 }}>
+                <h2 className="m-0 text-[1.75rem] font-bold">
                   Recuperar Contraseña
                 </h2>
-                <p style={{ margin: "8px 0 0 0", opacity: 0.95, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                <p className="mt-2 mb-0 opacity-95 text-[0.95rem] leading-relaxed">
                   Te enviaremos un enlace seguro para que puedas restablecer tu contraseña.
                 </p>
               </div>
 
               {/* Contenido del formulario */}
-              <form onSubmit={onRequestReset} style={{ padding: "32px" }}>
-                <label style={{ display: "block", marginBottom: "24px" }}>
-                  <span
-                    style={{
-                      display: "block",
-                      marginBottom: "8px",
-                      color: "#374151",
-                      fontWeight: 600,
-                      fontSize: "0.95rem",
-                    }}
-                  >
+              <form onSubmit={onRequestReset} className="p-8">
+                <label className="block mb-6">
+                  <span className="block mb-2 text-gray-700 font-semibold text-[0.95rem]">
                     📧 Correo electrónico
                   </span>
                   <input
@@ -319,73 +226,28 @@ export default function Home() {
                     required
                     disabled={resetLoading}
                     placeholder="tu@email.com"
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      fontSize: "1rem",
-                      border: "2px solid #e5e7eb",
-                      borderRadius: "10px",
-                      transition: "all 0.2s",
-                      outline: "none",
-                      opacity: resetLoading ? 0.6 : 1,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = "#667eea";
-                      e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = "#e5e7eb";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
+                    className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-[10px] transition-all outline-none disabled:opacity-60 focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
                   />
                 </label>
 
                 {resetError && (
-                  <div
-                    style={{
-                      marginBottom: "20px",
-                      padding: "14px 16px",
-                      background: "#fef2f2",
-                      border: "1px solid #fecaca",
-                      borderRadius: "10px",
-                      color: "#991b1b",
-                      fontSize: "0.9rem",
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "10px",
-                      animation: "shakeError 0.4s ease-in-out",
-                    }}
-                  >
-                    <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>⚠️</span>
+                  <div className="mb-5 p-3.5 px-4 bg-red-50 border border-red-200 rounded-[10px] text-red-800 text-sm flex items-start gap-2.5 animate-shakeError">
+                    <span className="text-xl flex-shrink-0">⚠️</span>
                     <span>{resetError}</span>
                   </div>
                 )}
 
                 {resetMessage && (
-                  <div
-                    style={{
-                      marginBottom: "20px",
-                      padding: "14px 16px",
-                      background: "#f0fdf4",
-                      border: "1px solid #86efac",
-                      borderRadius: "10px",
-                      color: "#166534",
-                      fontSize: "0.9rem",
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "10px",
-                      animation: "slideDown 0.3s ease-out",
-                    }}
-                  >
-                    <span style={{ fontSize: "1.2rem", flexShrink: 0 }}>✅</span>
+                  <div className="mb-5 p-3.5 px-4 bg-green-50 border border-green-300 rounded-[10px] text-green-800 text-sm flex items-start gap-2.5 animate-slideDown">
+                    <span className="text-xl flex-shrink-0">✅</span>
                     <div>
-                      <strong style={{ display: "block", marginBottom: "4px" }}>¡Enviado con éxito!</strong>
+                      <strong className="block mb-1">¡Enviado con éxito!</strong>
                       <span>{resetMessage}</span>
                     </div>
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+                <div className="flex gap-3 mt-6">
                   <button
                     type="button"
                     onClick={() => {
@@ -394,64 +256,14 @@ export default function Home() {
                       setResetMessage("");
                     }}
                     disabled={resetLoading}
-                    style={{
-                      flex: 1,
-                      padding: "12px 20px",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      border: "2px solid #e5e7eb",
-                      borderRadius: "10px",
-                      background: "white",
-                      color: "#6b7280",
-                      cursor: resetLoading ? "not-allowed" : "pointer",
-                      transition: "all 0.2s",
-                      opacity: resetLoading ? 0.5 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!resetLoading) {
-                        e.currentTarget.style.background = "#f9fafb";
-                        e.currentTarget.style.borderColor = "#d1d5db";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.borderColor = "#e5e7eb";
-                    }}
+                    className="flex-1 px-5 py-3 text-base font-semibold border-2 border-gray-200 rounded-[10px] bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={resetLoading || !!resetMessage}
-                    style={{
-                      flex: 1,
-                      padding: "12px 20px",
-                      fontSize: "1rem",
-                      fontWeight: 600,
-                      border: "none",
-                      borderRadius: "10px",
-                      background: resetLoading || resetMessage
-                        ? "#d1d5db"
-                        : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white",
-                      cursor: resetLoading || resetMessage ? "not-allowed" : "pointer",
-                      transition: "all 0.2s",
-                      boxShadow: resetLoading || resetMessage
-                        ? "none"
-                        : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!resetLoading && !resetMessage) {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
-                    }}
+                    className="flex-1 px-5 py-3 text-base font-semibold border-none rounded-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white transition-all duration-200 shadow-md hover:-translate-y-px hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
                   >
                     {resetLoading ? "⏳ Enviando..." : resetMessage ? "✓ Enviado" : "📤 Enviar enlace"}
                   </button>
