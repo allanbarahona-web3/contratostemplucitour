@@ -86,7 +86,7 @@ export default function Home() {
     <main className="shell">
       <section className="login-card">
         <Image
-          src="/assets/LOGO ALMANOVA NEGRO CON DORADO.png"
+          src="/assets/LOGO ALMANOVA.png"
           alt="Viajes Alma Nova"
           width={245}
           height={120}
