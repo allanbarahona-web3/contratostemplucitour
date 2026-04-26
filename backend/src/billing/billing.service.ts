@@ -2531,6 +2531,31 @@ contratos@viajesalmanova.com
       await this.ensureReceiptPdf(receipt.id);
 
       await this.recalcInvoiceAmounts(invoice.id);
+
+      // Vincular documentos de reserva del contrato como adjuntos del pago
+      try {
+        const contractWithDocs = await (this.prisma as any).contract.findUnique({
+          where: { id: contract.id },
+          include: { documents: true },
+        });
+        const reservationDocs = this.normalizeContractReservationDocuments(contractWithDocs);
+        for (const doc of reservationDocs) {
+          await (this.prisma as any).billingPaymentAttachment.create({
+            data: {
+              paymentId: payment.id,
+              objectKey: doc.objectKey,
+              originalFileName: doc.originalFileName,
+              mimeType: doc.mimeType,
+              size: doc.size,
+            },
+          });
+        }
+        if (reservationDocs.length) {
+          this.logger.log(`[bootstrapContractBilling] Vinculados ${reservationDocs.length} comprobante(s) de reserva al pago ${payment.id}`);
+        }
+      } catch (docError) {
+        this.logger.warn(`[bootstrapContractBilling] No se pudieron vincular comprobantes: ${docError instanceof Error ? docError.message : String(docError)}`);
+      }
     }
 
     return {

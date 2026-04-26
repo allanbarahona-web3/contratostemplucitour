@@ -6,7 +6,6 @@ import {
   reserveNextContractNumber,
   saveContractDraft,
 } from "@/lib/contracts-api";
-import { useRouter } from "next/navigation";
 import { loadAssetDataUri } from "@/lib/assets";
 import { buildContractPdfHtml } from "@/features/contracts-form/pdf-template";
 import {
@@ -83,7 +82,6 @@ type ContractsFormProps = {
 };
 
 export function ContractsForm({ agent = null, initialDraftId = null }: ContractsFormProps) {
-  const router = useRouter();
   const [state, setState] = useState(() => createInitialFormState(agent || undefined));
   const [status, setStatus] = useState("Listo para iniciar migracion del formulario.");
   const [busyNumber, setBusyNumber] = useState(false);
@@ -102,6 +100,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
     passport: null,
   });
   const [supportDocs, setSupportDocs] = useState<File[]>([]);
+  const [reservationProof, setReservationProof] = useState<File | null>(null);
   const [companionDocs, setCompanionDocs] = useState<Record<string, { idFront: File | null; idBack: File | null; passport: File | null }>>({});
   const [minorDocs, setMinorDocs] = useState<
     Record<string, {
@@ -239,6 +238,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       docs.push(cloneWithPrefix(file, `soporte-${index + 1}`));
     });
 
+    if (reservationProof) {
+      docs.push(cloneWithPrefix(reservationProof, "comprobante-reserva-1"));
+    }
+
     return docs;
   };
 
@@ -299,10 +302,9 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         window.open(archived.pdfUrl, "_blank", "noopener,noreferrer");
       }
 
-      // Redirigir a la página de cobro para registrar el pago de reserva
-      // El modal de reserva se abrirá automáticamente gracias al parámetro autoModal
-      setStatus("Contrato guardado. Redirigiendo para registrar pago de reserva...");
-      router.push(`/billing/${archived.id}?autoModal=RESERVATION`);
+      // El pago de reserva se crea automáticamente al entrar al estado de cuenta
+      // Solo redirigimos al historial para que el agente vea el nuevo contrato
+      await resetFormForNextContract("Contrato guardado correctamente. El pago de reserva quedará pendiente de aprobación del admin.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "No se pudo completar el guardado del contrato.");
     } finally {
@@ -402,6 +404,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       setState(nextBaseState);
       setHolderDocs({ idFront: null, idBack: null, passport: null });
       setSupportDocs([]);
+      setReservationProof(null);
       setCompanionDocs({});
       setMinorDocs({});
       setPreviewHtml("");
@@ -428,6 +431,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
     setState(nextBaseState);
     setHolderDocs({ idFront: null, idBack: null, passport: null });
     setSupportDocs([]);
+    setReservationProof(null);
     setCompanionDocs({});
     setMinorDocs({});
     setPreviewHtml("");
@@ -1399,7 +1403,25 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       <h2 className="section-title">Adjuntos del Contrato</h2>
       <div className="contracts-grid">
         <label className="full-row">
-          Adjuntar documentos de soporte (multiple)
+          Comprobante de pago de reserva
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setReservationProof(file);
+            }}
+          />
+          {reservationProof ? (
+            <ul className="simple-list">
+              <li>{reservationProof.name}</li>
+            </ul>
+          ) : (
+            <small>Sube el comprobante del dep&#243;sito de reserva. Ser&#225; visible para el admin al momento de aprobar.</small>
+          )}
+        </label>
+        <label className="full-row">
+          Documentos de soporte adicionales (opcional, m&#250;ltiple)
           <input
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp"
