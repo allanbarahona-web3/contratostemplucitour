@@ -119,9 +119,17 @@ export class ContractsController {
   @Roles("AGENT")
   @Post("archive")
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: "documents", maxCount: 20 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: "documents", maxCount: 20 },
+      ],
+      {
+        limits: {
+          fieldSize: 5 * 1024 * 1024, // 5MB para campos de texto (contractHtml, payloadJson)
+          fileSize: 10 * 1024 * 1024, // 10MB por archivo adjunto
+        },
+      },
+    ),
   )
   archiveContract(
     @Req()

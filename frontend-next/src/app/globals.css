@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --bg-0: #eef4ff;
@@ -27,10 +25,7 @@ body {
 body {
   min-height: 100vh;
   color: var(--text);
-  background:
-    radial-gradient(circle at 10% 0%, rgba(153, 192, 255, 0.42) 0%, rgba(153, 192, 255, 0) 34%),
-    radial-gradient(circle at 100% 8%, rgba(123, 169, 247, 0.33) 0%, rgba(123, 169, 247, 0) 41%),
-    linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-2) 100%);
+  background: #f5f5f7 !important;
   font-family: var(--font-geist-sans), "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
 }
 
@@ -135,13 +130,16 @@ body {
 
 .contracts-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
 .contracts-editor {
   min-width: 0;
+  padding: 20px;
+  background: #e8eaed;
+  border-radius: 18px;
 }
 
 .contracts-preview-panel {
@@ -152,7 +150,7 @@ body {
 
 .contracts-grid {
   display: grid;
-  gap: 10px;
+  gap: 16px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 14px;
 }
@@ -178,6 +176,14 @@ body {
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
+/* Text overflow handling for inputs */
+.contracts-grid input:not([type="file"]),
+.itinerary-row input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .contracts-grid input:focus,
 .contracts-grid select:focus,
 .contracts-grid textarea:focus,
@@ -187,11 +193,61 @@ body {
   box-shadow: 0 0 0 4px rgba(31, 91, 197, 0.14);
 }
 
+/* Ocultar el botón nativo de Choose File */
 .contracts-grid input[type="file"] {
   width: 100%;
   max-width: 100%;
   min-height: 44px;
-  overflow: hidden;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2a4369;
+  padding: 11px 12px;
+  border: 1px dashed rgba(15, 48, 101, 0.25);
+  background: rgba(250, 253, 255, 0.76);
+  border-radius: 14px;
+  transition: all 140ms ease;
+}
+
+.contracts-grid input[type="file"]::file-selector-button {
+  display: none;
+}
+
+.contracts-grid input[type="file"]::-webkit-file-upload-button {
+  display: none;
+}
+
+.contracts-grid input[type="file"]:not(.has-file)::before {
+  content: 'Haz clic para seleccionar archivo...';
+  display: inline-block;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.contracts-grid input[type="file"]:not(.has-file):hover::before {
+  color: #3b82f6;
+}
+
+/* Estilo personalizado para mostrar solo el nombre del archivo */
+.contracts-grid label:has(input[type="file"]) {
+  position: relative;
+}
+
+.contracts-grid input[type="file"]:hover {
+  border-color: rgba(31, 91, 197, 0.4);
+  background: rgba(240, 248, 255, 0.9);
+}
+
+.contracts-grid input[type="file"]:focus {
+  outline: none;
+  border-style: solid;
+  border-color: rgba(31, 91, 197, 0.72);
+  box-shadow: 0 0 0 4px rgba(31, 91, 197, 0.14);
+  background: #fff;
 }
 
 .contracts-grid textarea {
@@ -272,12 +328,92 @@ body {
   white-space: nowrap;
 }
 
-.itinerary-box {
-  margin-top: 18px;
+/* Botones secundarios estandarizados */
+.btn-secondary {
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  background: linear-gradient(to bottom, #eff6ff, #dbeafe) !important;
+  color: #1e40af !important;
+  border: 1.5px solid #93c5fd !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  transition: all 140ms ease !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.12) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #dbeafe, #bfdbfe) !important;
+  border-color: #60a5fa !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2) !important;
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón primario estandarizado */
+.btn-primary {
+  border-radius: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(to bottom, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 140ms ease;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  filter: saturate(0.85);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Títulos de sección estandarizados */
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1e40af;
+}
+
+/* Tarjetas de sección principales del formulario */
+.form-section-card {
+  margin-top: 20px;
   border: 1px solid rgba(15, 48, 101, 0.13);
   border-radius: 18px;
-  padding: 14px;
-  background: rgba(250, 253, 255, 0.76);
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.itinerary-box {
+  margin-top: 20px;
+  border: 1px solid rgba(15, 48, 101, 0.13);
+  border-radius: 18px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .itinerary-head {
@@ -300,9 +436,10 @@ body {
 
 .subcard {
   border: 1px solid rgba(15, 48, 101, 0.12);
-  border-radius: 16px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .subcard h3 {
@@ -313,7 +450,7 @@ body {
 .itinerary-row {
   display: grid;
   grid-template-columns: 180px 170px 1fr auto;
-  gap: 10px;
+  gap: 14px;
   align-items: end;
 }
 
@@ -335,10 +472,15 @@ body {
 }
 
 .status-line {
-  margin: 12px 0 0;
-  font-size: 0.86rem;
-  color: #203f6c;
-  font-weight: 700;
+  margin: 20px 0 0;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #1e3a8a;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .agent-line {
@@ -839,6 +981,16 @@ body {
     position: static;
   }
 
+  .contracts-editor {
+    padding: 16px;
+  }
+
+  .form-section-card,
+  .itinerary-box {
+    padding: 20px;
+    margin-top: 16px;
+  }
+
   .payment-summary-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -874,6 +1026,18 @@ body {
 }
 
 @media (max-width: 640px) {
+  .contracts-editor {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .form-section-card,
+  .itinerary-box {
+    padding: 16px;
+    margin-top: 12px;
+    border-radius: 14px;
+  }
+
   .payment-summary-grid {
     grid-template-columns: 1fr;
   }

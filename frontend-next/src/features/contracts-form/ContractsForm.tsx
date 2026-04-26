@@ -104,8 +104,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
   const [companionDocs, setCompanionDocs] = useState<Record<string, { idFront: File | null; idBack: File | null; passport: File | null }>>({});
   const [minorDocs, setMinorDocs] = useState<
     Record<string, {
-      minorIdFront: File | null;
-      minorIdBack: File | null;
       minorPassport: File | null;
       tutorIdFront: File | null;
       tutorIdBack: File | null;
@@ -121,6 +119,11 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
   const requiredDocumentLabelClass = (hasAttachment: boolean) =>
     `doc-required-label ${hasAttachment ? "doc-required-label--done" : "doc-required-label--missing"}`;
+
+  // Helper para manejar file inputs y actualizar el placeholder CSS
+  const updateFileInputState = (input: HTMLInputElement, hasFile: boolean) => {
+    input.classList.toggle('has-file', hasFile);
+  };
 
   const onMoneyChange = (field: "totalAmount" | "reservationAmount" | "installmentCount", value: string) => {
     setState((prev) => applyMoneyDerivedValues({ ...prev, [field]: value }));
@@ -246,24 +249,36 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
   };
 
   const runArchiveFlow = async () => {
-    if (submitting) return;
-    if (previewing) return;
+    console.log("🔵 [runArchiveFlow] INICIO");
+    if (submitting) {
+      console.log("❌ Ya está submitting, retornando");
+      return;
+    }
+    if (previewing) {
+      console.log("❌ Ya está previewing, retornando");
+      return;
+    }
     if (!state.contractNumber.trim()) {
+      console.log("❌ No hay número de contrato");
       setStatus("No hay numero de contrato reservado todavia.");
       return;
     }
     if (!state.clientFullName.trim() || !state.clientIdNumber.trim() || !state.clientEmail.trim()) {
+      console.log("❌ Faltan datos principales del cliente");
       setStatus("Completa los datos principales del cliente antes de guardar.");
       return;
     }
     if (rangeMessage || itineraryMessage) {
+      console.log("❌ Hay errores de validación en fechas/itinerario");
       setStatus("Corrige las validaciones de fechas/itinerario antes de guardar.");
       return;
     }
 
+    console.log("✅ Validaciones pasadas, iniciando submit");
     setSubmitting(true);
     setLatestSigningLinks([]);
     try {
+      console.log("🔵 Paso 1: Preparando contrato...");
       setStatus("Preparando contrato...");
       const [logoSrc, representativeSignSrc] = await Promise.all([
         loadFirstAvailableAsset([
@@ -274,12 +289,37 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           "/assets/firmakaren.png",
         ]),
       ]);
+      console.log("✅ Assets cargados");
 
+      console.log("🔵 Paso 2: Construyendo HTML del contrato...");
       const contractHtml = buildContractPdfHtml(state, {
         logoSrc,
         representativeSignSrc,
       });
+      console.log("✅ HTML construido, longitud:", contractHtml.length);
 
+      console.log("🔵 Paso 3: Recolectando documentos...");
+      const docs = collectDocumentsForArchive();
+      console.log("✅ Documentos recolectados:", docs.length);
+
+      console.log("🔵 Paso 4: Verificando tamaños de campos...");
+      const payloadJson = JSON.stringify(state);
+      console.log("====================================");
+      console.log("📏 TAMAÑOS DE CAMPOS A ENVIAR:");
+      console.log("====================================");
+      console.log(`contractNumber: "${state.contractNumber}" (${state.contractNumber.length} chars) - límite: 120`);
+      console.log(`clientFullName: "${state.clientFullName}" (${state.clientFullName.length} chars) - límite: 200`);
+      console.log(`clientIdNumber: "${state.clientIdNumber}" (${state.clientIdNumber.length} chars) - límite: 80`);
+      console.log(`clientEmail: "${state.clientEmail}" (${state.clientEmail.length} chars) - sin límite específico`);
+      console.log(`destination: "${state.destination}" (${state.destination.length} chars) - límite: 160`);
+      console.log(`issuedAt: "${state.issuedAt}" (${state.issuedAt?.length || 0} chars) - límite: 40`);
+      console.log(`startDate: "${state.startDate}" (${state.startDate?.length || 0} chars) - límite: 40`);
+      console.log(`endDate: "${state.endDate}" (${state.endDate?.length || 0} chars) - límite: 40`);
+      console.log(`payloadJson: ${payloadJson.length} chars - sin límite en DTO`);
+      console.log(`contractHtml: ${contractHtml.length} chars - sin límite en DTO`);
+      console.log("====================================");
+
+      console.log("🔵 Paso 5: Enviando al backend...");
       setStatus("Guardando contrato en base de datos...");
       const archived = await archiveContract({
         draftId: activeDraftId || undefined,
@@ -291,10 +331,11 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         issuedAt: state.issuedAt,
         startDate: state.startDate,
         endDate: state.endDate,
-        payloadJson: JSON.stringify(state),
+        payloadJson,
         contractHtml,
-        documents: collectDocumentsForArchive(),
+        documents: docs,
       });
+      console.log("✅ Respuesta del backend recibida:", archived);
 
       if (archived.pdfUrl) {
         window.open(archived.pdfUrl, "_blank", "noopener,noreferrer");
@@ -302,11 +343,15 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
       // El pago de reserva se crea automáticamente al entrar al estado de cuenta
       // Solo redirigimos al historial para que el agente vea el nuevo contrato
+      console.log("🔵 Paso 6: Reseteando formulario...");
       await resetFormForNextContract("Contrato guardado correctamente. El pago de reserva quedará pendiente de aprobación del admin.");
+      console.log("✅ Formulario reseteado");
     } catch (error) {
+      console.error("❌ ERROR en runArchiveFlow:", error);
       setStatus(error instanceof Error ? error.message : "No se pudo completar el guardado del contrato.");
     } finally {
       setSubmitting(false);
+      console.log("🔵 [runArchiveFlow] FIN");
     }
   };
 
@@ -519,17 +564,24 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       <div className="contracts-workspace">
         <div className="contracts-editor">
 
-      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Datos del Contrato</h2>
+      <div className="form-section-card">
+        <h2 className="section-title">Datos del Contrato</h2>
 
       <div className="contracts-grid">
         <label>
           Numero de contrato
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <input value={state.contractNumber} readOnly placeholder="Generando automaticamente..." />
+            <input 
+              value={state.contractNumber} 
+              readOnly 
+              placeholder="Generando automaticamente..." 
+              className="font-mono text-sm !overflow-hidden text-ellipsis"
+              title={state.contractNumber || "Esperando asignación..."}
+            />
             {!state.contractNumber ? (
               <button
                 type="button"
-                className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                className="btn-secondary"
                 onClick={() => {
                   void reserveNumber();
                 }}
@@ -679,8 +731,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           </label>
         </div>
       </div>
+      </div>
 
-      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Datos del Cliente</h2>
+      <div className="form-section-card">
+        <h2 className="section-title">Datos del Cliente</h2>
 
       <div className="contracts-grid">
         <label>
@@ -800,6 +854,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             onChange={(event) => {
               const file = event.target.files?.[0] || null;
+              updateFileInputState(event.target, !!file);
               setHolderDocs((prev) => ({ ...prev, idFront: file }));
               setState((prev) => ({
                 ...prev,
@@ -816,6 +871,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             onChange={(event) => {
               const file = event.target.files?.[0] || null;
+              updateFileInputState(event.target, !!file);
               setHolderDocs((prev) => ({ ...prev, idBack: file }));
               setState((prev) => ({
                 ...prev,
@@ -832,6 +888,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             onChange={(event) => {
               const file = event.target.files?.[0] || null;
+              updateFileInputState(event.target, !!file);
               setHolderDocs((prev) => ({ ...prev, passport: file }));
               setState((prev) => ({
                 ...prev,
@@ -841,13 +898,14 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           />
         </label>
       </div>
+      </div>
 
       <div className="itinerary-box">
         <div className="itinerary-head">
           <h2>Acompanantes</h2>
           <button 
             type="button" 
-            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" 
+            className="btn-secondary" 
             onClick={() => setState((prev) => addCompanion(prev))}
           >
             + Agregar acompanante
@@ -862,7 +920,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <h3>Acompanante {index + 1}</h3>
                 <button
                   type="button"
-                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                  className="btn-secondary"
                   onClick={() => {
                     setCompanionDocs((prev) => {
                       const next = { ...prev };
@@ -1004,6 +1062,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setCompanionDocs((prev) => ({
                         ...prev,
                         [companion.id]: {
@@ -1023,6 +1082,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setCompanionDocs((prev) => ({
                         ...prev,
                         [companion.id]: {
@@ -1042,6 +1102,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setCompanionDocs((prev) => ({
                         ...prev,
                         [companion.id]: {
@@ -1081,7 +1142,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             </label>
             <button
               type="button"
-              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+              className="btn-secondary"
               onClick={() => setState((prev) => addMinor(prev))}
               disabled={!state.hasMinorCompanion}
             >
@@ -1100,7 +1161,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <h3>Menor {index + 1}</h3>
                 <button
                   type="button"
-                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                  className="btn-secondary"
                   onClick={() => {
                     setMinorDocs((prev) => {
                       const next = { ...prev };
@@ -1170,50 +1231,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     ))}
                   </select>
                 </label>
-                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorIdFront))}>
-                  Cedula menor frente
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      setMinorDocs((prev) => ({
-                        ...prev,
-                        [minor.id]: {
-                          minorIdFront: file,
-                          minorIdBack: prev[minor.id]?.minorIdBack || null,
-                          minorPassport: prev[minor.id]?.minorPassport || null,
-                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
-                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
-                          tutorPassport: prev[minor.id]?.tutorPassport || null,
-                        },
-                      }));
-                      setState((prev) => updateMinor(prev, minor.id, "minorIdFrontDocumentName", file?.name || ""));
-                    }}
-                  />
-                </label>
-                <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorIdBack))}>
-                  Cedula menor reverso
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      setMinorDocs((prev) => ({
-                        ...prev,
-                        [minor.id]: {
-                          minorIdFront: prev[minor.id]?.minorIdFront || null,
-                          minorIdBack: file,
-                          minorPassport: prev[minor.id]?.minorPassport || null,
-                          tutorIdFront: prev[minor.id]?.tutorIdFront || null,
-                          tutorIdBack: prev[minor.id]?.tutorIdBack || null,
-                          tutorPassport: prev[minor.id]?.tutorPassport || null,
-                        },
-                      }));
-                      setState((prev) => updateMinor(prev, minor.id, "minorIdBackDocumentName", file?.name || ""));
-                    }}
-                  />
-                </label>
                 <label className={requiredDocumentLabelClass(Boolean(minorDocs[minor.id]?.minorPassport))}>
                   Pasaporte menor
                   <input
@@ -1221,11 +1238,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setMinorDocs((prev) => ({
                         ...prev,
                         [minor.id]: {
-                          minorIdFront: prev[minor.id]?.minorIdFront || null,
-                          minorIdBack: prev[minor.id]?.minorIdBack || null,
                           minorPassport: file,
                           tutorIdFront: prev[minor.id]?.tutorIdFront || null,
                           tutorIdBack: prev[minor.id]?.tutorIdBack || null,
@@ -1243,11 +1259,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setMinorDocs((prev) => ({
                         ...prev,
                         [minor.id]: {
-                          minorIdFront: prev[minor.id]?.minorIdFront || null,
-                          minorIdBack: prev[minor.id]?.minorIdBack || null,
                           minorPassport: prev[minor.id]?.minorPassport || null,
                           tutorIdFront: file,
                           tutorIdBack: prev[minor.id]?.tutorIdBack || null,
@@ -1265,11 +1280,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setMinorDocs((prev) => ({
                         ...prev,
                         [minor.id]: {
-                          minorIdFront: prev[minor.id]?.minorIdFront || null,
-                          minorIdBack: prev[minor.id]?.minorIdBack || null,
                           minorPassport: prev[minor.id]?.minorPassport || null,
                           tutorIdFront: prev[minor.id]?.tutorIdFront || null,
                           tutorIdBack: file,
@@ -1287,11 +1301,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(event) => {
                       const file = event.target.files?.[0] || null;
+                      updateFileInputState(event.target, !!file);
                       setMinorDocs((prev) => ({
                         ...prev,
                         [minor.id]: {
-                          minorIdFront: prev[minor.id]?.minorIdFront || null,
-                          minorIdBack: prev[minor.id]?.minorIdBack || null,
                           minorPassport: prev[minor.id]?.minorPassport || null,
                           tutorIdFront: prev[minor.id]?.tutorIdFront || null,
                           tutorIdBack: prev[minor.id]?.tutorIdBack || null,
@@ -1313,7 +1326,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           <h2>Itinerario</h2>
           <button
             type="button"
-            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            className="btn-secondary"
             onClick={() => setState((prev) => addCustomItineraryItem(prev))}
             disabled={Boolean(rangeMessage) || Boolean(itineraryMessage)}
           >
@@ -1364,7 +1377,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                   {item.kind === "custom" ? (
                     <button
                       type="button"
-                      className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                      className="btn-secondary"
                       disabled={Boolean(itineraryMessage)}
                       onClick={() => setState((prev) => removeCustomItineraryItem(prev, item.id))}
                     >
@@ -1380,7 +1393,8 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         </div>
       </div>
 
-      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Equipaje</h2>
+      <div className="form-section-card">
+        <h2 className="section-title">Equipaje</h2>
       <div className="contracts-grid">
         <label className="col-span-full">
           Clausula de equipaje permitido
@@ -1391,16 +1405,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           />
         </label>
       </div>
-
-      <div className="contracts-grid">
-        <label className="col-span-full">
-          Firma del representante
-          <input value="Se usa automaticamente: /firmakaren.png" readOnly />
-          <small>Esta firma no se carga desde el formulario; se toma fija desde assets al generar el PDF.</small>
-        </label>
       </div>
 
-      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Adjuntos del Contrato</h2>
+      <div className="form-section-card">
+        <h2 className="section-title">Adjuntos del Contrato</h2>
       <div className="contracts-grid">
         <label className="col-span-full">
           Comprobante de pago de reserva
@@ -1409,6 +1417,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             onChange={(event) => {
               const file = event.target.files?.[0] || null;
+              updateFileInputState(event.target, !!file);
               setReservationProof(file);
             }}
           />
@@ -1428,6 +1437,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             multiple
             onChange={(event) => {
               const files = Array.from(event.target.files || []);
+              updateFileInputState(event.target, files.length > 0);
               setSupportDocs(files);
               setState((prev) => ({
                 ...prev,
@@ -1446,11 +1456,12 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           )}
         </label>
       </div>
+      </div>
 
       <div className="flex gap-2 flex-wrap mt-3.5">
         <button
           type="button"
-          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="btn-secondary"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void saveDraftFlow();
@@ -1461,7 +1472,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
         <button
           type="button"
-          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="btn-secondary"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void runPreviewFlow();
@@ -1472,7 +1483,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
         <button
           type="button"
-          className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
+          className="btn-primary"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void runArchiveFlow();
@@ -1509,15 +1520,15 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <div className="flex gap-2 flex-wrap mt-2">
                   <button
                     type="button"
-                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                    className="btn-secondary"
                     onClick={() => {
                       void copySigningUrl(item.signingUrl, item.signerKey);
                     }}
                   >
-                    {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
+                    {copiedSignerKey === item.signerKey ? "✓ Copiado" : "Copiar link"}
                   </button>
                   <a
-                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center"
+                    className="btn-secondary no-underline inline-flex items-center justify-center"
                     href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1549,15 +1560,15 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <div className="flex gap-2 flex-wrap mt-2">
                   <button
                     type="button"
-                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                    className="btn-secondary"
                     onClick={() => {
                       void copySigningUrl(item.signingUrl, item.signerKey);
                     }}
                   >
-                    {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
+                    {copiedSignerKey === item.signerKey ? "✓ Copiado" : "Copiar link"}
                   </button>
                   <a
-                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center"
+                    className="btn-secondary no-underline inline-flex items-center justify-center"
                     href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1572,11 +1583,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       ) : null}
 
       <p className="status-line">{status}</p>
-
-      <details>
-        <summary>Ver payload actual (debug local)</summary>
-        <pre className="json-preview">{JSON.stringify(state, null, 2)}</pre>
-      </details>
 
         </div>
 

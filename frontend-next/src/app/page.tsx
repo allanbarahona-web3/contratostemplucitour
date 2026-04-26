@@ -83,195 +83,227 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen grid place-items-center p-5">
-      <section className="w-full max-w-[460px] bg-white/75 border border-blue-900/10 rounded-[26px] p-7 backdrop-blur-[14px] shadow-[0_28px_55px_rgba(15,31,58,0.12),0_2px_0_rgba(255,255,255,0.65)_inset]">
-        <Image
-          src="/assets/LOGO ALMANOVA.png"
-          alt="Viajes Alma Nova"
-          width={245}
-          height={120}
-          className="h-auto block mx-auto mb-2.5"
-          style={{ width: "clamp(170px, 42vw, 245px)" }}
-          priority
-        />
-
-        <h1 className="m-0 mb-2.5 text-2xl text-center">Ingreso de Agente</h1>
-        <p className="mt-2 mb-4 text-gray-600 text-center text-sm">Primera pantalla migrada a Next.js + TypeScript.</p>
-
-        <form className="grid gap-2.5" onSubmit={onSubmit}>
-          {/* Honeypot field - hidden from users but visible to bots */}
-          <input
-            type="text"
-            name="website"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px" }}
-            tabIndex={-1}
-            autoComplete="nope"
-            aria-hidden="true"
-          />
-
-          <label className="grid gap-1.5 text-sm font-bold text-blue-900">
-            Correo
-            <input
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              className="border border-blue-900/20 bg-white/90 px-3.5 py-3 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
+    <main className="min-h-screen flex items-center justify-center p-6 bg-linear-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <Image
+              src="/assets/LOGO ALMANOVA.png"
+              alt="Viajes Alma Nova"
+              width={180}
+              height={90}
+              className="h-auto"
+              priority
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-sm font-bold text-blue-900">
-            Contraseña
-            <div className="relative w-full">
+          {/* Título */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Ingreso de Agente</h1>
+            <p className="text-sm text-gray-500">Ingresa tus credenciales para continuar</p>
+          </div>
+
+          {/* Formulario */}
+          <form onSubmit={onSubmit} className="space-y-5">
+            {/* Honeypot field */}
+            <input
+              type="text"
+              name="website"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="sr-only"
+              tabIndex={-1}
+              autoComplete="nope"
+              aria-hidden="true"
+            />
+
+            {/* Campo Correo */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Correo electrónico
+              </label>
               <input
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                id="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 required
-                className="w-full border border-blue-900/20 bg-white/90 px-3.5 py-3 pr-11 rounded-[14px] transition-all duration-150 focus:outline-none focus:border-blue-700/85 focus:shadow-[0_0_0_4px_rgba(23,78,166,0.16)]"
+                placeholder="tu@email.com"
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
+            </div>
+
+            {/* Campo Contraseña */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="block w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? "Ocultar" : "Mostrar"}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showPassword ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Link olvidaste contraseña */}
+            <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[1.3rem] p-0 leading-none flex items-center justify-center w-[30px] h-[30px]"
-                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                onClick={() => setShowResetModal(true)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                {showPassword ? "🙈" : "👁️"}
+                ¿Olvidaste tu contraseña?
               </button>
             </div>
-          </label>
 
-          <div className="text-right mt-2 mb-2">
+            {/* Mensaje de error */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            {/* Botón de login */}
             <button
-              type="button"
-              onClick={() => setShowResetModal(true)}
-              className="bg-transparent border-none text-blue-600 underline cursor-pointer text-sm p-0"
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ¿Olvidaste tu contraseña?
+              {loading ? "Ingresando..." : "Iniciar sesión"}
             </button>
-          </div>
+          </form>
+        </div>
+      </div>
 
-          {error ? <p className="my-0.5 text-sm text-red-600 font-bold">{error}</p> : null}
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
-          >
-            {loading ? "Ingresando..." : "Entrar"}
-          </button>
-        </form>
-
-        {/* Modal de Reset de Contraseña */}
-        {showResetModal ? (
+      {/* Modal de Reset de Contraseña */}
+      {showResetModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            if (!resetLoading) {
+              setShowResetModal(false);
+              setResetError("");
+              setResetMessage("");
+            }
+          }}
+        >
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fadeIn"
-            onClick={() => {
-              if (!resetLoading) {
-                setShowResetModal(false);
-                setResetError("");
-                setResetMessage("");
-              }
-            }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="bg-white rounded-2xl shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] max-w-[480px] w-[90%] relative overflow-hidden animate-slideUp"
-              onClick={(e) => e.stopPropagation()}
+            {/* Botón cerrar */}
+            <button
+              onClick={() => {
+                if (!resetLoading) {
+                  setShowResetModal(false);
+                  setResetError("");
+                  setResetMessage("");
+                }
+              }}
+              disabled={resetLoading}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
             >
-              {/* Header con gradiente */}
-              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 pb-6 text-white relative">
-                <button
-                  onClick={() => {
-                    if (!resetLoading) {
-                      setShowResetModal(false);
-                      setResetError("");
-                      setResetMessage("");
-                    }
-                  }}
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Icono */}
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+
+            {/* Título */}
+            <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">
+              Recuperar Contraseña
+            </h2>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Te enviaremos un enlace para restablecer tu contraseña
+            </p>
+
+            {/* Formulario */}
+            <form onSubmit={onRequestReset} className="space-y-4">
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Correo electrónico
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
                   disabled={resetLoading}
-                  className="absolute top-4 right-4 bg-white/20 border-none rounded-full w-8 h-8 flex items-center justify-center cursor-pointer text-2xl text-white transition-all duration-200 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Cerrar"
-                >
-                  ×
-                </button>
-
-                <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-3xl mb-4">
-                  🔑
-                </div>
-
-                <h2 className="m-0 text-[1.75rem] font-bold">
-                  Recuperar Contraseña
-                </h2>
-                <p className="mt-2 mb-0 opacity-95 text-[0.95rem] leading-relaxed">
-                  Te enviaremos un enlace seguro para que puedas restablecer tu contraseña.
-                </p>
+                  placeholder="tu@email.com"
+                  className="w-full px-4 py-2.5 text-[15px] bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                />
               </div>
 
-              {/* Contenido del formulario */}
-              <form onSubmit={onRequestReset} className="p-8">
-                <label className="block mb-6">
-                  <span className="block mb-2 text-gray-700 font-semibold text-[0.95rem]">
-                    📧 Correo electrónico
-                  </span>
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    required
-                    disabled={resetLoading}
-                    placeholder="tu@email.com"
-                    className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-[10px] transition-all outline-none disabled:opacity-60 focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(102,126,234,0.1)]"
-                  />
-                </label>
-
-                {resetError && (
-                  <div className="mb-5 p-3.5 px-4 bg-red-50 border border-red-200 rounded-[10px] text-red-800 text-sm flex items-start gap-2.5 animate-shakeError">
-                    <span className="text-xl flex-shrink-0">⚠️</span>
-                    <span>{resetError}</span>
-                  </div>
-                )}
-
-                {resetMessage && (
-                  <div className="mb-5 p-3.5 px-4 bg-green-50 border border-green-300 rounded-[10px] text-green-800 text-sm flex items-start gap-2.5 animate-slideDown">
-                    <span className="text-xl flex-shrink-0">✅</span>
-                    <div>
-                      <strong className="block mb-1">¡Enviado con éxito!</strong>
-                      <span>{resetMessage}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowResetModal(false);
-                      setResetError("");
-                      setResetMessage("");
-                    }}
-                    disabled={resetLoading}
-                    className="flex-1 px-5 py-3 text-base font-semibold border-2 border-gray-200 rounded-[10px] bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={resetLoading || !!resetMessage}
-                    className="flex-1 px-5 py-3 text-base font-semibold border-none rounded-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white transition-all duration-200 shadow-md hover:-translate-y-px hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
-                  >
-                    {resetLoading ? "⏳ Enviando..." : resetMessage ? "✓ Enviado" : "📤 Enviar enlace"}
-                  </button>
+              {/* Error */}
+              {resetError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 font-medium">{resetError}</p>
                 </div>
-              </form>
-            </div>
+              )}
+
+              {/* Success */}
+              {resetMessage && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-600 font-medium">{resetMessage}</p>
+                </div>
+              )}
+
+              {/* Botones */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetError("");
+                    setResetMessage("");
+                  }}
+                  disabled={resetLoading}
+                  className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading || !!resetMessage}
+                  className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+                >
+                  {resetLoading ? "Enviando..." : resetMessage ? "Enviado ✓" : "Enviar enlace"}
+                </button>
+              </div>
+            </form>
           </div>
-        ) : null}
-      </section>
+        </div>
+      )}
     </main>
   );
 }

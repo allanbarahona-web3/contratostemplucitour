@@ -10,7 +10,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
-import * as sharp from "sharp";
+import sharp from "sharp";
 import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
@@ -1418,39 +1418,94 @@ export class ContractsService {
       });
     }
 
-    const archived = await (this.prisma as any).contract.create({
-      data: {
-        contractNumber,
-        paymentReference,
-        clientId: client.id,
-        destination: dto.destination.trim(),
-        status: CONTRACT_STATUS_PENDING_PAYMENT_RESERVE,
-        generatedByUserId: user.id,
-        generatedByEmail: user.email,
-        generatedByName: user.fullName,
-        issuedAt: this.toDateOrNull(dto.issuedAt),
-        startDate: this.toDateOrNull(dto.startDate),
-        endDate: this.toDateOrNull(dto.endDate),
-        payload: enrichedPayload as any,
-        pdfObjectKey: pdfKey,
-        pdfFileName: `${contractNumber}.pdf`,
-        pdfMimeType: "application/pdf",
-        pdfSize: pdfBuffer.length,
-        htmlObjectKey: htmlKey,
-        documents: {
-          create: uploadedDocuments.map((doc) => ({
-            kind: null,
-            originalFileName: doc.originalFileName,
-            objectKey: doc.objectKey,
-            mimeType: doc.mimeType,
-            size: doc.size,
-          })),
+    // =================================================================
+    // 🔍 DEBUG: Log de tamaños ANTES de insertar en base de datos
+    // =================================================================
+    console.log('====================================');
+    console.log('🔍 [archiveContract] INICIO - Verificando tamaños de campos');
+    console.log('====================================');
+    console.log(`contractNumber: "${contractNumber}" (${contractNumber.length} chars)`);
+    console.log(`paymentReference: "${paymentReference}" (${paymentReference.length} chars)`);
+    console.log(`destination: "${dto.destination.trim()}" (${dto.destination.trim().length} chars)`);
+    console.log(`clientFullName: "${dto.clientFullName.trim()}" (${dto.clientFullName.trim().length} chars)`);
+    console.log(`clientIdNumber: "${dto.clientIdNumber.trim()}" (${dto.clientIdNumber.trim().length} chars)`);
+    console.log(`generatedByEmail: "${user.email}" (${user.email.length} chars)`);
+    console.log(`generatedByName: "${user.fullName}" (${user.fullName.length} chars)`);
+    console.log(`pdfObjectKey: "${pdfKey}" (${pdfKey.length} chars)`);
+    console.log(`pdfFileName: "${contractNumber}.pdf" (${(contractNumber + '.pdf').length} chars)`);
+    console.log(`htmlObjectKey: "${htmlKey}" (${htmlKey.length} chars)`);
+    console.log(`payload JSON: ${JSON.stringify(enrichedPayload).length} chars total`);
+    console.log('====================================');
+
+    let archived: any;
+    try {
+      archived = await (this.prisma as any).contract.create({
+        data: {
+          contractNumber,
+          paymentReference,
+          clientId: client.id,
+          destination: dto.destination.trim(),
+          status: CONTRACT_STATUS_PENDING_PAYMENT_RESERVE,
+          generatedByUserId: user.id,
+          generatedByEmail: user.email,
+          generatedByName: user.fullName,
+          issuedAt: this.toDateOrNull(dto.issuedAt),
+          startDate: this.toDateOrNull(dto.startDate),
+          endDate: this.toDateOrNull(dto.endDate),
+          payload: enrichedPayload as any,
+          pdfObjectKey: pdfKey,
+          pdfFileName: `${contractNumber}.pdf`,
+          pdfMimeType: "application/pdf",
+          pdfSize: pdfBuffer.length,
+          htmlObjectKey: htmlKey,
+          documents: {
+            create: uploadedDocuments.map((doc) => ({
+              kind: null,
+              originalFileName: doc.originalFileName,
+              objectKey: doc.objectKey,
+              mimeType: doc.mimeType,
+              size: doc.size,
+            })),
+          },
         },
-      },
-      include: {
-        documents: true,
-      },
-    });
+        include: {
+          documents: true,
+        },
+      });
+    } catch (error) {
+      console.log('====================================');
+      console.log('❌ [archiveContract] ERROR EN BASE DE DATOS');
+      console.log('====================================');
+      console.log('Error completo:', error);
+      console.log('Error message:', error instanceof Error ? error.message : String(error));
+      
+      if (error && typeof error === 'object') {
+        console.log('Error keys:', Object.keys(error));
+        if ('code' in error) console.log('Prisma code:', (error as any).code);
+        if ('meta' in error) console.log('Prisma meta:', JSON.stringify((error as any).meta, null, 2));
+      }
+      console.log('====================================');
+      
+      this.logger.error('[archiveContract] Error al crear contrato en la base de datos:');
+      this.logger.error(`  Error message: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`  Error details:`, error);
+      
+      // Si es un error de Prisma, intentar extraer más detalles
+      if (error && typeof error === 'object' && 'code' in error) {
+        this.logger.error(`  Prisma error code: ${(error as any).code}`);
+        this.logger.error(`  Prisma meta:`, (error as any).meta);
+      }
+      
+      // Relanzar con mensaje más útil
+      if (error instanceof Error && error.message.toLowerCase().includes('too long')) {
+        throw new BadRequestException(
+          `Error: Uno de los campos excede el límite permitido. Revisa los logs del servidor para más detalles. ` +
+          `Mensaje original: ${error.message}`
+        );
+      }
+      
+      throw error;
+    }
 
     const pdfUrl = await this.buildSignedObjectUrl(pdfKey, 900);
 
