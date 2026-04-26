@@ -267,9 +267,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       setStatus("Preparando contrato...");
       const [logoSrc, representativeSignSrc] = await Promise.all([
         loadFirstAvailableAsset([
-          "/assets/LOGO ALMANOVA NEGRO CON DORADO.png",
-          "/LOGO ALMANOVA NEGRO CON DORADO.png",
-          "/assets/LOGO ALMANOVA NEGRO.png",
+          "/assets/LOGO ALMANOVA.png",
         ]),
         loadFirstAvailableAsset([
           "/firmakaren.png",
@@ -334,9 +332,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
       const [logoSrc, representativeSignSrc] = await Promise.all([
         loadFirstAvailableAsset([
-          "/assets/LOGO ALMANOVA NEGRO CON DORADO.png",
-          "/LOGO ALMANOVA NEGRO CON DORADO.png",
-          "/assets/LOGO ALMANOVA NEGRO.png",
+          "/assets/LOGO ALMANOVA.png",
         ]),
         loadFirstAvailableAsset([
           "/firmakaren.png",

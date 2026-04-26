@@ -517,7 +517,7 @@ html, body {
 
 <header class="doc-header">
   <img class="doc-header-logo"
-  src="${escapeAttr(assets.logoSrc || "/assets/LOGO ALMANOVA NEGRO CON DORADO.png")}" 
+  src="${escapeAttr(assets.logoSrc || "/assets/LOGO ALMANOVA.png")}" 
        alt="Viajes Alma Nova" />
   <div class="doc-header-text">
     <h1>Viajes Alma Nova</h1>
