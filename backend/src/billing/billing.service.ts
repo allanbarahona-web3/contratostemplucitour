@@ -1460,21 +1460,33 @@ export class BillingService {
     }
 
     const company = this.getCompanyProfile(receipt.contract);
+    
+    // Obtener payment reference del contrato (código único de pago)
+    const paymentReference = String(receipt.contract?.paymentReference || "-");
+    
+    // Método de pago humanizado
+    const paymentMethod = String(receipt.payment?.paymentMethod || "")
+      .replace("TRANSFERENCIA_BANCARIA", "Transferencia Bancaria")
+      .replace("SINPE_MOVIL", "SINPE Móvil")
+      .replace("EFECTIVO", "Efectivo")
+      .replace("TARJETA", "Tarjeta")
+      || "-";
+
     const pdfBuffer = await this.createCorporatePdfBuffer({
       documentTitle: "Recibo de Caja",
       documentNumber: String(receipt.receiptNumber),
       contractNumber: String(receipt.contractNumber),
       company,
       detailRows: [
-        { label: "Factura", value: String(receipt.invoice?.invoiceNumber || "-") },
         { label: "Cliente", value: String(receipt.invoice?.client?.fullName || "-") },
-        { label: "Pagador", value: String(receipt.payment?.payerName || "-") },
-        { label: "Referencia", value: String(receipt.payment?.bankReference || "-") },
-        { label: "Monto", value: this.formatCurrency(receipt.amount) },
-        { label: "Estado", value: String(receipt.status || "-") },
-        { label: "Emitido", value: this.formatDateTime(receipt.issuedAt) },
-        { label: "Aprobado", value: this.formatDateTime(receipt.approvedAt) },
+        { label: "Código de pago", value: paymentReference },
+        { label: "Monto recibido", value: this.formatCurrency(receipt.amount) },
+        { label: "Método de pago", value: paymentMethod },
+        { label: "Referencia bancaria", value: String(receipt.payment?.bankReference || "-") },
+        { label: "Fecha emisión", value: this.formatDateTime(receipt.issuedAt) },
+        { label: "Fecha aprobación", value: this.formatDateTime(receipt.approvedAt) },
       ],
+      note: "Este recibo certifica que el pago fue recibido y aprobado correctamente.",
     });
 
     const objectKey = [
