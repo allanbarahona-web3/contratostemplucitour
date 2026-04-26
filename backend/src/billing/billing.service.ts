@@ -139,9 +139,8 @@ export class BillingService {
     const dd = String(now.getDate()).padStart(2, "0");
     const hh = String(now.getHours()).padStart(2, "0");
     const min = String(now.getMinutes()).padStart(2, "0");
-    const ss = String(now.getSeconds()).padStart(2, "0");
-    const ms = String(now.getMilliseconds()).padStart(3, "0");
-    return `RCPT-${contractNumber}-${yyyy}${mm}${dd}${hh}${min}${ss}${ms}`;
+    // Formato más corto: RCPT-YYYYMMDD-HHMM
+    return `RCPT-${yyyy}${mm}${dd}-${hh}${min}`;
   }
 
   private buildCreditNoteNumber(contractNumber: string) {
@@ -381,6 +380,333 @@ export class BillingService {
       size: 8.5,
       font,
       color: rgb(0.35, 0.37, 0.42),
+    });
+
+    const bytes = await pdf.save();
+    return Buffer.from(bytes);
+  }
+
+  private async createReceiptPdfBuffer(params: {
+    receiptNumber: string;
+    contractNumber: string;
+    company: {
+      legalName: string;
+      commercialName: string;
+      legalId: string;
+      companyEmail: string;
+    };
+    clientName: string;
+    paymentReference: string;
+    amount: number;
+    paymentMethod: string;
+    bankReference: string;
+    issuedAt: Date | string | null;
+    approvedAt: Date | string | null;
+  }) {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([595.28, 841.89]);
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const logo = await this.loadCompanyLogo();
+
+    // Header sin franja azul - solo logo y nombre de empresa
+    if (logo) {
+      const image = logo.format === "jpg" ? await pdf.embedJpg(logo.bytes) : await pdf.embedPng(logo.bytes);
+      const scaled = image.scale(0.25);
+      const maxWidth = 180;
+      const ratio = scaled.width > maxWidth ? maxWidth / scaled.width : 1;
+      const drawWidth = scaled.width * ratio;
+      const drawHeight = scaled.height * ratio;
+
+      // Logo arriba a la derecha
+      page.drawImage(image, {
+        x: 545 - drawWidth,
+        y: 785,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    }
+
+    // Nombre de empresa arriba a la izquierda
+    page.drawText(params.company.commercialName, {
+      x: 50,
+      y: 810,
+      size: 20,
+      font: bold,
+      color: rgb(0.07, 0.26, 0.41),
+    });
+    page.drawText(this.toShortText(params.company.legalName, 55), {
+      x: 50,
+      y: 793,
+      size: 9,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    page.drawText(`Cédula Jurídica: ${params.company.legalId}`, {
+      x: 50,
+      y: 778,
+      size: 8.5,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+
+    // Línea divisoria del header
+    page.drawLine({
+      start: { x: 36, y: 762 },
+      end: { x: 559, y: 762 },
+      thickness: 2,
+      color: rgb(0.07, 0.26, 0.41),
+    });
+
+    // Título del documento
+    page.drawText("RECIBO DE CAJA", {
+      x: 50,
+      y: 730,
+      size: 22,
+      font: bold,
+      color: rgb(0.08, 0.11, 0.16),
+    });
+
+    // Número de recibo y contrato
+    let y = 700;
+    page.drawText("Número de Recibo:", {
+      x: 50,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.receiptNumber, 45), {
+      x: 170,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    y -= 16;
+    page.drawText("Número de Contrato:", {
+      x: 50,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.contractNumber, 45), {
+      x: 170,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    // Fechas del lado derecho
+    y = 700;
+    page.drawText("Fecha de Emisión:", {
+      x: 350,
+      y,
+      size: 9,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.formatDateTime(params.issuedAt), {
+      x: 455,
+      y,
+      size: 9,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    y -= 16;
+    page.drawText("Fecha de Aprobación:", {
+      x: 350,
+      y,
+      size: 9,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.formatDateTime(params.approvedAt), {
+      x: 455,
+      y,
+      size: 9,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    // Separador
+    y -= 22;
+    page.drawLine({
+      start: { x: 50, y },
+      end: { x: 545, y },
+      thickness: 1,
+      color: rgb(0.82, 0.84, 0.87),
+    });
+
+    // Sección de Información del Cliente
+    y -= 26;
+    page.drawText("INFORMACIÓN DEL CLIENTE", {
+      x: 50,
+      y,
+      size: 12,
+      font: bold,
+      color: rgb(0.08, 0.11, 0.16),
+    });
+
+    y -= 20;
+    page.drawText("Cliente:", {
+      x: 56,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.clientName, 70), {
+      x: 140,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    y -= 16;
+    page.drawText("Código de Pago:", {
+      x: 56,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.paymentReference, 70), {
+      x: 140,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    // Separador
+    y -= 22;
+    page.drawLine({
+      start: { x: 50, y },
+      end: { x: 545, y },
+      thickness: 1,
+      color: rgb(0.82, 0.84, 0.87),
+    });
+
+    // Sección de Detalle del Pago
+    y -= 26;
+    page.drawText("DETALLE DEL PAGO", {
+      x: 50,
+      y,
+      size: 12,
+      font: bold,
+      color: rgb(0.08, 0.11, 0.16),
+    });
+
+    y -= 24;
+    // Monto recibido - destacado
+    page.drawRectangle({
+      x: 50,
+      y: y - 4,
+      width: 495,
+      height: 28,
+      color: rgb(0.95, 0.97, 0.99),
+      borderColor: rgb(0.07, 0.26, 0.41),
+      borderWidth: 1,
+    });
+    page.drawText("Monto Recibido:", {
+      x: 60,
+      y: y + 6,
+      size: 11,
+      font: bold,
+      color: rgb(0.08, 0.11, 0.16),
+    });
+    page.drawText(this.formatCurrency(params.amount), {
+      x: 440,
+      y: y + 6,
+      size: 14,
+      font: bold,
+      color: rgb(0.0, 0.5, 0.0),
+    });
+
+    y -= 34;
+    page.drawText("Método de Pago:", {
+      x: 56,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.paymentMethod, 50), {
+      x: 180,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    y -= 16;
+    page.drawText("Referencia Bancaria:", {
+      x: 56,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText(this.toShortText(params.bankReference, 50), {
+      x: 180,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+
+    // Nota al pie
+    y -= 40;
+    page.drawText("NOTA:", {
+      x: 50,
+      y,
+      size: 10,
+      font: bold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    y -= 14;
+    page.drawText("Este recibo certifica que el pago fue recibido y aprobado correctamente.", {
+      x: 50,
+      y,
+      size: 9.5,
+      font,
+      color: rgb(0.23, 0.25, 0.31),
+    });
+    y -= 12;
+    page.drawText("El monto indicado ha sido aplicado a su contrato de servicios.", {
+      x: 50,
+      y,
+      size: 9.5,
+      font,
+      color: rgb(0.23, 0.25, 0.31),
+    });
+
+    // Footer
+    page.drawLine({
+      start: { x: 36, y: 74 },
+      end: { x: 559, y: 74 },
+      thickness: 1,
+      color: rgb(0.82, 0.84, 0.87),
+    });
+    page.drawText("Documento generado electrónicamente - Sistema de Facturación", {
+      x: 50,
+      y: 58,
+      size: 8,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+    page.drawText(`Email: ${params.company.companyEmail}`, {
+      x: 50,
+      y: 46,
+      size: 8,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
     });
 
     const bytes = await pdf.save();
@@ -1472,21 +1798,17 @@ export class BillingService {
       .replace("TARJETA", "Tarjeta")
       || "-";
 
-    const pdfBuffer = await this.createCorporatePdfBuffer({
-      documentTitle: "Recibo de Caja",
-      documentNumber: String(receipt.receiptNumber),
+    const pdfBuffer = await this.createReceiptPdfBuffer({
+      receiptNumber: String(receipt.receiptNumber),
       contractNumber: String(receipt.contractNumber),
       company,
-      detailRows: [
-        { label: "Cliente", value: String(receipt.invoice?.client?.fullName || "-") },
-        { label: "Código de pago", value: paymentReference },
-        { label: "Monto recibido", value: this.formatCurrency(receipt.amount) },
-        { label: "Método de pago", value: paymentMethod },
-        { label: "Referencia bancaria", value: String(receipt.payment?.bankReference || "-") },
-        { label: "Fecha emisión", value: this.formatDateTime(receipt.issuedAt) },
-        { label: "Fecha aprobación", value: this.formatDateTime(receipt.approvedAt) },
-      ],
-      note: "Este recibo certifica que el pago fue recibido y aprobado correctamente.",
+      clientName: String(receipt.invoice?.client?.fullName || "-"),
+      paymentReference,
+      amount: receipt.amount,
+      paymentMethod,
+      bankReference: String(receipt.payment?.bankReference || "-"),
+      issuedAt: receipt.issuedAt,
+      approvedAt: receipt.approvedAt,
     });
 
     const objectKey = [
