@@ -529,7 +529,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             {!state.contractNumber ? (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                 onClick={() => {
                   void reserveNumber();
                 }}
@@ -845,7 +845,11 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       <div className="itinerary-box">
         <div className="itinerary-head">
           <h2>Acompanantes</h2>
-          <button type="button" className="btn btn-secondary" onClick={() => setState((prev) => addCompanion(prev))}>
+          <button 
+            type="button" 
+            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" 
+            onClick={() => setState((prev) => addCompanion(prev))}
+          >
             + Agregar acompanante
           </button>
         </div>
@@ -858,7 +862,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <h3>Acompanante {index + 1}</h3>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   onClick={() => {
                     setCompanionDocs((prev) => {
                       const next = { ...prev };
@@ -1077,7 +1081,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             </label>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
               onClick={() => setState((prev) => addMinor(prev))}
               disabled={!state.hasMinorCompanion}
             >
@@ -1096,7 +1100,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                 <h3>Menor {index + 1}</h3>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   onClick={() => {
                     setMinorDocs((prev) => {
                       const next = { ...prev };
@@ -1309,7 +1313,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           <h2>Itinerario</h2>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
             onClick={() => setState((prev) => addCustomItineraryItem(prev))}
             disabled={Boolean(rangeMessage) || Boolean(itineraryMessage)}
           >
@@ -1360,7 +1364,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                   {item.kind === "custom" ? (
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                       disabled={Boolean(itineraryMessage)}
                       onClick={() => setState((prev) => removeCustomItineraryItem(prev, item.id))}
                     >
@@ -1443,10 +1447,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         </label>
       </div>
 
-      <div className="actions">
+      <div className="flex gap-2 flex-wrap mt-3.5">
         <button
           type="button"
-          className="btn btn-secondary"
+          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void saveDraftFlow();
@@ -1457,7 +1461,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
         <button
           type="button"
-          className="btn btn-secondary"
+          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void runPreviewFlow();
@@ -1468,7 +1472,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
 
         <button
           type="button"
-          className="btn"
+          className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
           disabled={savingDraft || submitting || previewing || busyNumber || !state.contractNumber}
           onClick={() => {
             void runArchiveFlow();
@@ -1502,10 +1506,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     <input type="text" value={item.signingUrl} readOnly />
                   </label>
                 </div>
-                <div className="actions" style={{ marginTop: 8 }}>
+                <div className="flex gap-2 flex-wrap mt-2">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     onClick={() => {
                       void copySigningUrl(item.signingUrl, item.signerKey);
                     }}
@@ -1513,7 +1517,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
                   </button>
                   <a
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center"
                     href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1542,10 +1546,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     <input type="text" value={item.signingUrl} readOnly />
                   </label>
                 </div>
-                <div className="actions" style={{ marginTop: 8 }}>
+                <div className="flex gap-2 flex-wrap mt-2">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     onClick={() => {
                       void copySigningUrl(item.signingUrl, item.signerKey);
                     }}
@@ -1553,7 +1557,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     {copiedSignerKey === item.signerKey ? "Copiado" : "Copiar link"}
                   </button>
                   <a
-                    className="btn btn-secondary"
+                    className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center"
                     href={buildWhatsappShareUrl(item.signingUrl, item.signerName || item.signerKey)}
                     target="_blank"
                     rel="noopener noreferrer"

@@ -299,7 +299,7 @@ export default function HistoryPage() {
             />
             <button
               type="button"
-              className="btn btn-secondary"
+              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
               onClick={() => {
                 void load(query);
               }}
@@ -358,12 +358,12 @@ export default function HistoryPage() {
                           <div className="history-actions">
                             {isDraft ? (
                               <>
-                                <Link href={`/contracts?draftId=${encodeURIComponent(item.id)}`} className="btn btn-secondary">
+                                <Link href={`/contracts?draftId=${encodeURIComponent(item.id)}`} className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center">
                                   Continuar borrador
                                 </Link>
                                 <button
                                   type="button"
-                                  className="btn btn-secondary"
+                                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                   onClick={() => openDeleteDraftModal(item)}
                                   disabled={busyAction === "delete-draft:confirm"}
                                 >
@@ -374,7 +374,7 @@ export default function HistoryPage() {
                               <>
                                 <button
                                   type="button"
-                                  className="btn btn-secondary"
+                                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                   onClick={() => void openContractPdf(item.id)}
                                   disabled={busyAction === `contract:${item.id}`}
                                 >
@@ -382,7 +382,7 @@ export default function HistoryPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn btn-secondary"
+                                  className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                                   onClick={() => void openDocuments(item.id)}
                                   disabled={busyAction === `documents:${item.id}`}
                                 >
@@ -393,7 +393,10 @@ export default function HistoryPage() {
                             {isSigned ? (
                               <button
                                 type="button"
-                                className={`btn ${isResendDone ? "btn-success" : "btn-secondary"}`}
+                                className={isResendDone 
+                                  ? "rounded-xl px-4 py-3 bg-gradient-to-b from-green-500 to-green-700 text-white font-bold shadow-lg shadow-green-500/25 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                  : "rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                                }
                                 onClick={() => void onResendSigned(item.id)}
                                 disabled={busyAction === `resend:${item.id}` || isResendDone}
                               >
@@ -407,7 +410,7 @@ export default function HistoryPage() {
                             {item.status === "PENDING_SIGNATURE" ? (
                               <button
                                 type="button"
-                                className="btn"
+                                className="rounded-xl px-4 py-3 bg-gradient-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                                 onClick={() => void onSendSigningLinks(item.id)}
                                 disabled={busyAction === `sign:${item.id}`}
                               >
@@ -415,7 +418,7 @@ export default function HistoryPage() {
                               </button>
                             ) : null}
                             {isSigned || item.status === "PENDING_SIGNATURE" || item.status === "SIGNING_SENT" || item.status === "PENDING_PAYMENT_RESERVE" || item.status === "RESERVE_IN_REVIEW" ? (
-                              <Link href={`/billing/${encodeURIComponent(item.id)}`} className="btn btn-secondary">
+                              <Link href={`/billing/${encodeURIComponent(item.id)}`} className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center">
                                 Estado de cuenta
                               </Link>
                             ) : null}
@@ -436,7 +439,7 @@ export default function HistoryPage() {
           <div className="viewer-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>{viewerTitle}</h2>
-              <button type="button" className="btn btn-secondary" onClick={closeViewer}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" onClick={closeViewer}>
                 Cerrar
               </button>
             </div>
