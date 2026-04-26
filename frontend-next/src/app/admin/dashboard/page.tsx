@@ -5,7 +5,7 @@ import { getBillingDashboardMetrics, type DashboardMetrics } from "@/lib/billing
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const formatMoney = (value: number): string => `USD ${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;'
+const formatMoney = (value: number): string => `USD ${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
 const formatDate = (value: string): string => {
   try {
