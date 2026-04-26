@@ -217,7 +217,7 @@ export default function BillingPage() {
                   <td>{formatMoney(item.amounts.pending)}</td>
                   <td>{formatMoney(item.amounts.balance)}</td>
                   <td>
-                    <Link href={`/billing/${encodeURIComponent(item.contractId)}`} className="btn btn-secondary">
+                    <Link href={`/billing/${encodeURIComponent(item.contractId)}`} className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 no-underline inline-flex items-center justify-center">
                       Abrir cuenta
                     </Link>
                   </td>

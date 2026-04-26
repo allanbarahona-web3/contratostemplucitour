@@ -994,21 +994,21 @@ export default function BillingContractAccountPage() {
             ) : null}
 
             <section className="billing-actions-row">
-              <button type="button" className="btn btn-secondary" onClick={openInstallmentModal}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" onClick={openInstallmentModal}>
                 Generar abono
               </button>
-              <button type="button" className="btn btn-secondary" onClick={openStatement}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" onClick={openStatement}>
                 Estado de cuenta
               </button>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                 onClick={() => void onOpenInvoicePdf()}
                 disabled={actionBusy === "invoice:pdf"}
               >
                 {actionBusy === "invoice:pdf" ? "Abriendo..." : "Abrir documento del contrato"}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setModalMode("CREDIT_NOTE")}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" onClick={() => setModalMode("CREDIT_NOTE")}>
                 Generar nota de credito
               </button>
             </section>

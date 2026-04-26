@@ -248,7 +248,7 @@ export default function PendingPaymentsPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
                           onClick={() => {
                             setRejectModalPaymentId(payment.id);
                             setRejectReason("");
@@ -259,7 +259,7 @@ export default function PendingPaymentsPage() {
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                           onClick={() => router.push(`/billing/${payment.contractId}`)}
                           style={{ marginLeft: "8px" }}
                         >
@@ -288,7 +288,7 @@ export default function PendingPaymentsPage() {
           <div className="viewer-panel reject-modal-panel" onClick={(event) => event.stopPropagation()}>
             <div className="viewer-head">
               <h2>Rechazar Pago</h2>
-              <button type="button" className="btn btn-secondary" onClick={() => setRejectModalPaymentId("")}>
+              <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0" onClick={() => setRejectModalPaymentId("")}>
                 Cerrar
               </button>
             </div>
