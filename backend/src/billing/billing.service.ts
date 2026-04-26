@@ -132,15 +132,12 @@ export class BillingService {
     return Math.ceil(diffMs / (24 * 60 * 60 * 1000));
   }
 
-  private buildReceiptNumber(contractNumber: string) {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const hh = String(now.getHours()).padStart(2, "0");
-    const min = String(now.getMinutes()).padStart(2, "0");
-    // Formato más corto: RCPT-YYYYMMDD-HHMM
-    return `RCPT-${yyyy}${mm}${dd}-${hh}${min}`;
+  private async buildReceiptNumber(): Promise<string> {
+    // Contar recibos existentes para generar número consecutivo
+    const count = await (this.prisma as any).billingReceipt.count();
+    const nextNumber = count + 1;
+    const paddedNumber = String(nextNumber).padStart(8, "0");
+    return `RCPT-${paddedNumber}`;
   }
 
   private buildCreditNoteNumber(contractNumber: string) {
@@ -427,7 +424,7 @@ export class BillingService {
       });
     }
 
-    // Nombre de empresa arriba a la izquierda
+    // Nombre de empresa arriba a la izquierda (solo commercialName, sin duplicar)
     page.drawText(params.company.commercialName, {
       x: 50,
       y: 810,
@@ -435,25 +432,18 @@ export class BillingService {
       font: bold,
       color: rgb(0.07, 0.26, 0.41),
     });
-    page.drawText(this.toShortText(params.company.legalName, 55), {
+    page.drawText(`Cédula Jurídica: ${params.company.legalId}`, {
       x: 50,
       y: 793,
       size: 9,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-    page.drawText(`Cédula Jurídica: ${params.company.legalId}`, {
-      x: 50,
-      y: 778,
-      size: 8.5,
       font,
       color: rgb(0.5, 0.5, 0.5),
     });
 
     // Línea divisoria del header
     page.drawLine({
-      start: { x: 36, y: 762 },
-      end: { x: 559, y: 762 },
+      start: { x: 36, y: 778 },
+      end: { x: 559, y: 778 },
       thickness: 2,
       color: rgb(0.07, 0.26, 0.41),
     });
@@ -461,14 +451,14 @@ export class BillingService {
     // Título del documento
     page.drawText("RECIBO DE CAJA", {
       x: 50,
-      y: 730,
+      y: 746,
       size: 22,
       font: bold,
       color: rgb(0.08, 0.11, 0.16),
     });
 
     // Número de recibo y contrato
-    let y = 700;
+    let y = 716;
     page.drawText("Número de Recibo:", {
       x: 50,
       y,
@@ -603,8 +593,8 @@ export class BillingService {
       color: rgb(0.08, 0.11, 0.16),
     });
 
-    y -= 24;
-    // Monto recibido - destacado
+    y -= 32;
+    // Monto recibido - destacado (más espacio arriba)
     page.drawRectangle({
       x: 50,
       y: y - 4,
@@ -2824,7 +2814,7 @@ contratos@viajesalmanova.com
           invoiceId: invoice.id,
           contractId: contract.id,
           contractNumber: contract.contractNumber,
-          receiptNumber: this.buildReceiptNumber(contract.contractNumber),
+          receiptNumber: await this.buildReceiptNumber(),
           amount: this.toDecimalString(reservationAmount),
           issuedByUserId: user.id,
           issuedByName: user.fullName,
@@ -3806,7 +3796,7 @@ contratos@viajesalmanova.com
         invoiceId: invoice.id,
         contractId,
         contractNumber: invoice.contractNumber,
-        receiptNumber: this.buildReceiptNumber(invoice.contractNumber),
+        receiptNumber: await this.buildReceiptNumber(),
         amount: this.toDecimalString(amount),
         issuedByUserId: user.id,
         issuedByName: user.fullName,
