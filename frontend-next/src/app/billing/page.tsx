@@ -25,13 +25,39 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [items, setItems] = useState<BillingListItem[]>([]);
   const { toasts, showError, dismissToast } = useToast();
 
-  const load = async (search = query, statusValue = status) => {
+  const load = async (
+    search = query, 
+    statusValue = status,
+    dateFilterValue = dateFilter,
+    dateFromValue = dateFrom,
+    dateToValue = dateTo
+  ) => {
     setLoading(true);
     try {
-      const list = await listBillingContracts({ q: search, status: statusValue, limit: 60 });
+      const params: any = { 
+        q: search, 
+        status: statusValue, 
+        limit: 60 
+      };
+      
+      // Si hay preset, lo usamos
+      if (dateFilterValue && dateFilterValue !== "custom") {
+        params.datePreset = dateFilterValue;
+      }
+      
+      // Si es custom o hay fechas específicas, usamos dateFrom/dateTo
+      if (dateFilterValue === "custom" || (!dateFilterValue && (dateFromValue || dateToValue))) {
+        if (dateFromValue) params.dateFrom = dateFromValue;
+        if (dateToValue) params.dateTo = dateToValue;
+      }
+      
+      const list = await listBillingContracts(params);
       setItems(list);
     } catch (fetchError) {
       showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar estados de cuenta.");
@@ -47,20 +73,20 @@ export default function BillingPage() {
       return;
     }
 
-    void load("", "");
+    void load("", "", "", "", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query || status) {
+      if (query || status || dateFilter || dateFrom || dateTo) {
         void load();
       }
     }, 500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, status]);
+  }, [query, status, dateFilter, dateFrom, dateTo]);
 
   if (loading && items.length === 0) {
     return (
@@ -100,6 +126,41 @@ export default function BillingPage() {
             </select>
           </label>
 
+          <label>
+            Fecha
+            <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}>
+              <option value="">Todo el historial</option>
+              <option value="7days">Últimos 7 días</option>
+              <option value="1week">Última semana</option>
+              <option value="2weeks">Últimas 2 semanas</option>
+              <option value="1month">Último mes</option>
+              <option value="3months">Últimos 3 meses</option>
+              <option value="custom">Rango personalizado</option>
+            </select>
+          </label>
+
+          {dateFilter === "custom" && (
+            <>
+              <label>
+                Desde
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                />
+              </label>
+
+              <label>
+                Hasta
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                />
+              </label>
+            </>
+          )}
+
           <div className="actions" style={{ alignItems: "flex-end", marginTop: 22 }}>
             <button type="button" className="btn" onClick={() => void load()} disabled={loading}>
               {loading ? "Buscando..." : "Aplicar filtros"}
@@ -129,7 +190,7 @@ export default function BillingPage() {
                       <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>💰</div>
                       <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>No hay estados de cuenta</h3>
                       <p className="muted" style={{ margin: 0 }}>
-                        {query || status ? "No se encontraron resultados con los filtros aplicados." : "Los estados de cuenta aparecerán aquí automáticamente al firmar contratos."}
+                        {query || status || dateFilter ? "No se encontraron resultados con los filtros aplicados." : "Los estados de cuenta aparecerán aquí automáticamente al firmar contratos."}
                       </p>
                     </div>
                   </td>

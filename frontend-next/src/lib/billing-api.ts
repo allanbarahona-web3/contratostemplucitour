@@ -354,10 +354,20 @@ export const bootstrapBillingContract = async (contractId: string): Promise<{ cr
     },
   );
 
-export const listBillingContracts = async (params: { q?: string; status?: string; limit?: number } = {}): Promise<BillingListItem[]> => {
+export const listBillingContracts = async (params: { 
+  q?: string; 
+  status?: string; 
+  limit?: number;
+  datePreset?: string;
+  dateFrom?: string;
+  dateTo?: string;
+} = {}): Promise<BillingListItem[]> => {
   const query = new URLSearchParams();
   if (params.q) query.set("q", String(params.q));
   if (params.status) query.set("status", String(params.status));
+  if (params.datePreset) query.set("datePreset", String(params.datePreset));
+  if (params.dateFrom) query.set("dateFrom", String(params.dateFrom));
+  if (params.dateTo) query.set("dateTo", String(params.dateTo));
   query.set("limit", String(params.limit || 50));
 
   const payload = await apiFetchJson<{ items?: BillingListItem[] }>(`/billing/contracts?${query.toString()}`, {

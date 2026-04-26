@@ -17,4 +17,17 @@ export class ListBillingContractsDto {
   @IsString()
   @IsIn(["FACTURA_EMITIDA", "FACTURA_PARCIAL", "FACTURA_PAGADA", "FACTURA_ANULADA"])
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(["7days", "1week", "2weeks", "1month", "3months"])
+  datePreset?: string;
+
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
 }

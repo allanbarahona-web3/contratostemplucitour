@@ -2591,6 +2591,73 @@ contratos@viajesalmanova.com
       where.status = status;
     }
 
+    // Filtros de fecha
+    let dateFrom: Date | null = null;
+    let dateTo: Date | null = null;
+
+    // Si hay preset, calculamos el rango
+    if (query.datePreset) {
+      const now = new Date();
+      dateTo = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      
+      switch (query.datePreset) {
+        case "7days":
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "1week":
+          dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "2weeks":
+          dateFrom = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+          break;
+        case "1month":
+          dateFrom = new Date(now);
+          dateFrom.setMonth(dateFrom.getMonth() - 1);
+          break;
+        case "3months":
+          dateFrom = new Date(now);
+          dateFrom.setMonth(dateFrom.getMonth() - 3);
+          break;
+      }
+      
+      if (dateFrom) {
+        dateFrom.setHours(0, 0, 0, 0);
+      }
+    }
+    
+    // Si hay fechas específicas, las usamos (sobrescriben preset)
+    if (query.dateFrom) {
+      const parsed = new Date(query.dateFrom);
+      if (!Number.isNaN(parsed.getTime())) {
+        dateFrom = parsed;
+        dateFrom.setHours(0, 0, 0, 0);
+      }
+    }
+    
+    if (query.dateTo) {
+      const parsed = new Date(query.dateTo);
+      if (!Number.isNaN(parsed.getTime())) {
+        dateTo = parsed;
+        dateTo.setHours(23, 59, 59, 999);
+      }
+    }
+
+    // Aplicar filtros de fecha sobre createdAt (cuando se emitió la factura)
+    if (dateFrom && dateTo) {
+      where.createdAt = {
+        gte: dateFrom,
+        lte: dateTo,
+      };
+    } else if (dateFrom) {
+      where.createdAt = {
+        gte: dateFrom,
+      };
+    } else if (dateTo) {
+      where.createdAt = {
+        lte: dateTo,
+      };
+    }
+
     if (q) {
       where.OR = [
         { contractNumber: { contains: q, mode: "insensitive" } },
