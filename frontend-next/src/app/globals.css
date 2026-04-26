@@ -41,7 +41,8 @@ body {
   padding: 20px;
 }
 
-.login-card,
+/* .login-card, .login-logo, .login-title, .login-subtitle, .login-form migrados a Tailwind */
+
 .card {
   width: min(460px, 92vw);
   background: var(--surface);
@@ -55,93 +56,7 @@ body {
     0 2px 0 rgba(255, 255, 255, 0.65) inset;
 }
 
-.login-logo {
-  height: auto;
-  display: block;
-  margin: 0 auto 10px;
-}
-
-.login-title {
-  margin: 0;
-  font-size: 1.5rem;
-  text-align: center;
-}
-
-.login-subtitle {
-  margin: 8px 0 16px;
-  color: var(--muted);
-  text-align: center;
-  font-size: 0.92rem;
-}
-
-.login-form {
-  display: grid;
-  gap: 10px;
-}
-
-.login-form label {
-  display: grid;
-  gap: 6px;
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #2a4369;
-}
-
-.login-form input {
-  border: 1px solid rgba(15, 48, 101, 0.2);
-  background: rgba(255, 255, 255, 0.92);
-  padding: 12px 13px;
-  border-radius: 14px;
-  color: var(--text);
-  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
-}
-
-.login-form input:focus {
-  outline: none;
-  border-color: rgba(23, 78, 166, 0.85);
-  box-shadow: 0 0 0 4px rgba(23, 78, 166, 0.16);
-}
-
-.login-form button,
-.btn {
-  border: 0;
-  border-radius: 14px;
-  padding: 11px 15px;
-  background: linear-gradient(180deg, #3975e3 0%, #1f55bf 100%);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 760;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(31, 88, 190, 0.24);
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-}
-
-.btn:hover,
-.login-form button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(31, 88, 190, 0.28);
-}
-
-.btn:active,
-.login-form button:active {
-  transform: translateY(0);
-  filter: saturate(0.92);
-}
-
-.login-form button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.login-error {
-  margin: 2px 0;
-  font-size: 0.84rem;
-  color: var(--danger);
-  font-weight: 700;
-}
+/* .login-logo, .login-title, .login-subtitle, .login-form migrados a Tailwind */
 
 .card h1 {
   margin: 0 0 10px;
@@ -158,24 +73,7 @@ body {
   margin-top: 14px;
 }
 
-.btn-secondary {
-  background: rgba(250, 253, 255, 0.94);
-  color: #1c3b68;
-  border: 1px solid rgba(18, 63, 147, 0.18);
-  box-shadow: none;
-}
-
-.btn-success {
-  background: linear-gradient(180deg, #2cad67 0%, #1d8a4f 100%);
-  color: #fff;
-  border: 1px solid rgba(24, 117, 68, 0.9);
-  box-shadow: none;
-}
-
-.btn-success:disabled {
-  opacity: 1;
-  cursor: not-allowed;
-}
+/* Botones secundarios y de éxito - migrados a Tailwind */
 
 .session-link-active {
   background: linear-gradient(180deg, #3975e3 0%, #1f55bf 100%);
@@ -318,17 +216,13 @@ body {
   color: #1a8a4e;
 }
 
-.section-title {
-  margin: 24px 0 8px;
-  font-size: 0.9rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: #2a4b77;
-}
-
-.full-row {
-  grid-column: 1 / -1;
-}
+/* === Utilidades CSS migradas a Tailwind === */
+/* Las siguientes clases fueron reemplazadas:
+   - .section-title → my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]
+   - .full-row → col-span-full
+   - .inline-row → grid grid-cols-[1fr_auto] gap-2
+   - .muted → m-0 text-[#4b6790] text-sm
+*/
 
 .payment-summary-grid {
   display: grid;
@@ -468,11 +362,7 @@ body {
   font-weight: 700;
 }
 
-.muted {
-  margin: 0;
-  color: #4b6790;
-  font-size: 0.84rem;
-}
+/* .muted migrado a Tailwind: m-0 text-[#4b6790] text-sm */
 
 .simple-list {
   margin: 6px 0 0;
