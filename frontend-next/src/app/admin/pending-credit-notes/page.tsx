@@ -10,7 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const formatMoney = (value: number): string => `₡${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+const formatMoney = (value: number): string => `USD ${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;'
 
 const formatDateTime = (value: string): string => {
   try {
