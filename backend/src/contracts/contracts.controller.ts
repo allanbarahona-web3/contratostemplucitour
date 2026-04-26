@@ -148,6 +148,19 @@ export class ContractsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("AGENT")
+  @Post(":contractId/send-signing-links")
+  sendSigningLinks(
+    @Req()
+    req: {
+      user: { id: string; email: string; fullName: string };
+    },
+    @Param("contractId") contractId: string,
+  ) {
+    return this.contractsService.sendSigningLinksForContract(req.user, contractId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("AGENT")
   @Post(":contractId/send-to-billing")
   sendContractToBilling(
     @Req()

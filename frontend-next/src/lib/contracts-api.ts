@@ -263,6 +263,16 @@ export const sendSigningEmail = async (params: {
     body: JSON.stringify(params),
   });
 
+export const sendSigningLinksForContract = async (contractId: string): Promise<{
+  contractId: string;
+  contractNumber: string;
+  emailsSent: number;
+  signingLinks: Array<{ signerKey: string; signerName: string; signerEmail: string | null; signingUrl: string }>;
+}> =>
+  apiFetchJson(`/contracts/${encodeURIComponent(contractId)}/send-signing-links`, {
+    method: "POST",
+  });
+
 export const searchContracts = async (query: { q?: string; limit?: number } = {}): Promise<HistoryContractItem[]> => {
   const q = String(query.q || "").trim();
   const limit = Number.isFinite(Number(query.limit)) ? Number(query.limit) : 30;

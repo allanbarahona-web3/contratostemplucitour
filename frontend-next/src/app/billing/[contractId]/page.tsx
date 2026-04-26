@@ -20,7 +20,7 @@ import {
 import { ReceiptProcessor } from "@/components/receipt-processor";
 import { LoadingModal } from "@/components/loading-modal";
 import type { ExtractedPaymentData } from "@/lib/payment-verification-api";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type BillingModalMode = "RESERVATION" | "INSTALLMENT" | "CREDIT_NOTE" | "NONE";
@@ -131,6 +131,7 @@ const escapeHtml = (value: unknown): string =>
 
 export default function BillingContractAccountPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ contractId: string }>();
   const contractId = String(params?.contractId || "").trim();
 
@@ -211,6 +212,19 @@ export default function BillingContractAccountPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, contractId]);
+
+  // Auto-abrir modal de reserva si se llegó desde el formulario de creación de contrato
+  useEffect(() => {
+    const autoModal = searchParams?.get("autoModal");
+    if (autoModal === "RESERVATION" && !loading && account) {
+      setModalMode("RESERVATION");
+      // Limpiar el query param para que no vuelva a abrir el modal al refrescar
+      const url = new URL(window.location.href);
+      url.searchParams.delete("autoModal");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, account]);
 
   // Auto-refresh cada 30 segundos para agentes
   useEffect(() => {

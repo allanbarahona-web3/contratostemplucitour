@@ -544,6 +544,18 @@ body {
   border: 1px solid rgba(66, 102, 168, 0.32);
 }
 
+.status-ready {
+  background: rgba(22, 163, 74, 0.13);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.30);
+}
+
+.status-sent {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+}
+
 .status-overdue {
   background: rgba(185, 56, 62, 0.14);
   color: #99242a;

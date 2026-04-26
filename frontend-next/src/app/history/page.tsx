@@ -8,6 +8,7 @@ import {
   getContractFiles,
   resendSignedEmail,
   searchContracts,
+  sendSigningLinksForContract,
 } from "@/lib/contracts-api";
 import { ToastNotification, useToast } from "@/components/toast-notification";
 import { ConfirmationModal } from "@/components/confirmation-modal";
@@ -105,6 +106,18 @@ export default function HistoryPage() {
     if (normalized === STATUS_SIGNED) {
       return { label: "Firmado", className: "status-signed" };
     }
+    if (normalized === "PENDING_PAYMENT_RESERVE") {
+      return { label: "Esperando pago de reserva", className: "status-pending" };
+    }
+    if (normalized === "RESERVE_IN_REVIEW") {
+      return { label: "Pago de reserva en revisi\u00f3n", className: "status-pending" };
+    }
+    if (normalized === "PENDING_SIGNATURE") {
+      return { label: "Listo para enviar a firmar", className: "status-ready" };
+    }
+    if (normalized === "SIGNING_SENT") {
+      return { label: "Firmantes notificados", className: "status-sent" };
+    }
     return { label: "Pendiente", className: "status-pending" };
   };
 
@@ -199,6 +212,27 @@ export default function HistoryPage() {
       }
     } catch (actionError) {
       showError(actionError instanceof Error ? actionError.message : "No se pudo reenviar.");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const onSendSigningLinks = async (contractId: string) => {
+    setBusyAction(`sign:${contractId}`);
+    try {
+      const result = await sendSigningLinksForContract(contractId);
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === contractId ? { ...item, status: "SIGNING_SENT" } : item,
+        ),
+      );
+      showSuccess(
+        result.emailsSent > 0
+          ? `${result.emailsSent} correo(s) de firma enviados a los firmantes.`
+          : "Contrato marcado como enviado. Comparte los links manualmente.",
+      );
+    } catch (actionError) {
+      showError(actionError instanceof Error ? actionError.message : "No se pudo enviar a firmar.");
     } finally {
       setBusyAction("");
     }
@@ -370,7 +404,17 @@ export default function HistoryPage() {
                                     : "Reenviar firmado"}
                               </button>
                             ) : null}
-                            {isSigned ? (
+                            {item.status === "PENDING_SIGNATURE" ? (
+                              <button
+                                type="button"
+                                className="btn"
+                                onClick={() => void onSendSigningLinks(item.id)}
+                                disabled={busyAction === `sign:${item.id}`}
+                              >
+                                {busyAction === `sign:${item.id}` ? "Enviando..." : "✉️ Enviar a Firmar"}
+                              </button>
+                            ) : null}
+                            {isSigned || item.status === "PENDING_SIGNATURE" || item.status === "SIGNING_SENT" || item.status === "PENDING_PAYMENT_RESERVE" || item.status === "RESERVE_IN_REVIEW" ? (
                               <Link href={`/billing/${encodeURIComponent(item.id)}`} className="btn btn-secondary">
                                 Estado de cuenta
                               </Link>

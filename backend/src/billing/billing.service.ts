@@ -3614,6 +3614,28 @@ contratos@viajesalmanova.com
       );
     }
 
+    // Si el pago aprobado es la reserva inicial, habilitar el contrato para firma
+    if (String(payment.type || "") === "RESERVATION" && payment.invoice?.contractId) {
+      try {
+        const contract = await (this.prisma as any).contract.findUnique({
+          where: { id: payment.invoice.contractId },
+          select: { id: true, status: true },
+        });
+
+        if (contract && ["PENDING_PAYMENT_RESERVE", "RESERVE_IN_REVIEW"].includes(String(contract.status || ""))) {
+          await (this.prisma as any).contract.update({
+            where: { id: contract.id },
+            data: { status: "PENDING_SIGNATURE" },
+          });
+          this.logger.log(`[verifyPayment] ✅ Contrato ${contract.id} habilitado para firma tras pago de reserva aprobado.`);
+        }
+      } catch (contractUpdateError) {
+        this.logger.error(
+          `[verifyPayment] ⚠️ No se pudo actualizar el status del contrato: ${contractUpdateError instanceof Error ? contractUpdateError.message : String(contractUpdateError)}`,
+        );
+      }
+    }
+
     return { ok: true, paymentId: updated.id, status: updated.status };
   }
 

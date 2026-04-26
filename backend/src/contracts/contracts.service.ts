@@ -20,6 +20,8 @@ import { SendContractEmailDto } from "./dto/send-contract-email.dto";
 import { SendSigningEmailDto } from "./dto/send-signing-email.dto";
 import { SearchContractsDto } from "./dto/search-contracts.dto";
 
+const CONTRACT_STATUS_PENDING_PAYMENT_RESERVE = "PENDING_PAYMENT_RESERVE";
+const CONTRACT_STATUS_RESERVE_IN_REVIEW = "RESERVE_IN_REVIEW";
 const CONTRACT_STATUS_PENDING_SIGNATURE = "PENDING_SIGNATURE";
 const CONTRACT_STATUS_VIEWED = "VIEWED";
 const CONTRACT_STATUS_SIGNED = "SIGNED";
@@ -1212,6 +1214,61 @@ export class ContractsService {
     };
   }
 
+  async sendSigningLinksForContract(
+    user: { id: string; email: string; fullName: string },
+    contractId: string,
+  ) {
+    const contract = await (this.prisma as any).contract.findUnique({
+      where: { id: contractId },
+      include: { client: true },
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Contrato no encontrado.");
+    }
+
+    const status = String(contract.status || "").toUpperCase();
+    if (status !== CONTRACT_STATUS_PENDING_SIGNATURE) {
+      throw new BadRequestException(
+        "El contrato no esta listo para enviar a firma. El pago de reserva debe estar aprobado primero.",
+      );
+    }
+
+    // Generate signing links (1 day TTL)
+    const signing = await this.createContractSigningLink(user, contractId, 1440);
+    const links = signing.signingLinks || [];
+
+    let sent = 0;
+    for (const target of links) {
+      if (!target.signerEmail) continue;
+      try {
+        await this.sendContractSigningEmail(user, {
+          toEmail: target.signerEmail,
+          clientName: target.signerName || "Firmante",
+          contractNumber: contract.contractNumber,
+          signingUrl: target.signingUrl,
+        });
+        sent += 1;
+      } catch {
+        // Log but continue sending to others
+        this.logger.warn(`[sendSigningLinksForContract] Could not send email to ${target.signerEmail}`);
+      }
+    }
+
+    // Mark as signing sent
+    await (this.prisma as any).contract.update({
+      where: { id: contractId },
+      data: { status: "SIGNING_SENT" },
+    });
+
+    return {
+      contractId: contract.id,
+      contractNumber: contract.contractNumber,
+      emailsSent: sent,
+      signingLinks: links,
+    };
+  }
+
   async archiveContract(
     user: { id: string; email: string; fullName: string },
     dto: ArchiveContractDto,
@@ -1367,7 +1424,7 @@ export class ContractsService {
         paymentReference,
         clientId: client.id,
         destination: dto.destination.trim(),
-        status: CONTRACT_STATUS_PENDING_SIGNATURE,
+        status: CONTRACT_STATUS_PENDING_PAYMENT_RESERVE,
         generatedByUserId: user.id,
         generatedByEmail: user.email,
         generatedByName: user.fullName,

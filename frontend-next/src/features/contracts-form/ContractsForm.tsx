@@ -2,12 +2,11 @@
 
 import {
   archiveContract,
-  createSigningLink,
   getContractDraft,
   reserveNextContractNumber,
   saveContractDraft,
-  sendSigningEmail,
 } from "@/lib/contracts-api";
+import { useRouter } from "next/navigation";
 import { loadAssetDataUri } from "@/lib/assets";
 import { buildContractPdfHtml } from "@/features/contracts-form/pdf-template";
 import {
@@ -84,6 +83,7 @@ type ContractsFormProps = {
 };
 
 export function ContractsForm({ agent = null, initialDraftId = null }: ContractsFormProps) {
+  const router = useRouter();
   const [state, setState] = useState(() => createInitialFormState(agent || undefined));
   const [status, setStatus] = useState("Listo para iniciar migracion del formulario.");
   const [busyNumber, setBusyNumber] = useState(false);
@@ -299,38 +299,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         window.open(archived.pdfUrl, "_blank", "noopener,noreferrer");
       }
 
-      setStatus("Generando enlaces de firma...");
-      const signing = await createSigningLink(archived.id, 1440);
-      const links = (signing.signingLinks || []).map((item) => ({
-        signerKey: item.signerKey,
-        signerName: item.signerName,
-        signerEmail: item.signerEmail,
-        signingUrl: item.signingUrl,
-      }));
-      setLatestSigningLinks(links);
-
-      let sent = 0;
-      for (const target of links) {
-        if (!target.signerEmail) continue;
-        try {
-          await sendSigningEmail({
-            toEmail: target.signerEmail,
-            clientName: target.signerName || "Firmante",
-            contractNumber: state.contractNumber,
-            signingUrl: target.signingUrl,
-          });
-          sent += 1;
-        } catch {
-          // Continue with the rest.
-        }
-      }
-
-      const completionMessage =
-        sent > 0
-          ? `Contrato guardado y ${sent} correo(s) de firma enviados.`
-          : "Contrato guardado. Enlaces de firma generados para compartir manualmente.";
-
-      await resetFormForNextContract(completionMessage);
+      // Redirigir a la página de cobro para registrar el pago de reserva
+      // El modal de reserva se abrirá automáticamente gracias al parámetro autoModal
+      setStatus("Contrato guardado. Redirigiendo para registrar pago de reserva...");
+      router.push(`/billing/${archived.id}?autoModal=RESERVATION`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "No se pudo completar el guardado del contrato.");
     } finally {
@@ -1484,7 +1456,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             void runArchiveFlow();
           }}
         >
-          {submitting ? "Guardando..." : "Guardar contrato y generar firma"}
+          {submitting ? "Guardando..." : "Guardar contrato y reportar reserva"}
         </button>
       </div>
 
