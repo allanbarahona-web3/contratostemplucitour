@@ -70,7 +70,7 @@ export default function BillingAuditPage() {
       ) : (
         <section className="card contracts-card">
           <h1>Auditoria de Estados de Cuenta</h1>
-          <p className="muted">Todos los eventos de estados de cuenta, abonos, recibos y notas de credito.</p>
+          <p className="m-0 text-[#4b6790] text-sm">Todos los eventos de estados de cuenta, abonos, recibos y notas de credito.</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>

@@ -109,7 +109,7 @@ export default function AdminCreditNotesPage() {
       ) : (
         <section className="card contracts-card">
           <h1>Cola Admin - Notas de Credito</h1>
-          <p className="muted">Solo admin puede aprobar o rechazar. Ninguna nota pendiente impacta saldos.</p>
+          <p className="m-0 text-[#4b6790] text-sm">Solo admin puede aprobar o rechazar. Ninguna nota pendiente impacta saldos.</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>

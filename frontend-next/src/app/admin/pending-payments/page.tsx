@@ -143,17 +143,17 @@ export default function PendingPaymentsPage() {
     <main className="app-shell">
       <section className="card contracts-card">
         <h1>💰 Pagos Pendientes de Verificación</h1>
-        <p className="muted">Revisa y aprueba los pagos reportados por los agentes.</p>
+        <p className="m-0 text-[#4b6790] text-sm">Revisa y aprueba los pagos reportados por los agentes.</p>
 
         {statusText ? <p className="status-line">{statusText}</p> : null}
 
         {loading ? (
-          <p className="muted">Cargando pagos pendientes...</p>
+          <p className="m-0 text-[#4b6790] text-sm">Cargando pagos pendientes...</p>
         ) : pendingPayments.length === 0 ? (
           <div className="empty-state" style={{ padding: "40px 20px", textAlign: "center" }}>
             <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
             <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>¡Todo al día!</h3>
-            <p className="muted" style={{ margin: 0 }}>No hay pagos pendientes de verificación.</p>
+            <p className="m-0 text-[#4b6790] text-sm" style={{ margin: 0 }}>No hay pagos pendientes de verificación.</p>
           </div>
         ) : (
           <div className="history-table-wrap" style={{ marginTop: "16px" }}>

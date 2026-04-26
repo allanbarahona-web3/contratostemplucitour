@@ -332,7 +332,7 @@ export default function AdminUsersPage() {
       ) : (
         <section className="card contracts-card">
           <h1>Admin - Usuarios</h1>
-          <p className="muted">Roles disponibles: ADMIN (acceso total), CONTADOR (facturación y reportes), AGENT (solo formularios).</p>
+          <p className="m-0 text-[#4b6790] text-sm">Roles disponibles: ADMIN (acceso total), CONTADOR (facturación y reportes), AGENT (solo formularios).</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>

@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
         {error ? <p className="form-error">{error}</p> : null}
 
         {loading ? (
-          <p className="muted">Cargando métricas...</p>
+          <p className="m-0 text-[#4b6790] text-sm">Cargando métricas...</p>
         ) : metrics ? (
           <>
             {/* KPIs Principales */}

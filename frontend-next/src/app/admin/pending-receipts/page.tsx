@@ -142,17 +142,17 @@ export default function PendingReceiptsPage() {
     <main className="app-shell">
       <section className="card contracts-card">
         <h1>🧾 Recibos Pendientes de Envío</h1>
-        <p className="muted">Revisa y envía los recibos de pagos ya verificados.</p>
+        <p className="m-0 text-[#4b6790] text-sm">Revisa y envía los recibos de pagos ya verificados.</p>
 
         {statusText ? <p className="status-line">{statusText}</p> : null}
 
         {loading ? (
-          <p className="muted">Cargando recibos pendientes...</p>
+          <p className="m-0 text-[#4b6790] text-sm">Cargando recibos pendientes...</p>
         ) : receipts.length === 0 ? (
           <div className="empty-state" style={{ padding: "40px 20px", textAlign: "center" }}>
             <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>✅</div>
             <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>¡Todo al día!</h3>
-            <p className="muted" style={{ margin: 0 }}>No hay recibos pendientes de envío.</p>
+            <p className="m-0 text-[#4b6790] text-sm" style={{ margin: 0 }}>No hay recibos pendientes de envío.</p>
           </div>
         ) : (
           <div className="history-table-wrap" style={{ marginTop: "16px" }}>
@@ -231,7 +231,7 @@ export default function PendingReceiptsPage() {
             </div>
 
             <div className="viewer-body">
-              <p className="muted" style={{ marginBottom: "16px" }}>
+              <p className="m-0 text-[#4b6790] text-sm" style={{ marginBottom: "16px" }}>
                 <strong>Recibo:</strong> {emailModalReceipt.receiptNumber}<br />
                 <strong>Monto:</strong> {formatMoney(emailModalReceipt.amount)}<br />
                 <strong>Cliente:</strong> {emailModalReceipt.clientName}

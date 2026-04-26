@@ -519,12 +519,12 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       <div className="contracts-workspace">
         <div className="contracts-editor">
 
-      <h2 className="section-title">Datos del Contrato</h2>
+      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Datos del Contrato</h2>
 
       <div className="contracts-grid">
         <label>
           Numero de contrato
-          <div className="inline-row">
+          <div className="grid grid-cols-[1fr_auto] gap-2">
             <input value={state.contractNumber} readOnly placeholder="Generando automaticamente..." />
             {!state.contractNumber ? (
               <button
@@ -660,7 +660,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           <input value={state.installmentCount} readOnly placeholder="Se calcula automaticamente" />
         </label>
 
-        <div className="full-row payment-summary-grid">
+        <div className="col-span-full payment-summary-grid">
           <label className="payment-summary-field">
             Monto por cuota USD (regular)
             <input value={state.monthlyInstallmentAmount} readOnly placeholder="Saldo / plazo" />
@@ -680,7 +680,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         </div>
       </div>
 
-      <h2 className="section-title">Datos del Cliente</h2>
+      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Datos del Cliente</h2>
 
       <div className="contracts-grid">
         <label>
@@ -855,7 +855,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         </div>
 
         <div className="itinerary-list">
-          {state.companions.length === 0 ? <p className="muted">Aun no hay acompanantes.</p> : null}
+          {state.companions.length === 0 ? <p className="m-0 text-[#4b6790] text-sm">Aun no hay acompanantes.</p> : null}
           {state.companions.map((companion, index) => (
             <article key={companion.id} className="subcard">
               <div className="itinerary-head">
@@ -1090,10 +1090,10 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           </div>
         </div>
 
-        {!state.hasMinorCompanion ? <p className="muted">Marca la casilla si hay menores en el viaje.</p> : null}
+        {!state.hasMinorCompanion ? <p className="m-0 text-[#4b6790] text-sm">Marca la casilla si hay menores en el viaje.</p> : null}
 
         <div className="itinerary-list">
-          {state.hasMinorCompanion && state.minors.length === 0 ? <p className="muted">Aun no hay menores.</p> : null}
+          {state.hasMinorCompanion && state.minors.length === 0 ? <p className="m-0 text-[#4b6790] text-sm">Aun no hay menores.</p> : null}
           {state.minors.map((minor, index) => (
             <article key={minor.id} className="subcard">
               <div className="itinerary-head">
@@ -1380,9 +1380,9 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         </div>
       </div>
 
-      <h2 className="section-title">Equipaje</h2>
+      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Equipaje</h2>
       <div className="contracts-grid">
-        <label className="full-row">
+        <label className="col-span-full">
           Clausula de equipaje permitido
           <textarea
             rows={4}
@@ -1393,16 +1393,16 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       </div>
 
       <div className="contracts-grid">
-        <label className="full-row">
+        <label className="col-span-full">
           Firma del representante
           <input value="Se usa automaticamente: /firmakaren.png" readOnly />
           <small>Esta firma no se carga desde el formulario; se toma fija desde assets al generar el PDF.</small>
         </label>
       </div>
 
-      <h2 className="section-title">Adjuntos del Contrato</h2>
+      <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Adjuntos del Contrato</h2>
       <div className="contracts-grid">
-        <label className="full-row">
+        <label className="col-span-full">
           Comprobante de pago de reserva
           <input
             type="file"
@@ -1420,7 +1420,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             <small>Sube el comprobante del dep&#243;sito de reserva. Ser&#225; visible para el admin al momento de aprobar.</small>
           )}
         </label>
-        <label className="full-row">
+        <label className="col-span-full">
           Documentos de soporte adicionales (opcional, m&#250;ltiple)
           <input
             type="file"
@@ -1501,7 +1501,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                   {item.signerEmail ? ` (${item.signerEmail})` : ""}
                 </p>
                 <div className="contracts-grid" style={{ marginTop: 8 }}>
-                  <label className="full-row">
+                  <label className="col-span-full">
                     Link de firma
                     <input type="text" value={item.signingUrl} readOnly />
                   </label>
@@ -1541,7 +1541,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                   {item.signerEmail ? ` (${item.signerEmail})` : ""}
                 </p>
                 <div className="contracts-grid" style={{ marginTop: 8 }}>
-                  <label className="full-row">
+                  <label className="col-span-full">
                     Link de firma
                     <input type="text" value={item.signingUrl} readOnly />
                   </label>

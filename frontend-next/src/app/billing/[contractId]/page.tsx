@@ -904,7 +904,7 @@ export default function BillingContractAccountPage() {
       <section className="card contracts-card billing-dashboard">
         <h1>Estado de cuenta del contrato</h1>
 
-        {loading ? <p className="muted">Cargando...</p> : null}
+        {loading ? <p className="m-0 text-[#4b6790] text-sm">Cargando...</p> : null}
         {error ? <p className="form-error">{error}</p> : null}
         
         {statusText ? (
@@ -1497,7 +1497,7 @@ export default function BillingContractAccountPage() {
             </div>
 
             <div className="viewer-body">
-              <p className="muted">
+              <p className="m-0 text-[#4b6790] text-sm">
                 Documento: <strong>{documentEmailModal.type === "RECEIPT" ? "Recibo" : "Nota de credito"}</strong> · Numero: <strong>{documentEmailModal.number}</strong>
               </p>
 
@@ -1560,11 +1560,11 @@ export default function BillingContractAccountPage() {
             <div className="viewer-body">
               {modalMode === "INSTALLMENT" ? (
                 <>
-                  <p className="muted">
+                  <p className="m-0 text-[#4b6790] text-sm">
                     Contrato: <strong>{account?.invoice.contractNumber || "-"}</strong> · Saldo actual: <strong>{formatMoney(account?.invoice.amounts.balance || 0)}</strong>
                   </p>
 
-                  <p className="muted">
+                  <p className="m-0 text-[#4b6790] text-sm">
                     El sistema guarda automaticamente fecha/hora de registro y usuario responsable.
                   </p>
 
@@ -1601,7 +1601,7 @@ export default function BillingContractAccountPage() {
                         Monto
                       </span>
                       {modalMode === "INSTALLMENT" ? (
-                        <div className="inline-row">
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
                           <input value={amount} onChange={(event) => setAmount(event.target.value)} />
                           <button type="button" className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none" onClick={setInstallmentToFullBalance}>
                             Saldo total
@@ -1728,7 +1728,7 @@ export default function BillingContractAccountPage() {
                       />
                     </label>
 
-                    <label className="full-row">
+                    <label className="col-span-full">
                       <span style={{ 
                         color: notes.trim() ? '#10b981' : '#dc2626',
                         fontWeight: '600',

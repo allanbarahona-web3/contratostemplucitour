@@ -291,7 +291,7 @@ export default function HistoryPage() {
         <section className="card contracts-card">
           <h1>Historial de contratos</h1>
 
-          <div className="inline-row history-search-row">
+          <div className="grid grid-cols-[1fr_auto] gap-2 history-search-row">
             <input
               value={query}
               placeholder="Buscar por numero, cliente, cedula o correo"

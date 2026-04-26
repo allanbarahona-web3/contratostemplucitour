@@ -132,7 +132,7 @@ export default function AdminReportsPage() {
       ) : (
         <section className="card contracts-card">
           <h1>Reportes Contables</h1>
-          <p className="muted">Vista para revisión interna y envío manual al contador.</p>
+          <p className="m-0 text-[#4b6790] text-sm">Vista para revisión interna y envío manual al contador.</p>
 
         {/* Botones de Rango Rápido */}
         <div style={{ marginTop: "16px", marginBottom: "12px", padding: "12px", background: "#f9fafb", borderRadius: "6px", border: "1px solid #e5e7eb" }}>
@@ -276,7 +276,7 @@ export default function AdminReportsPage() {
               </label>
             </div>
 
-            <h2 className="section-title">Facturas</h2>
+            <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Facturas</h2>
             <div className="history-table-wrap" style={{ marginTop: 10 }}>
               <table className="history-table">
                 <thead>
@@ -328,7 +328,7 @@ export default function AdminReportsPage() {
               </table>
             </div>
 
-            <h2 className="section-title">Alertas de Vencimiento</h2>
+            <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Alertas de Vencimiento</h2>
             <div className="history-table-wrap" style={{ marginTop: 10 }}>
               <table className="history-table">
                 <thead>
@@ -362,7 +362,7 @@ export default function AdminReportsPage() {
               </table>
             </div>
 
-            <h2 className="section-title">Abonos</h2>
+            <h2 className="my-6 mb-2 text-sm tracking-wider uppercase text-[#2a4b77]">Abonos</h2>
             <div className="history-table-wrap" style={{ marginTop: 10 }}>
               <table className="history-table">
                 <thead>

@@ -102,7 +102,7 @@ export default function BillingPage() {
       
       <section className="card contracts-card">
         <h1>Estados de cuenta</h1>
-        <p className="muted">Panel operativo de estados de cuenta por contrato, pagos reportados y saldos pendientes.</p>
+        <p className="m-0 text-[#4b6790] text-sm">Panel operativo de estados de cuenta por contrato, pagos reportados y saldos pendientes.</p>
 
         <div className="contracts-grid" style={{ marginTop: 12 }}>
           <label>
@@ -189,7 +189,7 @@ export default function BillingPage() {
                     <div className="empty-state" style={{ padding: "40px 20px" }}>
                       <div className="empty-state-icon" style={{ fontSize: "48px", marginBottom: "12px" }}>💰</div>
                       <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>No hay estados de cuenta</h3>
-                      <p className="muted" style={{ margin: 0 }}>
+                      <p className="m-0 text-[#4b6790] text-sm" style={{ margin: 0 }}>
                         {query || status || dateFilter ? "No se encontraron resultados con los filtros aplicados." : "Los estados de cuenta aparecerán aquí automáticamente al firmar contratos."}
                       </p>
                     </div>
