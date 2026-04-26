@@ -36,14 +36,19 @@ export function VerticalNav() {
   const [pendingCounts, setPendingCounts] = useState<PendingCounts>({ pendingReceipts: 0, pendingCreditNotes: 0, contractsPendingSignature: 0 });
   const [mounted, setMounted] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null);
-
-  const token = getStoredToken();
-  const session = getStoredSession();
+  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
 
   // Fix hydration - only render on client
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Re-leer token y sesion cada vez que cambia la ruta (cubre el caso post-login)
+  useEffect(() => {
+    setToken(getStoredToken());
+    setSession(getStoredSession());
+  }, [pathname]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setTick(Date.now()), 1000);

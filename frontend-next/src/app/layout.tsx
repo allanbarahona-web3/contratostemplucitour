@@ -29,10 +29,8 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <Script src="/config.js" strategy="beforeInteractive" />
-      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Script src="/config.js" strategy="beforeInteractive" />
         <VerticalNav />
         {children}
       </body>
