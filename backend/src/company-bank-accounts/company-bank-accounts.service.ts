@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
@@ -11,6 +12,8 @@ import { ListBankAccountsDto } from './dto/list-bank-accounts.dto';
 
 @Injectable()
 export class CompanyBankAccountsService {
+  private readonly logger = new Logger(CompanyBankAccountsService.name);
+  
   constructor(private readonly prisma: PrismaService) {}
 
   async create(
@@ -86,18 +89,55 @@ export class CompanyBankAccountsService {
   }
 
   async findByAccountNumber(accountNumber: string) {
-    const normalized = String(accountNumber || '').trim();
-    if (!normalized) return null;
+    const original = String(accountNumber || '');
+    const normalized = original
+      .trim()
+      .toUpperCase()
+      .replace(/[\s\-]/g, ''); // Eliminar espacios y guiones
+    
+    this.logger.log(`🔎 findByAccountNumber: "${original}" → normalizado: "${normalized}"`);
+    
+    if (!normalized) {
+      this.logger.warn('⚠️ Búsqueda vacía, retornando null');
+      return null;
+    }
 
-    // Buscar en accountNumber o sinpeNumber
-    return this.prisma.companyBankAccount.findFirst({
-      where: {
-        OR: [
-          { accountNumber: normalized },
-          { sinpeNumber: normalized },
-        ],
-      },
+    // Buscar en todas las cuentas activas e inactivas
+    const allAccounts = await this.prisma.companyBankAccount.findMany();
+
+    this.logger.log(`📋 Total cuentas en DB: ${allAccounts.length}`);
+
+    // Buscar con normalización (quitar espacios, guiones, mayúsculas)
+    const found = allAccounts.find((acc) => {
+      const accNum = String(acc.accountNumber || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[\s\-]/g, '');
+      const sinpeNum = String(acc.sinpeNumber || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[\s\-]/g, '');
+      
+      const matchAccNum = accNum === normalized;
+      const matchSinpe = sinpeNum === normalized;
+      
+      if (matchAccNum || matchSinpe) {
+        this.logger.log(
+          `✅ Match encontrado: "${acc.accountNumber}" (${acc.bankName}, ${acc.currency})`,
+        );
+      }
+      
+      return matchAccNum || matchSinpe;
     });
+
+    if (!found) {
+      this.logger.warn(`❌ No se encontró cuenta para: "${normalized}"`);
+      this.logger.debug(`Cuentas disponibles: ${allAccounts.map(a => 
+        `${a.accountNumber} (${a.bankName})`
+      ).join(', ')}`);
+    }
+
+    return found || null;
   }
 
   async update(id: string, dto: UpdateBankAccountDto) {

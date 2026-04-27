@@ -1601,15 +1601,15 @@ export default function BillingContractAccountPage() {
 
                   {/* Columna derecha: Información y formulario */}
                   <div className="payment-modal-form">
-                    <p className="m-0 text-[#4b6790] text-sm">
-                      Contrato: <strong>{account?.invoice.contractNumber || "-"}</strong> · Saldo actual: <strong>{formatMoney(account?.invoice.amounts.balance || 0)}</strong>
+                    <p className="m-0 text-[#4b6790] text-[0.8rem] leading-tight">
+                      Contrato: <strong>{account?.invoice.contractNumber || "-"}</strong> · Saldo: <strong>{formatMoney(account?.invoice.amounts.balance || 0)}</strong>
                     </p>
 
-                    <p className="m-0 text-[#4b6790] text-sm mb-4">
-                      El sistema guarda automaticamente fecha/hora de registro y usuario responsable.
+                    <p className="m-0 text-[#64748b] text-[0.75rem] mb-3 leading-tight">
+                      El sistema guarda fecha/hora y usuario responsable automáticamente.
                     </p>
 
-                    <div className="contracts-grid payment-entry-grid">
+                    <div className="contracts-grid">
                       <label>
                         <span style={{ 
                         color: amount.trim() ? '#10b981' : '#dc2626',
@@ -1758,7 +1758,7 @@ export default function BillingContractAccountPage() {
                     </label>
                   </div>
 
-                  <div className="actions" style={{ marginTop: 12 }}>
+                  <div className="actions" style={{ marginTop: 16 }}>
                     <button
                       type="button"
                       className="rounded-xl px-4 py-3 bg-linear-to-b from-blue-500 to-blue-700 text-white font-bold shadow-lg shadow-blue-500/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0 active:saturate-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
@@ -1768,7 +1768,8 @@ export default function BillingContractAccountPage() {
                       {saving ? "Guardando..." : "Confirmar abono"}
                     </button>
                   </div>
-                  </div>
+                </div>
+
                 </div>
               ) : null}
 

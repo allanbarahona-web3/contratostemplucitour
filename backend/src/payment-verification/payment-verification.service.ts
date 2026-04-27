@@ -247,30 +247,37 @@ export class PaymentVerificationService {
     // 4. Validar cuenta destino si se detectó (REGLA DURA)
     let detectedBankAccount: any = null;
     if (data.destinationAccount) {
+      const searchTerm = data.destinationAccount;
       this.logger.log(
-        `🔍 Buscando cuenta destino: "${data.destinationAccount}"`,
+        `🔍 Buscando cuenta destino: "${searchTerm}" (length: ${searchTerm.length})`,
       );
       
       detectedBankAccount = await this.bankAccountsService.findByAccountNumber(
-        data.destinationAccount,
+        searchTerm,
       );
 
       if (!detectedBankAccount) {
-        this.logger.error(
-          `❌ Cuenta destino NO encontrada: "${data.destinationAccount}"`,
+        // Log adicional para debugging
+        const allAccounts = await this.bankAccountsService.findAll({});
+        this.logger.warn(
+          `❌ Cuenta destino NO encontrada: "${searchTerm}"`,
         );
+        this.logger.warn(
+          `📋 Cuentas registradas (${allAccounts.length}): ${allAccounts.map(a => a.accountNumber).join(', ')}`,
+        );
+        
         throw new BadRequestException(
-          `❌ CUENTA DESTINO NO REGISTRADA: La cuenta "${data.destinationAccount}" no está registrada en el sistema. Por favor, registre esta cuenta bancaria antes de procesar el pago, o verifique que el número de cuenta sea correcto.`,
+          `❌ CUENTA DESTINO NO REGISTRADA: La cuenta "${searchTerm}" no está registrada en el sistema. Por favor, registre esta cuenta bancaria antes de procesar el pago, o verifique que el número de cuenta sea correcto.`,
         );
       } else if (!detectedBankAccount.isActive) {
         throw new BadRequestException(
-          `❌ CUENTA DESTINO INACTIVA: La cuenta "${data.destinationAccount}" está marcada como inactiva en el sistema. Active la cuenta o use otra cuenta destino.`,
+          `❌ CUENTA DESTINO INACTIVA: La cuenta "${searchTerm}" está marcada como inactiva en el sistema. Active la cuenta o use otra cuenta destino.`,
         );
       } else {
         // Usar el banco de la cuenta registrada
         data.destinationBank = detectedBankAccount.bankName;
         this.logger.log(
-          `✅ Cuenta destino validada: ${data.destinationAccount} → ${detectedBankAccount.bankName}`,
+          `✅ Cuenta destino validada: ${searchTerm} → ${detectedBankAccount.bankName} (ID: ${detectedBankAccount.id})`,
         );
       }
     }

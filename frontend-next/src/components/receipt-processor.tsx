@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { processReceipt, type ExtractedPaymentData } from "@/lib/payment-verification-api";
 
 interface ReceiptProcessorProps {
@@ -11,7 +11,29 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
   const [processing, setProcessing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [showZoom, setShowZoom] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cerrar zoom con ESC y prevenir scroll del body
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showZoom) {
+        setShowZoom(false);
+      }
+    };
+    
+    if (showZoom) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+      document.body.style.overflow = "";
+    };
+  }, [showZoom]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -78,14 +100,14 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
     <div style={{ 
       border: "2px dashed #cbd5e1", 
       borderRadius: 8, 
-      padding: 20, 
-      marginBottom: 20,
+      padding: 10, 
+      marginBottom: 8,
       background: "#f8fafc"
     }}>
-      <div style={{ marginBottom: 12 }}>
-        <strong>📎 Adjuntar comprobante (Opcional)</strong>
-        <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "4px 0 0 0" }}>
-          El sistema extraerá automáticamente los datos del comprobante con IA
+      <div style={{ marginBottom: 8 }}>
+        <strong style={{ fontSize: "0.85rem" }}>📎 Adjuntar comprobante (Opcional)</strong>
+        <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "2px 0 0 0" }}>
+          IA extraerá los datos automáticamente
         </p>
       </div>
 
@@ -95,50 +117,60 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
         accept="image/jpeg,image/jpg,image/png,image/webp"
         onChange={handleFileSelect}
         disabled={processing}
-        style={{ marginBottom: 12 }}
+        style={{ 
+          marginBottom: 8, 
+          fontSize: "0.8rem",
+          display: preview ? "none" : "block" // Ocultar cuando hay preview
+        }}
       />
 
       {processing && (
         <div style={{ 
-          padding: 12, 
+          padding: 8, 
           background: "#dbeafe", 
           borderRadius: 6, 
           color: "#1e40af",
-          fontSize: "0.9rem"
+          fontSize: "0.8rem"
         }}>
-          ⏳ Procesando comprobante con IA... esto puede tardar unos segundos
+          ⏳ Procesando... 
         </div>
       )}
 
       {preview && !processing && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: "0.9rem", color: "#475569" }}>
-              ✅ <strong>{fileName}</strong>
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: "0.8rem", color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ✅ {fileName}
             </span>
             <button
               type="button"
               onClick={handleClear}
               style={{
-                padding: "4px 12px",
-                fontSize: "0.85rem",
+                padding: "3px 8px",
+                fontSize: "0.75rem",
                 background: "#ef4444",
                 color: "white",
                 border: "none",
                 borderRadius: 4,
-                cursor: "pointer"
+                cursor: "pointer",
+                flexShrink: 0
               }}
             >
-              🗑️ Quitar
+              Quitar
             </button>
           </div>
           <div style={{ 
-            maxHeight: "calc(80vh - 200px)",
+            position: "relative",
+            maxHeight: "450px",
             overflowY: "auto",
             borderRadius: 6,
             border: "1px solid #e2e8f0",
-            background: "#f8fafc"
-          }}>
+            background: "#fff",
+            cursor: "zoom-in"
+          }}
+            onClick={() => setShowZoom(true)}
+            title="Clic para ampliar"
+          >
             <img 
               src={preview} 
               alt="Preview" 
@@ -148,6 +180,83 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
                 display: "block"
               }} 
             />
+            <div style={{
+              position: "sticky",
+              bottom: 8,
+              left: 8,
+              right: 8,
+              textAlign: "center",
+              marginTop: -40,
+              pointerEvents: "none"
+            }}>
+              <span style={{
+                display: "inline-block",
+                background: "rgba(0,0,0,0.75)",
+                color: "white",
+                padding: "6px 12px",
+                borderRadius: 6,
+                fontSize: "0.75rem",
+                fontWeight: "600",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+              }}>
+                🔍 Clic para ampliar
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de zoom */}
+      {showZoom && preview && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.92)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px"
+          }}
+          onClick={() => setShowZoom(false)}
+        >
+          <div style={{ position: "relative", maxWidth: "95vw", maxHeight: "80vh" }}>
+            <img 
+              src={preview} 
+              alt="Comprobante ampliado"
+              style={{ 
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+                borderRadius: 8,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
+              }}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowZoom(false);
+              }}
+              style={{
+                position: "absolute",
+                top: -40,
+                right: 0,
+                background: "white",
+                border: "none",
+                borderRadius: 8,
+                padding: "8px 16px",
+                fontSize: "0.9rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+              }}
+            >
+              ✕ Cerrar
+            </button>
           </div>
         </div>
       )}
