@@ -273,7 +273,14 @@ export const sendSigningLinksForContract = async (contractId: string): Promise<{
     method: "POST",
   });
 
-export const searchContracts = async (query: { q?: string; limit?: number } = {}): Promise<HistoryContractItem[]> => {
+export const searchContracts = async (query: { 
+  q?: string; 
+  limit?: number;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  datePreset?: string;
+} = {}): Promise<HistoryContractItem[]> => {
   const q = String(query.q || "").trim();
   const limit = Number.isFinite(Number(query.limit)) ? Number(query.limit) : 30;
   const params = new URLSearchParams();
@@ -281,6 +288,20 @@ export const searchContracts = async (query: { q?: string; limit?: number } = {}
     params.set("q", q);
   }
   params.set("limit", String(limit));
+  
+  // Filtros adicionales
+  if (query.status) {
+    params.set("status", query.status);
+  }
+  if (query.datePreset) {
+    params.set("datePreset", query.datePreset);
+  }
+  if (query.dateFrom) {
+    params.set("dateFrom", query.dateFrom);
+  }
+  if (query.dateTo) {
+    params.set("dateTo", query.dateTo);
+  }
 
   const result = await apiFetchJson<{ items?: HistoryContractItem[] }>(`/contracts?${params.toString()}`, {
     method: "GET",

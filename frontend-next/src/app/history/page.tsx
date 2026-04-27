@@ -34,7 +34,39 @@ const formatDateTime = (value: string): string => {
 
 export default function HistoryPage() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  
+  // Cargar filtros desde localStorage
+  const [query, setQuery] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("history_filter_query") || "";
+    }
+    return "";
+  });
+  const [status, setStatus] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("history_filter_status") || "";
+    }
+    return "";
+  });
+  const [dateFilter, setDateFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("history_filter_dateFilter") || "";
+    }
+    return "";
+  });
+  const [dateFrom, setDateFrom] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("history_filter_dateFrom") || "";
+    }
+    return "";
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("history_filter_dateTo") || "";
+    }
+    return "";
+  });
+  
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<HistoryContractItem[]>([]);
   const [busyAction, setBusyAction] = useState<string>("");
@@ -68,10 +100,33 @@ export default function HistoryPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [viewerOpen]);
 
-  const load = async (q = "") => {
+  const load = async (
+    search = query,
+    statusValue = status,
+    dateFilterValue = dateFilter,
+    dateFromValue = dateFrom,
+    dateToValue = dateTo
+  ) => {
     setLoading(true);
     try {
-      const result = await searchContracts({ q, limit: 50 });
+      const params: any = { 
+        q: search, 
+        status: statusValue,
+        limit: 60 
+      };
+      
+      // Si hay preset, lo usamos
+      if (dateFilterValue && dateFilterValue !== "custom") {
+        params.datePreset = dateFilterValue;
+      }
+      
+      // Si es custom o hay fechas específicas, usamos dateFrom/dateTo
+      if (dateFilterValue === "custom" || (!dateFilterValue && (dateFromValue || dateToValue))) {
+        if (dateFromValue) params.dateFrom = dateFromValue;
+        if (dateToValue) params.dateTo = dateToValue;
+      }
+      
+      const result = await searchContracts(params);
       setItems(result);
     } catch (fetchError) {
       showError(fetchError instanceof Error ? fetchError.message : "No se pudo cargar historial.");
@@ -80,13 +135,23 @@ export default function HistoryPage() {
     }
   };
 
+  // Guardar filtros en localStorage y recargar con debounce
   useEffect(() => {
-    const handle = window.setTimeout(() => {
-      void load(query);
-    }, 260);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("history_filter_query", query);
+      localStorage.setItem("history_filter_status", status);
+      localStorage.setItem("history_filter_dateFilter", dateFilter);
+      localStorage.setItem("history_filter_dateFrom", dateFrom);
+      localStorage.setItem("history_filter_dateTo", dateTo);
+    }
 
-    return () => window.clearTimeout(handle);
-  }, [query]);
+    const timer = setTimeout(() => {
+      void load();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, status, dateFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -96,6 +161,7 @@ export default function HistoryPage() {
     }
 
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const statusInfo = (status: string) => {
@@ -290,23 +356,65 @@ export default function HistoryPage() {
       ) : (
         <section className="card contracts-card">
           <h1>Historial de contratos</h1>
+          <p className="m-0 text-[#4b6790] text-sm">Panel de búsqueda y consulta de contratos archivados, firmados y borradores.</p>
 
-          <div className="grid grid-cols-[1fr_auto] gap-2 history-search-row">
-            <input
-              value={query}
-              placeholder="Buscar por numero, cliente, cedula o correo"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <button
-              type="button"
-              className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-              onClick={() => {
-                void load(query);
-              }}
-              disabled={loading}
-            >
+          <div className="contracts-grid" style={{ marginTop: 12 }}>
+            <label>
               Buscar
-            </button>
+              <input
+                value={query}
+                placeholder="Cliente, contrato, cedula o correo"
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+
+            <label>
+              Estado
+              <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                <option value="">Todos</option>
+                <option value="DRAFT">Borrador</option>
+                <option value="PENDING_SIGNATURE">Listo para enviar</option>
+                <option value="SIGNING_SENT">Enviado a firmar</option>
+                <option value="SIGNED">Firmado</option>
+                <option value="PENDING_PAYMENT_RESERVE">Esperando pago reserva</option>
+                <option value="RESERVE_IN_REVIEW">Reserva en revisión</option>
+              </select>
+            </label>
+
+            <label>
+              Fecha
+              <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}>
+                <option value="">Todo el historial</option>
+                <option value="7days">Últimos 7 días</option>
+                <option value="1week">Última semana</option>
+                <option value="2weeks">Últimas 2 semanas</option>
+                <option value="1month">Último mes</option>
+                <option value="3months">Últimos 3 meses</option>
+                <option value="custom">Rango personalizado</option>
+              </select>
+            </label>
+
+            {dateFilter === "custom" && (
+              <>
+                <label>
+                  Desde
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                  />
+                </label>
+
+                <label>
+                  Hasta
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                  />
+                </label>
+              </>
+            )}
           </div>
 
           {!loading && items.length === 0 ? (

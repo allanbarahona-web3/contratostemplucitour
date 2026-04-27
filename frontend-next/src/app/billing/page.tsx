@@ -23,11 +23,39 @@ const formatDate = (value?: string | null): string => {
 export default function BillingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  
+  // Cargar filtros desde localStorage
+  const [query, setQuery] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("billing_filter_query") || "";
+    }
+    return "";
+  });
+  const [status, setStatus] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("billing_filter_status") || "";
+    }
+    return "";
+  });
+  const [dateFilter, setDateFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("billing_filter_dateFilter") || "";
+    }
+    return "";
+  });
+  const [dateFrom, setDateFrom] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("billing_filter_dateFrom") || "";
+    }
+    return "";
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("billing_filter_dateTo") || "";
+    }
+    return "";
+  });
+  
   const [items, setItems] = useState<BillingListItem[]>([]);
   const { toasts, showError, dismissToast } = useToast();
 
@@ -73,16 +101,22 @@ export default function BillingPage() {
       return;
     }
 
-    void load("", "", "", "", "");
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  // Debounce search
+  // Guardar filtros en localStorage y debounce search
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("billing_filter_query", query);
+      localStorage.setItem("billing_filter_status", status);
+      localStorage.setItem("billing_filter_dateFilter", dateFilter);
+      localStorage.setItem("billing_filter_dateFrom", dateFrom);
+      localStorage.setItem("billing_filter_dateTo", dateTo);
+    }
+
     const timer = setTimeout(() => {
-      if (query || status || dateFilter || dateFrom || dateTo) {
-        void load();
-      }
+      void load();
     }, 500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
