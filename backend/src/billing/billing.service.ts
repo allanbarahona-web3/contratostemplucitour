@@ -2383,6 +2383,7 @@ contratos@viajesalmanova.com
     const clientName = String(creditNote.invoice?.client?.fullName || "Cliente");
     const amountFormatted = `CRC ${this.toNumber(creditNote.amount, 0).toFixed(2)}`;
     const reason = String(creditNote.reason || "-");
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
 
     const resend = new Resend(apiKey);
     await resend.emails.send({
@@ -2407,6 +2408,7 @@ contratos@viajesalmanova.com
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
@@ -2568,6 +2570,7 @@ contratos@viajesalmanova.com
     const statementPdf = await this.getAccountStatementPdfUrl(user, contractId, 86_400);
     const documentUrl = statementPdf.url;
     const clientName = String(invoice.client?.fullName || "Cliente");
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
     const statusLabels: Record<string, string> = {
       FACTURA_EMITIDA: "Emitida",
       FACTURA_PARCIAL: "Parcial",
@@ -2606,6 +2609,7 @@ contratos@viajesalmanova.com
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
@@ -4580,6 +4584,7 @@ contratos@viajesalmanova.com
     const receiptPdfUrl = await this.buildSignedObjectUrl(String(receiptPdf.objectKeyPdf || ""), 86_400);
     const clientName = String(receipt.invoice?.client?.fullName || "Cliente");
     const amountFormatted = `CRC ${amount.toFixed(2)}`;
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
 
     await resend.emails.send({
       from: fromEmail,
@@ -4603,6 +4608,7 @@ contratos@viajesalmanova.com
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
