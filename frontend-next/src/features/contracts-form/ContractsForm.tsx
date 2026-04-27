@@ -218,8 +218,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
       const files = minorDocs[minor.id];
       if (!files) return;
       const idx = index + 1;
-      if (files.minorIdFront) docs.push(cloneWithPrefix(files.minorIdFront, `menor${idx}-cedula-frente`));
-      if (files.minorIdBack) docs.push(cloneWithPrefix(files.minorIdBack, `menor${idx}-cedula-reverso`));
       if (files.minorPassport) docs.push(cloneWithPrefix(files.minorPassport, `menor${idx}-pasaporte`));
       if (files.tutorIdFront) docs.push(cloneWithPrefix(files.tutorIdFront, `menor${idx}-tutor-cedula-frente`));
       if (files.tutorIdBack) docs.push(cloneWithPrefix(files.tutorIdBack, `menor${idx}-tutor-cedula-reverso`));
