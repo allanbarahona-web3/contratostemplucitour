@@ -33,7 +33,7 @@ export default function PendingCreditNotesPage() {
   const [statusText, setStatusText] = useState("");
 
   const role = String(getStoredSession()?.user?.role || "").toUpperCase();
-  const isAuthorized = ["ADMIN", "CONTADOR"].includes(role);
+  const isAuthorized = ["ADMIN", "FACTURACION_COBROS"].includes(role);
 
   const load = async () => {
     setLoading(true);
