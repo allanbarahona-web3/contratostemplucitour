@@ -1194,7 +1194,7 @@ export class BillingService {
       font,
       color: slate,
     });
-    page.drawText("Factura ligada al contrato firmado del cliente titular.", {
+    page.drawText("Datos ligados al contrato firmado del cliente titular.", {
       x: 42,
       y: 187,
       size: 9.8,
