@@ -78,6 +78,27 @@ export class BillingService {
   }
 
   private async loadCompanyLogo(): Promise<{ bytes: Buffer; format: "png" | "jpg" } | null> {
+    // Prioridad 1: Descargar desde URL (producción y desarrollo)
+    const logoUrl = this.configService.get<string>("COMPANY_LOGO_URL", "").trim();
+    if (logoUrl) {
+      try {
+        const response = await fetch(logoUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const bytes = Buffer.from(arrayBuffer);
+          const lower = logoUrl.toLowerCase();
+          const format: "png" | "jpg" =
+            lower.includes('.jpg') || lower.includes('.jpeg') ? "jpg" : "png";
+          return { bytes, format };
+        } else {
+          this.logger.warn(`[loadCompanyLogo] Error HTTP ${response.status} al descargar logo desde: ${logoUrl}`);
+        }
+      } catch (error) {
+        this.logger.warn(`[loadCompanyLogo] No se pudo descargar logo desde URL: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    // Fallback: Buscar archivo local (solo para desarrollo sin .env configurado)
     const configuredPath = this.configService.get<string>("COMPANY_LOGO_PATH", "").trim();
     const fileCandidates = [
       configuredPath,
