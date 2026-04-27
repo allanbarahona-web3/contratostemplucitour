@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getStoredSession } from "@/lib/auth-api";
+import { getStoredSession, getHomeRouteForRole } from "@/lib/auth-api";
 import {
   getCurrentExchangeRate,
   getExchangeRateHistory,
@@ -37,7 +37,7 @@ export default function AdminExchangeRatePage() {
 
     const role = String(session.user.role || "").toUpperCase();
     if (role !== "ADMIN" && role !== "FACTURACION_COBROS") {
-      router.replace("/contracts");
+      router.replace(getHomeRouteForRole(role));
       return;
     }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getStoredSession } from "@/lib/auth-api";
+import { getStoredSession, getHomeRouteForRole } from "@/lib/auth-api";
 import {
   getAllBankAccounts,
   createBankAccount,
@@ -68,7 +68,7 @@ export default function BankAccountsPage() {
 
     const role = String(session.user.role || "").toUpperCase();
     if (role !== "ADMIN") {
-      router.replace("/contracts");
+      router.replace(getHomeRouteForRole(role));
       return;
     }
 

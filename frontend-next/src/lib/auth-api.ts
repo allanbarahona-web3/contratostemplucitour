@@ -379,3 +379,25 @@ export const changePassword = async (
   return payload as { ok: boolean; message: string };
 };
 
+/**
+ * Get the default home route for a user based on their role
+ */
+export const getHomeRouteForRole = (role?: string): string => {
+  const normalizedRole = String(role || "").toUpperCase();
+  
+  switch (normalizedRole) {
+    case "ADMIN":
+      return "/admin/dashboard";
+    case "CONTADOR":
+      return "/admin/dashboard";
+    case "FACTURACION_COBROS":
+      return "/admin/pending-payments";
+    case "VENTAS":
+    case "OPERACIONES":
+      return "/billing";
+    default:
+      // AGENTE and other roles
+      return "/contracts";
+  }
+};
+

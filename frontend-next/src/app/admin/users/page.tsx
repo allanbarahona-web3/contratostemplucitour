@@ -7,6 +7,7 @@ import {
   adminUpdateUser,
   getStoredSession,
   getStoredToken,
+  getHomeRouteForRole,
   type AdminUserListItem,
 } from "@/lib/auth-api";
 import { ToastNotification, useToast } from "@/components/toast-notification";
@@ -106,7 +107,7 @@ export default function AdminUsersPage() {
     const session = getStoredSession();
     const role = String(session?.user?.role || "").toUpperCase();
     if (role !== "ADMIN") {
-      router.replace("/contracts");
+      router.replace(getHomeRouteForRole(role));
       return;
     }
 

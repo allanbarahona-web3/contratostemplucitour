@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { getStoredSession, getStoredToken, loginWithEmailPassword, requestPasswordReset } from "@/lib/auth-api";
+import { getStoredSession, getStoredToken, loginWithEmailPassword, requestPasswordReset, getHomeRouteForRole } from "@/lib/auth-api";
 
 export default function Home() {
   const router = useRouter();
@@ -22,7 +22,9 @@ export default function Home() {
   useEffect(() => {
     const token = getStoredToken();
     if (token) {
-      router.replace("/contracts");
+      const session = getStoredSession();
+      const homeRoute = getHomeRouteForRole(session?.user?.role);
+      router.replace(homeRoute);
     }
   }, [router]);
 
@@ -46,7 +48,8 @@ export default function Home() {
       if (session?.user?.mustChangePassword) {
         router.push("/change-password");
       } else {
-        router.push("/contracts");
+        const homeRoute = getHomeRouteForRole(session?.user?.role);
+        router.push(homeRoute);
       }
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "No se pudo iniciar sesion.";

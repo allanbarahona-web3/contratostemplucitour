@@ -1,6 +1,6 @@
 "use client";
 
-import { changePassword, clearStoredToken, getStoredSession } from "@/lib/auth-api";
+import { changePassword, clearStoredToken, getStoredSession, getHomeRouteForRole } from "@/lib/auth-api";
 import { ToastNotification, useToast } from "@/components/toast-notification";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -27,13 +27,8 @@ export default function ChangePasswordPage() {
       const role = String(session.user.role || "").toUpperCase();
       if (role === "ADMIN") {
         router.replace("/admin/users");
-      } else if (role === "CONTADOR" || role === "FACTURACION_COBROS") {
-        router.replace("/billing/admin/reports");
-      } else if (role === "VENTAS" || role === "OPERACIONES") {
-        // Roles sin vistas asignadas aún - redirigir al login
-        router.replace("/");
       } else {
-        router.replace("/contracts");
+        router.replace(getHomeRouteForRole(role));
       }
     }
   }, [session, router]);
