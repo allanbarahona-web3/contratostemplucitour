@@ -1,11 +1,7 @@
 "use client";
 
 import { getStoredSession, getStoredToken } from "@/lib/auth-api";
-import {
-  getBillingContractAccount,
-  approveAndSendBillingReceipt,
-  type BillingAccount,
-} from "@/lib/billing-api";
+import { approveAndSendBillingReceipt } from "@/lib/billing-api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -50,46 +46,40 @@ export default function PendingReceiptsPage() {
     setLoading(true);
     setStatusText("");
     try {
-      // Cargar todos los contratos desde la API de billing
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001"}/billing/contracts?limit=500`, {
-        headers: {
-          Authorization: `Bearer ${getStoredToken()}`,
-        },
-      });
+      // Usar admin/reports con filtro de status específico para recibos pendientes
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001"}/billing/admin/reports?paymentStatus=ABONO_VERIFICADO&limitPayments=200`,
+        {
+          headers: {
+            Authorization: `Bearer ${getStoredToken()}`,
+          },
+        }
+      );
       
-      if (!response.ok) throw new Error("No se pudo cargar los contratos");
+      if (!response.ok) throw new Error("No se pudo cargar los recibos pendientes");
       
       const data = await response.json();
-      const contracts = Array.isArray(data.items) ? data.items : [];
+      const payments = Array.isArray(data.payments) ? data.payments : [];
       
-      // Cargar detalles de cada contrato para obtener recibos pendientes
-      const pendingReceipts: PendingReceipt[] = [];
-      
-      for (const contract of contracts) {
-        try {
-          const account: BillingAccount = await getBillingContractAccount(contract.contractId);
-          
-          // Buscar pagos verificados con recibos pendientes
-          for (const payment of account.payments) {
-            if (payment.status === "ABONO_VERIFICADO" && payment.receipt?.status === "RECIBO_PENDIENTE_VERIFICACION") {
-              pendingReceipts.push({
-                receiptId: payment.receipt.id,
-                receiptNumber: payment.receipt.receiptNumber,
-                contractId: account.invoice.contractId,
-                contractNumber: account.invoice.contractNumber,
-                amount: payment.amount,
-                issuedAt: payment.receipt.issuedAt,
-                clientName: account.client.fullName,
-                clientEmail: account.client.email,
-                paymentId: payment.id,
-                paymentDate: payment.reportedAt,
-              });
-            }
-          }
-        } catch {
-          // Ignorar errores en contratos individuales
-        }
-      }
+      // Filtrar solo los pagos con recibos pendientes de envío
+      const pendingReceipts: PendingReceipt[] = payments
+        .filter(
+          (payment: any) =>
+            payment.status === "ABONO_VERIFICADO" &&
+            payment.receipt?.status === "RECIBO_PENDIENTE_VERIFICACION"
+        )
+        .map((payment: any) => ({
+          receiptId: payment.receipt.id,
+          receiptNumber: payment.receipt.receiptNumber,
+          contractId: payment.invoice.contractId,
+          contractNumber: payment.invoice.contractNumber,
+          amount: payment.amount,
+          issuedAt: payment.receipt.issuedAt,
+          clientName: payment.client.fullName,
+          clientEmail: payment.client.email,
+          paymentId: payment.id,
+          paymentDate: payment.reportedAt,
+        }));
       
       setReceipts(pendingReceipts);
     } catch (fetchError) {
