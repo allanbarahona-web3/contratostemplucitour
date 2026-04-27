@@ -128,8 +128,9 @@ export class PaymentVerificationService {
         };
       } catch (error) {
         // Si falla la conversión, retornar el archivo original
+        const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `❌ Error convirtiendo imagen a WebP: ${error.message}. Usando archivo original.`,
+          `❌ Error convirtiendo imagen a WebP: ${errorMessage}. Usando archivo original.`,
         );
         return params;
       }
