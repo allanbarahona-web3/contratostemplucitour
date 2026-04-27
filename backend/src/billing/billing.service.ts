@@ -1054,28 +1054,28 @@ export class BillingService {
     );
     page.drawText(`Modalidad: ${params.paymentPlan.modeLabel}`, {
       x: 284,
-      y: 573,
+      y: y - 47,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Plazo: ${params.paymentPlan.termLabel}`, {
       x: 284,
-      y: 558,
+      y: y - 62,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Fecha maxima: ${params.paymentPlan.maxPaymentDateLabel}`, {
       x: 284,
-      y: 543,
+      y: y - 77,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Cuotas: ${params.paymentPlan.installmentsLabel}`, {
       x: 284,
-      y: 528,
+      y: y - 92,
       size: 10,
       font,
       color: slate,
@@ -1083,7 +1083,7 @@ export class BillingService {
 
     page.drawRectangle({
       x: 40,
-      y: 460,
+      y: 445,
       width: 515,
       height: 36,
       color: rgb(1, 1, 1),
@@ -1092,7 +1092,7 @@ export class BillingService {
     });
     page.drawText("Direccion titular", {
       x: 46,
-      y: 482,
+      y: 467,
       size: 9.5,
       font: bold,
       color: ink,
@@ -1100,7 +1100,7 @@ export class BillingService {
     const addressLines = wrapTextByWidth(params.client.address || "-", 460, 10, 2);
     page.drawText(this.toShortText(addressLines[0] || "-", 110), {
       x: 46,
-      y: 469,
+      y: 454,
       size: 10,
       font,
       color: slate,
@@ -1108,7 +1108,7 @@ export class BillingService {
     if (addressLines[1]) {
       page.drawText(this.toShortText(addressLines[1], 110), {
         x: 46,
-        y: 457,
+        y: 442,
         size: 10,
         font,
         color: slate,
@@ -1117,21 +1117,21 @@ export class BillingService {
 
     page.drawRectangle({
       x: 40,
-      y: 410,
+      y: 395,
       width: 515,
       height: 36,
       color: rgb(1, 1, 1),
       borderColor: line,
       borderWidth: 1,
     });
-    page.drawText("Description", { x: 46, y: 425, size: 10, font: bold, color: ink });
-    page.drawText("Cant.", { x: 360, y: 425, size: 10, font: bold, color: ink });
-    page.drawText("Precio Unit.", { x: 412, y: 425, size: 10, font: bold, color: ink });
-    page.drawText("Importe", { x: 496, y: 425, size: 10, font: bold, color: ink });
+    page.drawText("Description", { x: 46, y: 410, size: 10, font: bold, color: ink });
+    page.drawText("Cant.", { x: 360, y: 410, size: 10, font: bold, color: ink });
+    page.drawText("Precio Unit.", { x: 412, y: 410, size: 10, font: bold, color: ink });
+    page.drawText("Importe", { x: 496, y: 410, size: 10, font: bold, color: ink });
 
     page.drawRectangle({
       x: 40,
-      y: 364,
+      y: 349,
       width: 515,
       height: 46,
       color: rgb(1, 1, 1),
@@ -1145,65 +1145,65 @@ export class BillingService {
       ),
       {
       x: 46,
-      y: 390,
+      y: 375,
       size: 10,
       font,
       color: ink,
     });
-    page.drawText("1", { x: 374, y: 390, size: 10, font, color: ink });
+    page.drawText("1", { x: 374, y: 375, size: 10, font, color: ink });
     const unitAmount = formatInvoiceCurrency(params.amounts.subtotal);
     const rowAmount = formatInvoiceCurrency(params.amounts.subtotal);
-    placeRightWithin(unitAmount, 9.2, 390, 485, 412, false, ink);
-    placeRightWithin(rowAmount, 9.2, 390, 548, 496, false, ink);
+    placeRightWithin(unitAmount, 9.2, 375, 485, 412, false, ink);
+    placeRightWithin(rowAmount, 9.2, 375, 548, 496, false, ink);
 
     page.drawLine({
-      start: { x: 356, y: 340 },
-      end: { x: 555, y: 340 },
+      start: { x: 356, y: 325 },
+      end: { x: 555, y: 325 },
       thickness: 1,
       color: line,
     });
-    placeRightWithin("Subtotal:", 12, 325, 470, 360, false, ink);
-    placeRightWithin(formatInvoiceCurrency(params.amounts.subtotal), 12, 325, 548, 476);
+    placeRightWithin("Subtotal:", 12, 310, 470, 360, false, ink);
+    placeRightWithin(formatInvoiceCurrency(params.amounts.subtotal), 12, 310, 548, 476);
     page.drawLine({
-      start: { x: 356, y: 314 },
-      end: { x: 555, y: 314 },
+      start: { x: 356, y: 299 },
+      end: { x: 555, y: 299 },
       thickness: 1,
       color: line,
     });
-    placeRightWithin(`Impuesto (${params.amounts.taxRatePercent}%):`, 12, 298, 470, 356, false, ink);
-    placeRightWithin(formatInvoiceCurrency(params.amounts.taxAmount), 12, 298, 548, 476);
+    placeRightWithin(`Impuesto (${params.amounts.taxRatePercent}%):`, 12, 283, 470, 356, false, ink);
+    placeRightWithin(formatInvoiceCurrency(params.amounts.taxAmount), 12, 283, 548, 476);
     page.drawLine({
-      start: { x: 356, y: 288 },
-      end: { x: 555, y: 288 },
+      start: { x: 356, y: 273 },
+      end: { x: 555, y: 273 },
       thickness: 1.2,
       color: brand,
     });
     page.drawText("Total:", {
       x: 386,
-      y: 268,
+      y: 253,
       size: 14.5,
       font: bold,
       color: ink,
     });
-    placeRightWithin(formatInvoiceCurrency(params.amounts.total), 14.5, 268, 548, 476, true, ink);
+    placeRightWithin(formatInvoiceCurrency(params.amounts.total), 14.5, 253, 548, 476, true, ink);
 
     page.drawText("Notas", {
       x: 42,
-      y: 235,
+      y: 220,
       size: 11,
       font: bold,
       color: ink,
     });
     page.drawText(this.toShortText(params.paymentAccountNote, 100), {
       x: 42,
-      y: 219,
+      y: 204,
       size: 9.8,
       font,
       color: slate,
     });
     page.drawText("Factura ligada al contrato firmado del cliente titular.", {
       x: 42,
-      y: 202,
+      y: 187,
       size: 9.8,
       font,
       color: slate,
