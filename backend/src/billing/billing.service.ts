@@ -407,6 +407,158 @@ export class BillingService {
     return Buffer.from(bytes);
   }
 
+  /**
+   * Standard PDF colors for consistent branding
+   */
+  private getPdfColors() {
+    return {
+      ink: rgb(0.09, 0.14, 0.24),      // Dark text
+      slate: rgb(0.34, 0.4, 0.5),       // Secondary text
+      line: rgb(0.87, 0.9, 0.94),       // Divider lines
+      brand: rgb(0.16, 0.24, 0.76),     // Brand blue
+      lightBg: rgb(0.95, 0.97, 0.99),   // Light backgrounds
+    };
+  }
+
+  /**
+   * Draw standard PDF header with logo, company info, and title
+   * Returns the Y position where content should start
+   */
+  private async drawStandardPdfHeader(params: {
+    page: any; // PDFPage
+    pdf: any;  // PDFDocument
+    font: any;
+    bold: any;
+    logo: { bytes: Buffer; format: "png" | "jpg" } | null;
+    documentTitle: string;
+    contractNumber?: string;
+    date?: Date | string | null;
+    company: {
+      legalName: string;
+      commercialName: string;
+      legalId: string;
+    };
+    contactInfo?: {
+      email: string;
+      phone: string;
+    };
+  }): Promise<number> {
+    const { page, pdf, font, bold, logo, documentTitle, contractNumber, date, company, contactInfo } = params;
+    const colors = this.getPdfColors();
+
+    // Helper to place text right-aligned
+    const placeRight = (text: string, size: number, y: number, useBold = false, color = colors.ink) => {
+      const f = useBold ? bold : font;
+      const textWidth = f.widthOfTextAtSize(text, size);
+      page.drawText(text, {
+        x: Math.max(40, 555 - textWidth),
+        y,
+        size,
+        font: f,
+        color,
+      });
+    };
+
+    // Draw border around entire page
+    page.drawRectangle({
+      x: 24,
+      y: 24,
+      width: 547,
+      height: 793,
+      borderColor: rgb(0.92, 0.94, 0.97),
+      borderWidth: 1,
+      color: rgb(1, 1, 1),
+    });
+
+    // Draw logo (top left)
+    if (logo) {
+      const image = logo.format === "jpg" ? await pdf.embedJpg(logo.bytes) : await pdf.embedPng(logo.bytes);
+      const maxWidth = 300;
+      const maxHeight = 96;
+      const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      page.drawImage(image, {
+        x: 42,
+        y: 715,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    }
+
+    // Draw document title (top right)
+    placeRight(documentTitle, 18, 778, true, colors.brand);
+    
+    // Draw contract number if provided (top right)
+    if (contractNumber) {
+      placeRight(`Contrato: ${this.toShortText(contractNumber, 30)}`, 9.8, 759);
+    }
+
+    // Draw date if provided (top right)
+    if (date) {
+      placeRight(`Fecha: ${this.formatDate(date)}`, 9.3, 744);
+    }
+
+    // Company info (left side)
+    page.drawText(this.toShortText(company.legalName, 38), {
+      x: 42,
+      y: 706,
+      size: 15,
+      font: bold,
+      color: colors.ink,
+    });
+    page.drawText(`ID fiscal: ${this.toShortText(company.legalId, 34)}`, {
+      x: 42,
+      y: 688,
+      size: 10,
+      font,
+      color: colors.slate,
+    });
+    page.drawText(`País: Costa Rica`, {
+      x: 42,
+      y: 672,
+      size: 10,
+      font,
+      color: colors.slate,
+    });
+
+    // Contact info (right side) if provided
+    if (contactInfo) {
+      page.drawText("Contacto", {
+        x: 284,
+        y: 706,
+        size: 12,
+        font: bold,
+        color: colors.ink,
+      });
+      page.drawText(`Correo: ${this.toShortText(contactInfo.email, 30)}`, {
+        x: 284,
+        y: 688,
+        size: 10,
+        font,
+        color: colors.slate,
+      });
+      page.drawText(`Teléfono: ${this.toShortText(contactInfo.phone, 30)}`, {
+        x: 284,
+        y: 672,
+        size: 10,
+        font,
+        color: colors.slate,
+      });
+    }
+
+    // Draw horizontal divider line
+    page.drawLine({
+      start: { x: 40, y: 648 },
+      end: { x: 555, y: 648 },
+      thickness: 2,
+      color: colors.brand,
+    });
+
+    // Return Y position where content should start (below the divider)
+    return 622;
+  }
+
   private async createReceiptPdfBuffer(params: {
     receiptNumber: string;
     contractNumber: string;
@@ -429,211 +581,166 @@ export class BillingService {
     const font = await pdf.embedFont(StandardFonts.Helvetica);
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
     const logo = await this.loadCompanyLogo();
+    const colors = this.getPdfColors();
 
-    // Header sin franja azul - solo logo y nombre de empresa
-    if (logo) {
-      const image = logo.format === "jpg" ? await pdf.embedJpg(logo.bytes) : await pdf.embedPng(logo.bytes);
-      const scaled = image.scale(0.25);
-      const maxWidth = 180;
-      const ratio = scaled.width > maxWidth ? maxWidth / scaled.width : 1;
-      const drawWidth = scaled.width * ratio;
-      const drawHeight = scaled.height * ratio;
-
-      // Logo arriba a la derecha (movido 25px hacia abajo)
-      page.drawImage(image, {
-        x: 545 - drawWidth,
-        y: 760,
-        width: drawWidth,
-        height: drawHeight,
-      });
-    }
-
-    // Nombre de empresa arriba a la izquierda (movido 25px hacia abajo)
-    page.drawText(params.company.commercialName, {
-      x: 50,
-      y: 785,
-      size: 20,
-      font: bold,
-      color: rgb(0.07, 0.26, 0.41),
-    });
-    page.drawText(`Cédula Jurídica: ${params.company.legalId}`, {
-      x: 50,
-      y: 768,
-      size: 9,
+    // Draw standard header with logo and company info
+    let y = await this.drawStandardPdfHeader({
+      page,
+      pdf,
       font,
-      color: rgb(0.5, 0.5, 0.5),
+      bold,
+      logo,
+      documentTitle: "RECIBO DE CAJA",
+      contractNumber: params.contractNumber,
+      date: params.approvedAt || params.issuedAt,
+      company: {
+        legalName: params.company.legalName,
+        commercialName: params.company.commercialName,
+        legalId: params.company.legalId,
+      },
+      contactInfo: {
+        email: params.company.companyEmail,
+        phone: "+506 7006-7572",
+      },
     });
 
-    // Línea divisoria del header (movida 25px hacia abajo)
-    page.drawLine({
-      start: { x: 36, y: 753 },
-      end: { x: 559, y: 753 },
-      thickness: 2,
-      color: rgb(0.07, 0.26, 0.41),
-    });
-
-    // Título del documento (movido 25px hacia abajo)
-    page.drawText("RECIBO DE CAJA", {
-      x: 50,
-      y: 721,
-      size: 22,
-      font: bold,
-      color: rgb(0.08, 0.11, 0.16),
-    });
-
-    // Número de recibo y contrato (movido 25px hacia abajo)
-    let y = 691;
-    page.drawText("Número de Recibo:", {
-      x: 50,
-      y,
-      size: 10,
-      font: bold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    page.drawText(this.toShortText(params.receiptNumber, 45), {
-      x: 170,
-      y,
-      size: 10,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-
-    y -= 16;
-    page.drawText("Número de Contrato:", {
-      x: 50,
-      y,
-      size: 10,
-      font: bold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    page.drawText(this.toShortText(params.contractNumber, 45), {
-      x: 170,
-      y,
-      size: 10,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-
-    // Fechas del lado derecho (movido 25px hacia abajo)
-    y = 675;
-    page.drawText("Fecha de Emisión:", {
-      x: 350,
-      y,
-      size: 9,
-      font: bold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    page.drawText(this.formatDateTime(params.issuedAt), {
-      x: 455,
-      y,
-      size: 9,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-
-    y -= 16;
-    page.drawText("Fecha de Aprobación:", {
-      x: 350,
-      y,
-      size: 9,
-      font: bold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    page.drawText(this.formatDateTime(params.approvedAt), {
-      x: 455,
-      y,
-      size: 9,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-
-    // Separador
-    y -= 22;
-    page.drawLine({
-      start: { x: 50, y },
-      end: { x: 545, y },
-      thickness: 1,
-      color: rgb(0.82, 0.84, 0.87),
-    });
-
-    // Sección de Información del Cliente
-    y -= 26;
-    page.drawText("INFORMACIÓN DEL CLIENTE", {
-      x: 50,
+    // Receipt info section
+    page.drawText("Recibo:", {
+      x: 42,
       y,
       size: 12,
       font: bold,
-      color: rgb(0.08, 0.11, 0.16),
+      color: colors.ink,
+    });
+    page.drawText(this.toShortText(params.receiptNumber, 50), {
+      x: 100,
+      y,
+      size: 12,
+      font,
+      color: colors.ink,
     });
 
-    y -= 20;
-    page.drawText("Cliente:", {
-      x: 56,
+    // Dates on right side
+    page.drawText("Emisión:", {
+      x: 284,
       y,
       size: 10,
       font: bold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: colors.slate,
     });
-    page.drawText(this.toShortText(params.clientName, 70), {
-      x: 140,
+    page.drawText(this.formatDateTime(params.issuedAt), {
+      x: 340,
       y,
       size: 10,
       font,
-      color: rgb(0.12, 0.12, 0.12),
+      color: colors.slate,
     });
 
-    y -= 16;
-    page.drawText("Código de Pago:", {
-      x: 56,
+    y -= 15;
+    page.drawText("Aprobación:", {
+      x: 284,
       y,
       size: 10,
       font: bold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: colors.slate,
+    });
+    page.drawText(this.formatDateTime(params.approvedAt), {
+      x: 340,
+      y,
+      size: 10,
+      font,
+      color: colors.slate,
+    });
+
+    // Divider
+    y -= 18;
+    page.drawLine({
+      start: { x: 40, y },
+      end: { x: 555, y },
+      thickness: 1,
+      color: colors.line,
+    });
+
+    // Client information section
+    y -= 22;
+    // Client information section
+    y -= 22;
+    page.drawText("INFORMACIÓN DEL CLIENTE", {
+      x: 42,
+      y,
+      size: 12,
+      font: bold,
+      color: colors.ink,
+    });
+
+    y -= 18;
+    page.drawText("Cliente:", {
+      x: 42,
+      y,
+      size: 10,
+      font: bold,
+      color: colors.slate,
+    });
+    page.drawText(this.toShortText(params.clientName, 70), {
+      x: 100,
+      y,
+      size: 10,
+      font,
+      color: colors.slate,
+    });
+
+    y -= 15;
+    page.drawText("Código de Pago:", {
+      x: 42,
+      y,
+      size: 10,
+      font: bold,
+      color: colors.slate,
     });
     page.drawText(this.toShortText(params.paymentReference, 70), {
       x: 140,
       y,
       size: 10,
       font,
-      color: rgb(0.12, 0.12, 0.12),
+      color: colors.slate,
     });
 
-    // Separador
-    y -= 22;
+    // Divider
+    y -= 18;
     page.drawLine({
-      start: { x: 50, y },
-      end: { x: 545, y },
+      start: { x: 40, y },
+      end: { x: 555, y },
       thickness: 1,
-      color: rgb(0.82, 0.84, 0.87),
+      color: colors.line,
     });
 
-    // Sección de Detalle del Pago
-    y -= 26;
+    // Payment details section
+    y -= 22;
     page.drawText("DETALLE DEL PAGO", {
-      x: 50,
+      x: 42,
       y,
       size: 12,
       font: bold,
-      color: rgb(0.08, 0.11, 0.16),
+      color: colors.ink,
     });
 
-    y -= 32;
-    // Monto recibido - destacado (más espacio arriba)
+    y -= 28;
+    // Amount box - highlighted
     page.drawRectangle({
-      x: 50,
+      x: 40,
       y: y - 4,
-      width: 495,
+      width: 515,
       height: 28,
-      color: rgb(0.95, 0.97, 0.99),
-      borderColor: rgb(0.07, 0.26, 0.41),
+      color: colors.lightBg,
+      borderColor: colors.brand,
       borderWidth: 1,
     });
     page.drawText("Monto Recibido:", {
-      x: 60,
+      x: 50,
       y: y + 6,
       size: 11,
       font: bold,
-      color: rgb(0.08, 0.11, 0.16),
+      color: colors.ink,
     });
     page.drawText(this.formatCurrency(params.amount), {
       x: 440,
@@ -643,84 +750,84 @@ export class BillingService {
       color: rgb(0.0, 0.5, 0.0),
     });
 
-    y -= 34;
+    y -= 30;
     page.drawText("Método de Pago:", {
-      x: 56,
+      x: 42,
       y,
       size: 10,
       font: bold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: colors.slate,
     });
     page.drawText(this.toShortText(params.paymentMethod, 50), {
-      x: 180,
+      x: 160,
       y,
       size: 10,
       font,
-      color: rgb(0.12, 0.12, 0.12),
+      color: colors.slate,
     });
 
-    y -= 16;
+    y -= 15;
     page.drawText("Referencia Bancaria:", {
-      x: 56,
+      x: 42,
       y,
       size: 10,
       font: bold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: colors.slate,
     });
     page.drawText(this.toShortText(params.bankReference, 50), {
-      x: 180,
+      x: 160,
       y,
       size: 10,
       font,
-      color: rgb(0.12, 0.12, 0.12),
+      color: colors.slate,
     });
 
-    // Nota al pie
-    y -= 40;
+    // Footer note
+    y -= 35;
     page.drawText("NOTA:", {
-      x: 50,
+      x: 42,
       y,
       size: 10,
       font: bold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: colors.slate,
     });
     y -= 14;
     page.drawText("Este recibo certifica que el pago fue recibido y aprobado correctamente.", {
-      x: 50,
+      x: 42,
       y,
-      size: 9.5,
+      size: 9,
       font,
-      color: rgb(0.23, 0.25, 0.31),
+      color: colors.slate,
     });
     y -= 12;
     page.drawText("El monto indicado ha sido aplicado a su contrato de servicios.", {
-      x: 50,
+      x: 42,
       y,
-      size: 9.5,
+      size: 9,
       font,
-      color: rgb(0.23, 0.25, 0.31),
+      color: colors.slate,
     });
 
-    // Footer
+    // Footer line and text
     page.drawLine({
-      start: { x: 36, y: 74 },
-      end: { x: 559, y: 74 },
+      start: { x: 40, y: 74 },
+      end: { x: 555, y: 74 },
       thickness: 1,
-      color: rgb(0.82, 0.84, 0.87),
+      color: colors.line,
     });
     page.drawText("Documento generado electrónicamente - Sistema de Facturación", {
-      x: 50,
+      x: 42,
       y: 58,
       size: 8,
       font,
-      color: rgb(0.5, 0.5, 0.5),
+      color: colors.slate,
     });
     page.drawText(`Email: ${params.company.companyEmail}`, {
-      x: 50,
+      x: 42,
       y: 46,
       size: 8,
       font,
-      color: rgb(0.5, 0.5, 0.5),
+      color: colors.slate,
     });
 
     const bytes = await pdf.save();
@@ -771,10 +878,11 @@ export class BillingService {
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
     const logo = await this.loadCompanyLogo();
 
-    const ink = rgb(0.09, 0.14, 0.24);
-    const slate = rgb(0.34, 0.4, 0.5);
-    const line = rgb(0.87, 0.9, 0.94);
-    const brand = rgb(0.16, 0.24, 0.76);
+    const colors = this.getPdfColors();
+    const ink = colors.ink;
+    const slate = colors.slate;
+    const line = colors.line;
+    const brand = colors.brand;
     const rightEdge = 555;
     const placeRight = (text: string, size: number, y: number, useBold = false, color = ink) => {
       const f = useBold ? bold : font;
@@ -842,87 +950,29 @@ export class BillingService {
       return lines.slice(0, maxLines);
     };
 
-    page.drawRectangle({
-      x: 24,
-      y: 24,
-      width: 547,
-      height: 793,
-      borderColor: rgb(0.92, 0.94, 0.97),
-      borderWidth: 1,
-      color: rgb(1, 1, 1),
+    // Draw standard header with logo and company info
+    await this.drawStandardPdfHeader({
+      page,
+      pdf,
+      font,
+      bold,
+      logo,
+      documentTitle: "Contrato",
+      contractNumber: params.contractNumber,
+      date: params.contractIssuedAt || params.invoiceDate,
+      company: {
+        legalName: params.company.legalName,
+        commercialName: params.company.commercialName,
+        legalId: params.company.legalId,
+      },
+      contactInfo: {
+        email: params.company.companyContactNumber,
+        phone: params.company.companyPhones,
+      },
     });
 
-    if (logo) {
-      const image = logo.format === "jpg" ? await pdf.embedJpg(logo.bytes) : await pdf.embedPng(logo.bytes);
-      const maxWidth = 300;
-      const maxHeight = 96;
-      const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
-      const drawWidth = image.width * scale;
-      const drawHeight = image.height * scale;
-
-      page.drawImage(image, {
-        x: 42,
-        y: 715,
-        width: drawWidth,
-        height: drawHeight,
-      });
-    }
-
-    placeRight("Contrato", 19, 777, true, brand);
-    placeRight(`Numero: ${this.toShortText(params.contractNumber, 34)}`, 9.8, 759);
+    // Draw payment code prominently (custom line for invoice)
     placeRight(`Codigo pago: ${this.toShortText(params.paymentReference, 10)}`, 9.8, 744, true, rgb(0.8, 0.15, 0.15));
-    placeRight(`Fecha: ${this.formatDate(params.contractIssuedAt || params.invoiceDate)}`, 9.3, 729);
-
-    page.drawText(this.toShortText(params.company.legalName, 38), {
-      x: 42,
-      y: 706,
-      size: 15,
-      font: bold,
-      color: ink,
-    });
-    page.drawText(`ID fiscal: ${this.toShortText(params.company.legalId, 34)}`, {
-      x: 42,
-      y: 688,
-      size: 10,
-      font,
-      color: slate,
-    });
-    page.drawText(`Pais: Costa Rica`, {
-      x: 42,
-      y: 672,
-      size: 10,
-      font,
-      color: slate,
-    });
-
-    page.drawText("Contacto", {
-      x: 284,
-      y: 706,
-      size: 12,
-      font: bold,
-      color: ink,
-    });
-    page.drawText(`Correo: ${this.toShortText(params.company.companyContactNumber, 30)}`, {
-      x: 284,
-      y: 688,
-      size: 10,
-      font,
-      color: slate,
-    });
-    page.drawText(`Telefono: ${this.toShortText(params.company.companyPhones, 30)}`, {
-      x: 284,
-      y: 672,
-      size: 10,
-      font,
-      color: slate,
-    });
-
-    page.drawLine({
-      start: { x: 40, y: 648 },
-      end: { x: 555, y: 648 },
-      thickness: 2,
-      color: brand,
-    });
 
     page.drawText("Contratado por", {
       x: 42,
