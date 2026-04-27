@@ -6,7 +6,7 @@ import {
   reserveNextContractNumber,
   saveContractDraft,
 } from "@/lib/contracts-api";
-import { loadAssetDataUri } from "@/lib/assets";
+import { bootstrapBillingContract } from "@/lib/billing-api";
 import { buildContractPdfHtml } from "@/features/contracts-form/pdf-template";
 import {
   addCompanion,
@@ -154,17 +154,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
     [latestSigningLinks],
   );
 
-  const loadFirstAvailableAsset = async (paths: string[], fallbackDataUri = ""): Promise<string> => {
-    for (const assetPath of paths) {
-      try {
-        return await loadAssetDataUri(assetPath);
-      } catch {
-        // Try next candidate path.
-      }
-    }
-    return fallbackDataUri;
-  };
-
   const buildWhatsappShareUrl = (signingUrl: string, signerName = "") => {
     const normalizedUrl = String(signingUrl || "").trim();
     const normalizedSigner = String(signerName || "").trim();
@@ -280,16 +269,13 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
     try {
       console.log("🔵 Paso 1: Preparando contrato...");
       setStatus("Preparando contrato...");
-      const [logoSrc, representativeSignSrc] = await Promise.all([
-        loadFirstAvailableAsset([
-          "/assets/LOGO ALMANOVA.png",
-        ]),
-        loadFirstAvailableAsset([
-          "/firmakaren.png",
-          "/assets/firmakaren.png",
-        ]),
-      ]);
-      console.log("✅ Assets cargados");
+      
+      // Usar URLs directas de Spaces en vez de cargar assets locales
+      // Esto reduce el HTML de 1.4MB a ~50KB
+      const logoSrc = "https://lucitouroperations.sfo3.digitaloceanspaces.com/contracts-assets/Almanova%20azul+dorado.webp";
+      const representativeSignSrc = "https://lucitouroperations.sfo3.digitaloceanspaces.com/contracts-assets/Firma%20Karen-Lucitour.webp";
+      
+      console.log("✅ Assets configurados (URLs directas)");
 
       console.log("🔵 Paso 2: Construyendo HTML del contrato...");
       const contractHtml = buildContractPdfHtml(state, {
@@ -341,9 +327,19 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
         window.open(archived.pdfUrl, "_blank", "noopener,noreferrer");
       }
 
-      // El pago de reserva se crea automáticamente al entrar al estado de cuenta
-      // Solo redirigimos al historial para que el agente vea el nuevo contrato
-      console.log("🔵 Paso 6: Reseteando formulario...");
+      // Inicializar el sistema de billing (crea factura + pago de reserva)
+      console.log("🔵 Paso 6: Inicializando billing...");
+      setStatus("Creando pago de reserva...");
+      try {
+        await bootstrapBillingContract(archived.id);
+        console.log("✅ Billing inicializado correctamente");
+      } catch (billingError) {
+        console.error("⚠️ Error al inicializar billing:", billingError);
+        // No bloqueamos el flujo, pero advertimos al usuario
+        setStatus("Contrato guardado, pero hubo un error al crear el pago de reserva. Contacta al admin.");
+      }
+
+      console.log("🔵 Paso 7: Reseteando formulario...");
       await resetFormForNextContract("Contrato guardado correctamente. El pago de reserva quedará pendiente de aprobación del admin.");
       console.log("✅ Formulario reseteado");
     } catch (error) {
@@ -375,15 +371,9 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
     try {
       setStatus("Generando vista previa...");
 
-      const [logoSrc, representativeSignSrc] = await Promise.all([
-        loadFirstAvailableAsset([
-          "/assets/LOGO ALMANOVA.png",
-        ]),
-        loadFirstAvailableAsset([
-          "/firmakaren.png",
-          "/assets/firmakaren.png",
-        ]),
-      ]);
+      // Usar URLs directas de Spaces en vez de cargar assets locales
+      const logoSrc = "https://lucitouroperations.sfo3.digitaloceanspaces.com/contracts-assets/Almanova%20azul+dorado.webp";
+      const representativeSignSrc = "https://lucitouroperations.sfo3.digitaloceanspaces.com/contracts-assets/Firma%20Karen-Lucitour.webp";
 
       const contractHtml = buildContractPdfHtml(state, {
         logoSrc,
