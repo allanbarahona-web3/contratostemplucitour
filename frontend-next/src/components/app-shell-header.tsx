@@ -35,6 +35,10 @@ const FACTURACION_COBROS_LINKS: HeaderLink[] = [
   { href: "/history", label: "Historial" },
 ];
 
+// Roles sin vistas asignadas aún
+const VENTAS_LINKS: HeaderLink[] = [];
+const OPERACIONES_LINKS: HeaderLink[] = [];
+
 const formatDuration = (seconds: number): string => {
   const safe = Math.max(0, Math.floor(seconds));
   const hh = Math.floor(safe / 3600)
@@ -69,6 +73,8 @@ export function AppShellHeader() {
   const links = 
     role === "ADMIN" ? ADMIN_LINKS :
     role === "FACTURACION_COBROS" ? FACTURACION_COBROS_LINKS :
+    role === "VENTAS" ? VENTAS_LINKS :
+    role === "OPERACIONES" ? OPERACIONES_LINKS :
     AGENT_LINKS;
   const connectedSeconds = session.loginAt
     ? Math.max(0, Math.floor((tick - new Date(session.loginAt).getTime()) / 1000))

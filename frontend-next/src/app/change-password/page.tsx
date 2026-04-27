@@ -29,6 +29,9 @@ export default function ChangePasswordPage() {
         router.replace("/admin/users");
       } else if (role === "CONTADOR" || role === "FACTURACION_COBROS") {
         router.replace("/billing/admin/reports");
+      } else if (role === "VENTAS" || role === "OPERACIONES") {
+        // Roles sin vistas asignadas aún - redirigir al login
+        router.replace("/");
       } else {
         router.replace("/contracts");
       }

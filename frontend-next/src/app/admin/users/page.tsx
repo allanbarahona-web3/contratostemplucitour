@@ -20,6 +20,8 @@ const roleLabel = (role: string) => {
   if (normalized === "ADMIN") return "ADMIN";
   if (normalized === "CONTADOR") return "CONTADOR";
   if (normalized === "FACTURACION_COBROS") return "FACTURACION_COBROS";
+  if (normalized === "VENTAS") return "VENTAS";
+  if (normalized === "OPERACIONES") return "OPERACIONES";
   return "AGENT";
 };
 
@@ -35,7 +37,7 @@ export default function AdminUsersPage() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [newRole, setNewRole] = useState<"AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS">("AGENT");
+  const [newRole, setNewRole] = useState<"AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES">("AGENT");
 
   // Modal de contraseña temporal
   const [resetModalUser, setResetModalUser] = useState<{
@@ -204,7 +206,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const onChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS") => {
+  const onChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES") => {
     const currentRole = roleLabel(item.role);
     
     if (newRole === currentRole) {
@@ -223,7 +225,7 @@ export default function AdminUsersPage() {
     });
   };
 
-  const performChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS") => {
+  const performChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES") => {
     try {
       const updated = await adminUpdateUser(item.id, { role: newRole });
       
@@ -359,10 +361,12 @@ export default function AdminUsersPage() {
           </label>
           <label>
             Rol
-            <select value={newRole} onChange={(event) => setNewRole((event.target.value as "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS") || "AGENT")}>
+            <select value={newRole} onChange={(event) => setNewRole((event.target.value as "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES") || "AGENT")}>
               <option value="AGENT">AGENT</option>
               <option value="CONTADOR">CONTADOR</option>
               <option value="FACTURACION_COBROS">FACTURACION & COBROS</option>
+              <option value="VENTAS">VENTAS</option>
+              <option value="OPERACIONES">OPERACIONES</option>
               <option value="ADMIN">ADMIN</option>
             </select>
           </label>
@@ -395,7 +399,7 @@ export default function AdminUsersPage() {
                   <td>
                     <select
                       value={roleLabel(item.role)}
-                      onChange={(e) => void onChangeRole(item, e.target.value as "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS")}
+                      onChange={(e) => void onChangeRole(item, e.target.value as "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES")}
                       style={{
                         padding: "8px 12px",
                         fontSize: "0.9rem",
@@ -404,7 +408,7 @@ export default function AdminUsersPage() {
                         background: "white",
                         cursor: "pointer",
                         fontWeight: 600,
-                        color: roleLabel(item.role) === "ADMIN" ? "#7c3aed" : roleLabel(item.role) === "CONTADOR" ? "#2563eb" : roleLabel(item.role) === "FACTURACION_COBROS" ? "#ea580c" : "#059669",
+                        color: roleLabel(item.role) === "ADMIN" ? "#7c3aed" : roleLabel(item.role) === "CONTADOR" ? "#2563eb" : roleLabel(item.role) === "FACTURACION_COBROS" ? "#ea580c" : roleLabel(item.role) === "VENTAS" ? "#dc2626" : roleLabel(item.role) === "OPERACIONES" ? "#0891b2" : "#059669",
                         transition: "all 0.2s",
                       }}
                       onFocus={(e) => {
@@ -419,6 +423,8 @@ export default function AdminUsersPage() {
                       <option value="AGENT">AGENTE</option>
                       <option value="CONTADOR">CONTADOR</option>
                       <option value="FACTURACION_COBROS">FACTURACION & COBROS</option>
+                      <option value="VENTAS">VENTAS</option>
+                      <option value="OPERACIONES">OPERACIONES</option>
                       <option value="ADMIN">ADMIN</option>
                     </select>
                   </td>

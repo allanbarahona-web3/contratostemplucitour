@@ -12,7 +12,7 @@ export class AdminUpdateUserDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(["AGENT", "ADMIN", "CONTADOR", "FACTURACION_COBROS", "agent", "admin", "contador", "facturacion_cobros"])
+  @IsIn(["AGENT", "ADMIN", "CONTADOR", "FACTURACION_COBROS", "VENTAS", "OPERACIONES", "agent", "admin", "contador", "facturacion_cobros", "ventas", "operaciones"])
   role?: string;
 
   @IsOptional()

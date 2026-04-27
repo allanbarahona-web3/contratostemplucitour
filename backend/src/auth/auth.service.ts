@@ -154,7 +154,7 @@ export class AuthService {
     const fullName = String(dto.fullName || "").trim();
     const password = String(dto.password || "");
     const roleInput = String(dto.role || "AGENT").trim().toUpperCase();
-    const role = ["ADMIN", "CONTADOR"].includes(roleInput) ? roleInput : "AGENT";
+    const role = ["ADMIN", "CONTADOR", "FACTURACION_COBROS", "VENTAS", "OPERACIONES"].includes(roleInput) ? roleInput : "AGENT";
 
     const passwordHash = await hash(password, 10);
 
@@ -214,7 +214,7 @@ export class AuthService {
 
     if (typeof dto.role === "string") {
       const roleInput = String(dto.role).trim().toUpperCase();
-      data.role = ["ADMIN", "CONTADOR"].includes(roleInput) ? roleInput : "AGENT";
+      data.role = ["ADMIN", "CONTADOR", "FACTURACION_COBROS", "VENTAS", "OPERACIONES"].includes(roleInput) ? roleInput : "AGENT";
       // Invalidate session when role changes - forces re-login with new permissions
       data.activeJti = null;
     }

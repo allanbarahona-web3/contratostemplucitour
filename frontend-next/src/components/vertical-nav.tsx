@@ -102,6 +102,8 @@ export function VerticalNav() {
   const isAdmin = role === "ADMIN";
   const isContador = role === "CONTADOR";
   const isFacturacionCobros = role === "FACTURACION_COBROS";
+  const isVentas = role === "VENTAS";
+  const isOperaciones = role === "OPERACIONES";
   const isAdminOrContador = isAdmin || isContador || isFacturacionCobros;
   const connectedSeconds = session.loginAt
     ? Math.max(0, Math.floor((tick - new Date(session.loginAt).getTime()) / 1000))
