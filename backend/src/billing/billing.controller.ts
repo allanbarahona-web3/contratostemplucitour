@@ -245,6 +245,8 @@ export class BillingController {
   }
 
   @Post("receipts/:receiptId/approve-send")
+  @Roles("ADMIN", "FACTURACION_COBROS")
+  @UseGuards(RolesGuard)
   approveAndSendReceipt(
     @Req()
     req: {
@@ -398,7 +400,7 @@ export class BillingController {
   }
 
   @Get("admin/reports")
-  @Roles("ADMIN", "CONTADOR")
+  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   getAdminReports(
     @Req()
