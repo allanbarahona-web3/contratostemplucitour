@@ -61,9 +61,10 @@ export function VerticalNav() {
     const loadPendingCounts = async () => {
       try {
         const counts = await getPendingApprovalsCount();
+        console.log("[VerticalNav] Pending counts:", counts);
         setPendingCounts(counts);
-      } catch {
-        // Silently fail
+      } catch (error) {
+        console.error("[VerticalNav] Error loading pending counts:", error);
       }
     };
 
@@ -220,7 +221,7 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Historial (todos EXCEPTO Facturacion) — badge de "listos para firmar" solo para agentes
+    // Historial (todos EXCEPTO Facturacion) — badge de "listos para firmar" SOLO para agentes
     ...(!isFacturacionCobros
       ? [
           {
@@ -232,6 +233,14 @@ export function VerticalNav() {
         ]
       : []),
   ];
+
+  // Debug: Log navItems para ver badges
+  console.log("[VerticalNav] Role:", role, "isAdminOrContador:", isAdminOrContador);
+  console.log("[VerticalNav] Pending counts:", pendingCounts);
+  const historialItem = navItems.find(item => item.href === "/history");
+  if (historialItem) {
+    console.log("[VerticalNav] Historial badge:", historialItem.badge);
+  }
 
   return (
     <>

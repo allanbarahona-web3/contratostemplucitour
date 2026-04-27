@@ -371,7 +371,7 @@ export class BillingController {
   }
 
   @Get("admin/pending-counts")
-  @Roles("ADMIN", "CONTADOR", "AGENTE", "FACTURACION_COBROS")
+  @Roles("ADMIN", "CONTADOR", "AGENT", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   async getPendingCounts(): Promise<{ pendingReceipts: number; pendingCreditNotes: number; contractsPendingSignature: number }> {
     const pendingReceipts = await this.billingService.getPendingPaymentsCount();
