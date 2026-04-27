@@ -12,6 +12,7 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [showZoom, setShowZoom] = useState(false);
+  const [isPdf, setIsPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cerrar zoom con ESC y prevenir scroll del body
@@ -40,9 +41,9 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
     if (!file) return;
 
     // Validar tipo de archivo
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
     if (!validTypes.includes(file.type)) {
-      onError?.("Solo se permiten imágenes (JPG, PNG, WEBP)");
+      onError?.("Solo se permiten imágenes (JPG, PNG, WEBP) o documentos PDF");
       return;
     }
 
@@ -53,6 +54,7 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
     }
 
     setFileName(file.name);
+    setIsPdf(file.type === "application/pdf");
 
     // Notificar al padre que se seleccionó un archivo
     onFileSelected?.(file);
@@ -90,6 +92,7 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
   const handleClear = () => {
     setPreview(null);
     setFileName("");
+    setIsPdf(false);
     onFileSelected?.(undefined as any); // Notificar que se quitó el archivo
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -114,7 +117,7 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
+        accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
         onChange={handleFileSelect}
         disabled={processing}
         style={{ 
@@ -166,42 +169,57 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
             borderRadius: 6,
             border: "1px solid #e2e8f0",
             background: "#fff",
-            cursor: "zoom-in"
+            cursor: isPdf ? "default" : "zoom-in"
           }}
-            onClick={() => setShowZoom(true)}
-            title="Clic para ampliar"
+            onClick={() => !isPdf && setShowZoom(true)}
+            title={isPdf ? "PDF" : "Clic para ampliar"}
           >
-            <img 
-              src={preview} 
-              alt="Preview" 
-              style={{ 
-                width: "100%", 
-                height: "auto",
-                display: "block"
-              }} 
-            />
-            <div style={{
-              position: "sticky",
-              bottom: 8,
-              left: 8,
-              right: 8,
-              textAlign: "center",
-              marginTop: -40,
-              pointerEvents: "none"
-            }}>
-              <span style={{
-                display: "inline-block",
-                background: "rgba(0,0,0,0.75)",
-                color: "white",
-                padding: "6px 12px",
-                borderRadius: 6,
-                fontSize: "0.75rem",
-                fontWeight: "600",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-              }}>
-                🔍 Clic para ampliar
-              </span>
-            </div>
+            {isPdf ? (
+              <iframe
+                src={preview!}
+                style={{
+                  width: "100%",
+                  height: "450px",
+                  border: "none",
+                  display: "block"
+                }}
+                title="Vista previa PDF"
+              />
+            ) : (
+              <>
+                <img 
+                  src={preview!} 
+                  alt="Preview" 
+                  style={{ 
+                    width: "100%", 
+                    height: "auto",
+                    display: "block"
+                  }} 
+                />
+                <div style={{
+                  position: "sticky",
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  textAlign: "center",
+                  marginTop: -40,
+                  pointerEvents: "none"
+                }}>
+                  <span style={{
+                    display: "inline-block",
+                    background: "rgba(0,0,0,0.75)",
+                    color: "white",
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    fontSize: "0.75rem",
+                    fontWeight: "600",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                  }}>
+                    🔍 Clic para ampliar
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

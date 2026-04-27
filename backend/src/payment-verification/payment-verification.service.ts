@@ -23,6 +23,7 @@ export class PaymentVerificationService {
     'image/png',
     'image/webp',
     'image/jpg',
+    'application/pdf',
   ]);
 
   constructor(
@@ -92,14 +93,17 @@ export class PaymentVerificationService {
     originalname: string;
     size: number;
   }> {
-    // Si ya es WebP, retornar sin cambios
-    if (params.mimetype === 'image/webp') {
+    // Si ya es WebP o es PDF, retornar sin cambios
+    if (params.mimetype === 'image/webp' || params.mimetype === 'application/pdf') {
+      this.logger.log(`📄 Archivo ${params.mimetype}, sin conversión necesaria`);
       return params;
     }
 
     // Convertir JPEG/PNG a WebP
     if (params.mimetype === 'image/jpeg' || params.mimetype === 'image/png' || params.mimetype === 'image/jpg') {
       try {
+        this.logger.log(`🔄 Convirtiendo ${params.mimetype} a WebP...`);
+        
         const webpBuffer = await sharp(params.buffer)
           .webp({ quality: 85 }) // 85% calidad para balance entre tamaño y calidad
           .toBuffer();
@@ -107,6 +111,14 @@ export class PaymentVerificationService {
         // Cambiar la extensión del nombre del archivo
         const nameWithoutExt = params.originalname.replace(/\.(jpe?g|png)$/i, '');
         const newName = `${nameWithoutExt}.webp`;
+
+        const originalSize = (params.size / 1024).toFixed(2);
+        const newSize = (webpBuffer.length / 1024).toFixed(2);
+        const savings = ((1 - webpBuffer.length / params.size) * 100).toFixed(1);
+        
+        this.logger.log(
+          `✅ Conversión exitosa: ${originalSize}KB → ${newSize}KB (${savings}% reducción)`,
+        );
 
         return {
           buffer: webpBuffer,
@@ -116,12 +128,15 @@ export class PaymentVerificationService {
         };
       } catch (error) {
         // Si falla la conversión, retornar el archivo original
-        console.error('Error convirtiendo imagen a WebP:', error);
+        this.logger.error(
+          `❌ Error convirtiendo imagen a WebP: ${error.message}. Usando archivo original.`,
+        );
         return params;
       }
     }
 
     // Para otros tipos, retornar sin cambios
+    this.logger.warn(`⚠️ Tipo ${params.mimetype} no se convierte, usando original`);
     return params;
   }
 
