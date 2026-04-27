@@ -988,7 +988,16 @@ export class BillingService {
       font: bold,
       color: rgb(0.6, 0.1, 0.1),
     });
-    placeRight(this.toShortText(params.paymentReference, 12), 13, 610, true, rgb(0.8, 0.0, 0.0));
+    // Place payment code with right margin (10px from box edge)
+    const paymentCode = this.toShortText(params.paymentReference, 12);
+    const paymentCodeWidth = bold.widthOfTextAtSize(paymentCode, 13);
+    page.drawText(paymentCode, {
+      x: Math.max(48, 545 - paymentCodeWidth),
+      y: 610,
+      size: 13,
+      font: bold,
+      color: rgb(0.8, 0.0, 0.0),
+    });
 
     let y = 580;
 
@@ -1384,7 +1393,16 @@ export class BillingService {
       font: bold,
       color: rgb(0.6, 0.1, 0.1),
     });
-    placeRight(this.toShortText(params.paymentReference, 12), 13, 610, true, rgb(0.8, 0.0, 0.0));
+    // Place payment code with right margin (10px from box edge)
+    const paymentCode = this.toShortText(params.paymentReference, 12);
+    const paymentCodeWidth = bold.widthOfTextAtSize(paymentCode, 13);
+    page.drawText(paymentCode, {
+      x: Math.max(48, 545 - paymentCodeWidth),
+      y: 610,
+      size: 13,
+      font: bold,
+      color: rgb(0.8, 0.0, 0.0),
+    });
 
     page.drawText("Contratado por", {
       x: 42,
