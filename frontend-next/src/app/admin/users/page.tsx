@@ -204,7 +204,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const onChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR") => {
+  const onChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS") => {
     const currentRole = roleLabel(item.role);
     
     if (newRole === currentRole) {
@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
     });
   };
 
-  const performChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR") => {
+  const performChangeRole = async (item: AdminUserListItem, newRole: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS") => {
     try {
       const updated = await adminUpdateUser(item.id, { role: newRole });
       
