@@ -439,50 +439,50 @@ export class BillingService {
       const drawWidth = scaled.width * ratio;
       const drawHeight = scaled.height * ratio;
 
-      // Logo arriba a la derecha
+      // Logo arriba a la derecha (movido 25px hacia abajo)
       page.drawImage(image, {
         x: 545 - drawWidth,
-        y: 785,
+        y: 760,
         width: drawWidth,
         height: drawHeight,
       });
     }
 
-    // Nombre de empresa arriba a la izquierda (solo commercialName, sin duplicar)
+    // Nombre de empresa arriba a la izquierda (movido 25px hacia abajo)
     page.drawText(params.company.commercialName, {
       x: 50,
-      y: 810,
+      y: 785,
       size: 20,
       font: bold,
       color: rgb(0.07, 0.26, 0.41),
     });
     page.drawText(`Cédula Jurídica: ${params.company.legalId}`, {
       x: 50,
-      y: 793,
+      y: 768,
       size: 9,
       font,
       color: rgb(0.5, 0.5, 0.5),
     });
 
-    // Línea divisoria del header
+    // Línea divisoria del header (movida 25px hacia abajo)
     page.drawLine({
-      start: { x: 36, y: 778 },
-      end: { x: 559, y: 778 },
+      start: { x: 36, y: 753 },
+      end: { x: 559, y: 753 },
       thickness: 2,
       color: rgb(0.07, 0.26, 0.41),
     });
 
-    // Título del documento
+    // Título del documento (movido 25px hacia abajo)
     page.drawText("RECIBO DE CAJA", {
       x: 50,
-      y: 746,
+      y: 721,
       size: 22,
       font: bold,
       color: rgb(0.08, 0.11, 0.16),
     });
 
-    // Número de recibo y contrato
-    let y = 716;
+    // Número de recibo y contrato (movido 25px hacia abajo)
+    let y = 691;
     page.drawText("Número de Recibo:", {
       x: 50,
       y,
@@ -514,8 +514,8 @@ export class BillingService {
       color: rgb(0.12, 0.12, 0.12),
     });
 
-    // Fechas del lado derecho
-    y = 700;
+    // Fechas del lado derecho (movido 25px hacia abajo)
+    y = 675;
     page.drawText("Fecha de Emisión:", {
       x: 350,
       y,
