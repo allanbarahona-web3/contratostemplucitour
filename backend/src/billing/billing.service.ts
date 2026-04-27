@@ -971,40 +971,58 @@ export class BillingService {
       },
     });
 
-    // Draw payment code prominently (custom line for invoice)
-    placeRight(`Codigo pago: ${this.toShortText(params.paymentReference, 10)}`, 9.8, 744, true, rgb(0.8, 0.15, 0.15));
+    // Payment code box (prominent display)
+    page.drawRectangle({
+      x: 40,
+      y: 605,
+      width: 515,
+      height: 20,
+      color: rgb(1.0, 0.95, 0.95),
+      borderColor: rgb(0.8, 0.15, 0.15),
+      borderWidth: 1.5,
+    });
+    page.drawText("CÓDIGO DE PAGO (úsalo en tus transferencias):", {
+      x: 48,
+      y: 610,
+      size: 9,
+      font: bold,
+      color: rgb(0.6, 0.1, 0.1),
+    });
+    placeRight(this.toShortText(params.paymentReference, 12), 13, 610, true, rgb(0.8, 0.0, 0.0));
+
+    let y = 580;
 
     page.drawText("Contratado por", {
       x: 42,
-      y: 620,
+      y,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Titular: ${this.toShortText(params.client.fullName, 42)}`, {
       x: 42,
-      y: 603,
+      y: y - 17,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`ID: ${this.toShortText(params.client.idNumber, 36)}`, {
       x: 42,
-      y: 588,
+      y: y - 32,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Email: ${this.toShortText(params.client.email, 44)}`, {
       x: 42,
-      y: 573,
+      y: y - 47,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Telefono: ${this.toShortText(params.client.phone, 36)}`, {
       x: 42,
-      y: 558,
+      y: y - 62,
       size: 10,
       font,
       color: slate,
@@ -1012,14 +1030,14 @@ export class BillingService {
 
     page.drawText("Detalle del servicio", {
       x: 284,
-      y: 620,
+      y,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Destino: ${this.toShortText(params.company.destination, 34)}`, {
       x: 284,
-      y: 603,
+      y: y - 17,
       size: 10,
       font,
       color: slate,
@@ -1028,7 +1046,7 @@ export class BillingService {
       `Viaje: ${this.formatDate(params.contractStartDate)} al ${this.formatDate(params.contractEndDate)}`,
       {
         x: 284,
-        y: 588,
+        y: y - 32,
         size: 10,
         font,
         color: slate,
@@ -1218,6 +1236,7 @@ export class BillingService {
 
   private async createAccountStatementPdfBuffer(params: {
     contractNumber: string;
+    paymentReference: string;
     generatedAt: Date | string | null;
     company: {
       legalName: string;
@@ -1355,37 +1374,56 @@ export class BillingService {
       color: brand,
     });
 
+    // Payment code box (prominent display)
+    page.drawRectangle({
+      x: 40,
+      y: 605,
+      width: 515,
+      height: 20,
+      color: rgb(1.0, 0.95, 0.95),
+      borderColor: rgb(0.8, 0.15, 0.15),
+      borderWidth: 1.5,
+    });
+    page.drawText("CÓDIGO DE PAGO (úsalo en tus transferencias):", {
+      x: 48,
+      y: 610,
+      size: 9,
+      font: bold,
+      color: rgb(0.6, 0.1, 0.1),
+    });
+    placeRight(this.toShortText(params.paymentReference, 12), 13, 610, true, rgb(0.8, 0.0, 0.0));
+
     page.drawText("Contratado por", {
       x: 42,
-      y: 622,
+      y: 580,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Titular: ${this.toShortText(params.client.fullName, 42)}`, {
       x: 42,
-      y: 604,
+      y: 562,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`ID: ${this.toShortText(params.client.idNumber, 36)}`, {
       x: 42,
-      y: 589,
+      y: 547,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Email: ${this.toShortText(params.client.email, 42)}`, {
       x: 42,
-      y: 574,
+      y: 532,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Telefono: ${this.toShortText(params.client.phone, 36)}`, {
       x: 42,
-      y: 559,
+      y: 517,
       size: 10,
       font,
       color: slate,
@@ -1393,35 +1431,35 @@ export class BillingService {
 
     page.drawText("Resumen", {
       x: 284,
-      y: 622,
+      y: 580,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Total contratado: ${formatMoney(params.summary.total)}`, {
       x: 284,
-      y: 604,
+      y: 562,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Total verificado: ${formatMoney(params.summary.verified)}`, {
       x: 284,
-      y: 589,
+      y: 547,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Total en revision bancaria: ${formatMoney(params.summary.pending)}`, {
       x: 284,
-      y: 574,
+      y: 532,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Saldo por cobrar: ${formatMoney(params.summary.balance)}`, {
       x: 284,
-      y: 559,
+      y: 517,
       size: 10,
       font,
       color: slate,
@@ -2071,6 +2109,7 @@ export class BillingService {
 
     const pdfBuffer = await this.createAccountStatementPdfBuffer({
       contractNumber: String(invoice.contractNumber),
+      paymentReference: String(invoice.contract?.paymentReference || "N/A"),
       generatedAt: new Date(),
       company,
       client: {
@@ -2601,6 +2640,7 @@ contratos@viajesalmanova.com
       where: { contractId },
       include: {
         client: true,
+        contract: true,
       },
     });
 
@@ -2624,6 +2664,7 @@ contratos@viajesalmanova.com
     const statementPdf = await this.getAccountStatementPdfUrl(user, contractId, 86_400);
     const documentUrl = statementPdf.url;
     const clientName = String(invoice.client?.fullName || "Cliente");
+    const paymentRef = String(invoice.contract?.paymentReference || "N/A");
     const logoSrc = await this.loadCompanyLogoEmailSrc();
     const statusLabels: Record<string, string> = {
       FACTURA_EMITIDA: "Emitida",
@@ -2701,10 +2742,21 @@ contratos@viajesalmanova.com
                     <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${String(invoice.contractNumber || "-")}</td>
                   </tr>
                   <tr>
+                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Código de pago:</td>
+                    <td style="padding: 8px 0; color: #dc2626; font-weight: 700; font-size: 16px; text-align: right; font-family: monospace;">${paymentRef}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Estado:</td>
                     <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${statusText}</td>
                   </tr>
                 </table>
+              </div>
+
+              <!-- Payment Code Notice -->
+              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
+                  <strong>⚠️ IMPORTANTE:</strong> Al realizar transferencias o depósitos, SIEMPRE incluye tu código de pago <strong>${paymentRef}</strong> para identificar tu abono automáticamente.
+                </p>
               </div>
 
               <!-- Amounts Summary -->
@@ -4595,6 +4647,7 @@ contratos@viajesalmanova.com
         invoice: {
           include: {
             client: true,
+            contract: true,
           },
         },
       },
@@ -4638,6 +4691,7 @@ contratos@viajesalmanova.com
     const receiptPdfUrl = await this.buildSignedObjectUrl(String(receiptPdf.objectKeyPdf || ""), 86_400);
     const clientName = String(receipt.invoice?.client?.fullName || "Cliente");
     const amountFormatted = `CRC ${amount.toFixed(2)}`;
+    const paymentRef = String(receipt.invoice?.contract?.paymentReference || "N/A");
     const logoSrc = await this.loadCompanyLogoEmailSrc();
 
     await resend.emails.send({
@@ -4700,6 +4754,10 @@ contratos@viajesalmanova.com
                     <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${String(receipt.contractNumber || "-")}</td>
                   </tr>
                   <tr>
+                    <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Código de pago:</td>
+                    <td style="padding: 8px 0; color: #dc2626; font-weight: 700; font-size: 16px; text-align: right; font-family: monospace;">${paymentRef}</td>
+                  </tr>
+                  <tr>
                     <td style="padding: 8px 0; color: #065f46; font-size: 14px;">Recibo:</td>
                     <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${String(receipt.receiptNumber || "-")}</td>
                   </tr>
@@ -4712,6 +4770,13 @@ contratos@viajesalmanova.com
                     <td style="padding: 8px 0; color: #10b981; font-weight: 600; text-align: right;">✅ Verificado y Aprobado</td>
                   </tr>
                 </table>
+              </div>
+
+              <!-- Payment Code Notice -->
+              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin: 20px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
+                  <strong>⚠️ Recuerda:</strong> Para futuros pagos, SIEMPRE incluye tu código <strong>${paymentRef}</strong> al hacer transferencias o depósitos.
+                </p>
               </div>
 
               <!-- Action Button -->
