@@ -1035,18 +1035,11 @@ export class BillingService {
       font: bold,
       color: ink,
     });
-    page.drawText(`Destino: ${this.toShortText(params.company.destination, 34)}`, {
-      x: 284,
-      y: y - 17,
-      size: 10,
-      font,
-      color: slate,
-    });
     page.drawText(
       `Viaje: ${this.formatDate(params.contractStartDate)} al ${this.formatDate(params.contractEndDate)}`,
       {
         x: 284,
-        y: y - 32,
+        y: y - 17,
         size: 10,
         font,
         color: slate,
@@ -1054,28 +1047,28 @@ export class BillingService {
     );
     page.drawText(`Modalidad: ${params.paymentPlan.modeLabel}`, {
       x: 284,
-      y: y - 47,
+      y: y - 32,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Plazo: ${params.paymentPlan.termLabel}`, {
       x: 284,
-      y: y - 62,
+      y: y - 47,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Fecha maxima: ${params.paymentPlan.maxPaymentDateLabel}`, {
       x: 284,
-      y: y - 77,
+      y: y - 62,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Cuotas: ${params.paymentPlan.installmentsLabel}`, {
       x: 284,
-      y: y - 92,
+      y: y - 77,
       size: 10,
       font,
       color: slate,
