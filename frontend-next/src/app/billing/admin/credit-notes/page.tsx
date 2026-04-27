@@ -58,7 +58,7 @@ export default function AdminCreditNotesPage() {
 
     const session = getStoredSession();
     const role = String(session?.user?.role || "").toUpperCase();
-    if (role !== "ADMIN") {
+    if (role !== "ADMIN" && role !== "FACTURACION_COBROS") {
       router.replace("/billing");
       return;
     }

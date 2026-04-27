@@ -44,7 +44,7 @@ export default function PendingReceiptsPage() {
   const [statusText, setStatusText] = useState("");
 
   const role = String(getStoredSession()?.user?.role || "").toUpperCase();
-  const isAuthorized = ["ADMIN", "CONTADOR"].includes(role);
+  const isAuthorized = ["ADMIN", "CONTADOR", "FACTURACION_COBROS"].includes(role);
 
   const loadPendingReceipts = async () => {
     setLoading(true);

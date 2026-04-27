@@ -49,7 +49,7 @@ export default function PendingPaymentsPage() {
 
   const session = getStoredSession();
   const role = String(session?.user?.role || "").toUpperCase();
-  const isAuthorized = ["ADMIN", "CONTADOR"].includes(role);
+  const isAuthorized = ["ADMIN", "CONTADOR", "FACTURACION_COBROS"].includes(role);
 
   const load = async () => {
     setLoading(true);
