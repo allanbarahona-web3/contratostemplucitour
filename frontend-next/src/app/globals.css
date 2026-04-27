@@ -756,6 +756,33 @@ body {
   padding: 12px;
 }
 
+/* Layout horizontal para modal de registro de abonos */
+.payment-modal-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  .payment-modal-layout {
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+  }
+}
+
+.payment-modal-receipt {
+  /* En desktop: columna izquierda fija */
+  max-height: calc(85vh - 120px);
+  overflow-y: auto;
+}
+
+.payment-modal-form {
+  /* En desktop: columna derecha con formulario */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .viewer-iframe {
   width: 100%;
   min-height: 72vh;

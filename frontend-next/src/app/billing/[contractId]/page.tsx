@@ -1559,41 +1559,45 @@ export default function BillingContractAccountPage() {
 
             <div className="viewer-body">
               {modalMode === "INSTALLMENT" ? (
-                <>
-                  <p className="m-0 text-[#4b6790] text-sm">
-                    Contrato: <strong>{account?.invoice.contractNumber || "-"}</strong> · Saldo actual: <strong>{formatMoney(account?.invoice.amounts.balance || 0)}</strong>
-                  </p>
+                <div className="payment-modal-layout">
+                  {/* Columna izquierda: Procesador de comprobantes */}
+                  <div className="payment-modal-receipt">
+                    <ReceiptProcessor 
+                      onDataExtracted={handleReceiptDataExtracted}
+                      onFileSelected={(file) => {
+                        // Guardar el archivo en el estado de attachments
+                        setAttachments([file]);
+                        console.log("📎 Archivo adjunto agregado:", file.name, "("+file.size+" bytes)");
+                      }}
+                      onError={(error) => {
+                        // Detectar error de cuenta destino no registrada
+                        const errorMsg = String(error || "").toLowerCase();
+                        if (errorMsg.includes("cuenta destino no registrada") || errorMsg.includes("cuenta destino inactiva")) {
+                          setCriticalAlert({
+                            title: "🚨 Pago Rechazado - Cuenta No Registrada",
+                            message: "La cuenta destino detectada en el comprobante NO está registrada en el sistema de Viajes Alma Nova.",
+                            details: error
+                          });
+                        } else {
+                          setStatusText(`❌ ${error}`);
+                        }
+                      }}
+                    />
+                  </div>
 
-                  <p className="m-0 text-[#4b6790] text-sm">
-                    El sistema guarda automaticamente fecha/hora de registro y usuario responsable.
-                  </p>
+                  {/* Columna derecha: Información y formulario */}
+                  <div className="payment-modal-form">
+                    <p className="m-0 text-[#4b6790] text-sm">
+                      Contrato: <strong>{account?.invoice.contractNumber || "-"}</strong> · Saldo actual: <strong>{formatMoney(account?.invoice.amounts.balance || 0)}</strong>
+                    </p>
 
-                  {/* Procesador de comprobantes con IA */}
-                  <ReceiptProcessor 
-                    onDataExtracted={handleReceiptDataExtracted}
-                    onFileSelected={(file) => {
-                      // Guardar el archivo en el estado de attachments
-                      setAttachments([file]);
-                      console.log("📎 Archivo adjunto agregado:", file.name, "("+file.size+" bytes)");
-                    }}
-                    onError={(error) => {
-                      // Detectar error de cuenta destino no registrada
-                      const errorMsg = String(error || "").toLowerCase();
-                      if (errorMsg.includes("cuenta destino no registrada") || errorMsg.includes("cuenta destino inactiva")) {
-                        setCriticalAlert({
-                          title: "🚨 Pago Rechazado - Cuenta No Registrada",
-                          message: "La cuenta destino detectada en el comprobante NO está registrada en el sistema de Viajes Alma Nova.",
-                          details: error
-                        });
-                      } else {
-                        setStatusText(`❌ ${error}`);
-                      }
-                    }}
-                  />
+                    <p className="m-0 text-[#4b6790] text-sm mb-4">
+                      El sistema guarda automaticamente fecha/hora de registro y usuario responsable.
+                    </p>
 
-                  <div className="contracts-grid payment-entry-grid" style={{ marginTop: 10 }}>
-                    <label>
-                      <span style={{ 
+                    <div className="contracts-grid payment-entry-grid">
+                      <label>
+                        <span style={{ 
                         color: amount.trim() ? '#10b981' : '#dc2626',
                         fontWeight: '600',
                         transition: 'color 0.3s ease'
@@ -1750,7 +1754,8 @@ export default function BillingContractAccountPage() {
                       {saving ? "Guardando..." : "Confirmar abono"}
                     </button>
                   </div>
-                </>
+                  </div>
+                </div>
               ) : null}
 
               {modalMode === "CREDIT_NOTE" ? (

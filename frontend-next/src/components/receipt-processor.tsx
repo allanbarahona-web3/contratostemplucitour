@@ -132,16 +132,23 @@ export function ReceiptProcessor({ onDataExtracted, onFileSelected, onError }: R
               🗑️ Quitar
             </button>
           </div>
-          <img 
-            src={preview} 
-            alt="Preview" 
-            style={{ 
-              maxWidth: "100%", 
-              maxHeight: 300, 
-              borderRadius: 6,
-              border: "1px solid #e2e8f0"
-            }} 
-          />
+          <div style={{ 
+            maxHeight: "calc(80vh - 200px)",
+            overflowY: "auto",
+            borderRadius: 6,
+            border: "1px solid #e2e8f0",
+            background: "#f8fafc"
+          }}>
+            <img 
+              src={preview} 
+              alt="Preview" 
+              style={{ 
+                width: "100%", 
+                height: "auto",
+                display: "block"
+              }} 
+            />
+          </div>
         </div>
       )}
     </div>
