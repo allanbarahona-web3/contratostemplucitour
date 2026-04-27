@@ -990,7 +990,7 @@ export class BillingService {
     });
     placeRight(this.toShortText(params.paymentReference, 12), 13, 610, true, rgb(0.8, 0.0, 0.0));
 
-    let y = 540;
+    let y = 580;
 
     page.drawText("Contratado por", {
       x: 42,
@@ -1054,28 +1054,28 @@ export class BillingService {
     );
     page.drawText(`Modalidad: ${params.paymentPlan.modeLabel}`, {
       x: 284,
-      y: 533,
+      y: 573,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Plazo: ${params.paymentPlan.termLabel}`, {
       x: 284,
-      y: 518,
+      y: 558,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Fecha maxima: ${params.paymentPlan.maxPaymentDateLabel}`, {
       x: 284,
-      y: 503,
+      y: 543,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Cuotas: ${params.paymentPlan.installmentsLabel}`, {
       x: 284,
-      y: 488,
+      y: 528,
       size: 10,
       font,
       color: slate,
@@ -1481,21 +1481,21 @@ export class BillingService {
 
     page.drawRectangle({
       x: 40,
-      y: 460,
+      y: 445,
       width: 515,
       height: 22,
       color: rgb(1, 1, 1),
       borderColor: line,
       borderWidth: 1,
     });
-    page.drawText("Fecha/Hora", { x: 46, y: 468, size: 8.8, font: bold, color: ink });
-    page.drawText("Movimiento", { x: 152, y: 468, size: 8.8, font: bold, color: ink });
-    page.drawText("Monto", { x: 332, y: 468, size: 8.8, font: bold, color: ink });
-    page.drawText("Saldo", { x: 400, y: 468, size: 8.8, font: bold, color: ink });
-    page.drawText("Usuario", { x: 462, y: 468, size: 8.8, font: bold, color: ink });
-    page.drawText("Estado", { x: 507, y: 468, size: 8.8, font: bold, color: ink });
+    page.drawText("Fecha/Hora", { x: 46, y: 453, size: 8.8, font: bold, color: ink });
+    page.drawText("Movimiento", { x: 152, y: 453, size: 8.8, font: bold, color: ink });
+    page.drawText("Monto", { x: 332, y: 453, size: 8.8, font: bold, color: ink });
+    page.drawText("Saldo", { x: 400, y: 453, size: 8.8, font: bold, color: ink });
+    page.drawText("Usuario", { x: 462, y: 453, size: 8.8, font: bold, color: ink });
+    page.drawText("Estado", { x: 507, y: 453, size: 8.8, font: bold, color: ink });
 
-    let y = 444;
+    let y = 429;
     const maxRows = 16;
     for (const row of params.movements.slice(0, maxRows)) {
       page.drawRectangle({
