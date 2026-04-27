@@ -34,7 +34,7 @@ export default function RootLayout({
         suppressHydrationWarning
         style={{ background: '#f5f5f7' }}
       >
-        <Script src="/config.js" strategy="beforeInteractive" />
+        <Script src="/config.js" strategy="afterInteractive" />
         <VerticalNav />
         {children}
       </body>

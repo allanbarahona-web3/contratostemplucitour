@@ -10,7 +10,6 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Resend } from "resend";
-import * as sharp from "sharp";
 import { PdfRenderService } from "./pdf-render.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "../billing/billing.service";
@@ -472,6 +471,10 @@ export class ContractsService {
     // Convertir JPEG/PNG a WebP
     if (params.mimetype === "image/jpeg" || params.mimetype === "image/png") {
       try {
+        // Dynamic import para evitar error de TypeScript con namespace
+        const sharpModule = await import('sharp');
+        const sharp = sharpModule.default || sharpModule;
+        
         const webpBuffer = await sharp(params.buffer)
           .webp({ quality: 85 }) // 85% calidad para balance entre tamaño y calidad
           .toBuffer();

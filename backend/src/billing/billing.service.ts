@@ -13,7 +13,6 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Resend } from "resend";
 import * as path from "path";
 import { readFile } from "fs/promises";
-import * as sharp from "sharp";
 import { PrismaService } from "../prisma/prisma.service";
 import { ApplyCreditNoteDto } from "./dto/apply-credit-note.dto";
 import { CreateCreditNoteDto } from "./dto/create-credit-note.dto";
@@ -1552,6 +1551,10 @@ export class BillingService {
     // Convertir JPEG/PNG a WebP
     if (params.mimetype === "image/jpeg" || params.mimetype === "image/png") {
       try {
+        // Dynamic import para evitar error de TypeScript con namespace
+        const sharpModule = await import('sharp');
+        const sharp = sharpModule.default || sharpModule;
+        
         const webpBuffer = await sharp(params.buffer)
           .webp({ quality: 85 }) // 85% calidad para balance entre tamaño y calidad
           .toBuffer();
