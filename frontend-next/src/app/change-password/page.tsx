@@ -27,7 +27,7 @@ export default function ChangePasswordPage() {
       const role = String(session.user.role || "").toUpperCase();
       if (role === "ADMIN") {
         router.replace("/admin/users");
-      } else if (role === "CONTADOR") {
+      } else if (role === "CONTADOR" || role === "FACTURACION_COBROS") {
         router.replace("/billing/admin/reports");
       } else {
         router.replace("/contracts");

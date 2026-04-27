@@ -58,7 +58,7 @@ export class BillingController {
   }
 
   @Get("audit")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   listAudit(
     @Req()
@@ -190,7 +190,7 @@ export class BillingController {
   }
 
   @Post("payments/:paymentId/verify")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   verifyPayment(
     @Req()
@@ -208,7 +208,7 @@ export class BillingController {
   }
 
   @Post("payments/:paymentId/reject")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   rejectPayment(
     @Req()
@@ -327,7 +327,7 @@ export class BillingController {
   }
 
   @Post("credit-notes/:creditNoteId/apply")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   applyCreditNote(
     @Req()
@@ -352,7 +352,7 @@ export class BillingController {
   }
 
   @Get("admin/credit-notes/pending")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   listPendingCreditNotes(
     @Req()
@@ -369,7 +369,7 @@ export class BillingController {
   }
 
   @Get("admin/pending-counts")
-  @Roles("ADMIN", "CONTADOR", "AGENTE")
+  @Roles("ADMIN", "CONTADOR", "AGENTE", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   async getPendingCounts(): Promise<{ pendingReceipts: number; pendingCreditNotes: number; contractsPendingSignature: number }> {
     const pendingReceipts = await this.billingService.getPendingPaymentsCount();
@@ -379,7 +379,7 @@ export class BillingController {
   }
 
   @Get("admin/dashboard-metrics")
-  @Roles("ADMIN", "CONTADOR")
+  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   getDashboardMetrics(
     @Req()
@@ -398,7 +398,7 @@ export class BillingController {
   }
 
   @Get("admin/reports")
-  @Roles("ADMIN", "CONTADOR")
+  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   getAdminReports(
     @Req()
@@ -425,7 +425,7 @@ export class BillingController {
   }
 
   @Post("admin/credit-notes/:creditNoteId/approve")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   approveCreditNote(
     @Req()
@@ -450,7 +450,7 @@ export class BillingController {
   }
 
   @Post("admin/credit-notes/:creditNoteId/reject")
-  @Roles("ADMIN")
+  @Roles("ADMIN", "FACTURACION_COBROS")
   @UseGuards(RolesGuard)
   rejectCreditNote(
     @Req()

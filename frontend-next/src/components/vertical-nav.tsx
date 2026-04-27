@@ -101,7 +101,8 @@ export function VerticalNav() {
   const role = String(session.user.role || "AGENT").toUpperCase();
   const isAdmin = role === "ADMIN";
   const isContador = role === "CONTADOR";
-  const isAdminOrContador = isAdmin || isContador;
+  const isFacturacionCobros = role === "FACTURACION_COBROS";
+  const isAdminOrContador = isAdmin || isContador || isFacturacionCobros;
   const connectedSeconds = session.loginAt
     ? Math.max(0, Math.floor((tick - new Date(session.loginAt).getTime()) / 1000))
     : 0;

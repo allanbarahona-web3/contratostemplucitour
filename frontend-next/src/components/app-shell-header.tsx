@@ -27,6 +27,14 @@ const ADMIN_LINKS: HeaderLink[] = [
   { href: "/history", label: "Historial" },
 ];
 
+const FACTURACION_COBROS_LINKS: HeaderLink[] = [
+  { href: "/billing", label: "Estados de cuenta" },
+  { href: "/billing/admin/reports", label: "Reportes" },
+  { href: "/billing/admin/credit-notes", label: "Aprobaciones NC" },
+  { href: "/billing/audit", label: "Auditoria" },
+  { href: "/history", label: "Historial" },
+];
+
 const formatDuration = (seconds: number): string => {
   const safe = Math.max(0, Math.floor(seconds));
   const hh = Math.floor(safe / 3600)
@@ -58,7 +66,10 @@ export function AppShellHeader() {
   }
 
   const role = String(session.user.role || "AGENT").toUpperCase();
-  const links = role === "ADMIN" ? ADMIN_LINKS : AGENT_LINKS;
+  const links = 
+    role === "ADMIN" ? ADMIN_LINKS :
+    role === "FACTURACION_COBROS" ? FACTURACION_COBROS_LINKS :
+    AGENT_LINKS;
   const connectedSeconds = session.loginAt
     ? Math.max(0, Math.floor((tick - new Date(session.loginAt).getTime()) / 1000))
     : 0;

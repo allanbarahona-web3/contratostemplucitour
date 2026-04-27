@@ -186,7 +186,7 @@ export default function BillingContractAccountPage() {
   const [loadingModalSuccessMsg, setLoadingModalSuccessMsg] = useState("");
 
   const role = String(getStoredSession()?.user?.role || "").toUpperCase();
-  const isAdmin = role === "ADMIN";
+  const isAdmin = role === "ADMIN" || role === "FACTURACION_COBROS";
 
   const load = async () => {
     if (!contractId) return;
