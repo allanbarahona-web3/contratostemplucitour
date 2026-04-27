@@ -2091,8 +2091,47 @@ export class ContractsService {
   async searchContracts(_user: { id: string; email: string; fullName: string }, query: SearchContractsDto) {
     const q = String(query.q || "").trim();
     const limit = Math.min(Math.max(query.limit || 20, 1), 100);
+    const status = String(query.status || "").trim().toUpperCase();
+    const datePreset = String(query.datePreset || "").trim();
+    const dateFrom = String(query.dateFrom || "").trim();
+    const dateTo = String(query.dateTo || "").trim();
 
-    const where = q
+    // Calcular rango de fechas según preset
+    let dateRangeFilter: any = undefined;
+    if (datePreset) {
+      const now = new Date();
+      const presetMap: Record<string, number> = {
+        "7days": 7,
+        "1week": 7,
+        "2weeks": 14,
+        "1month": 30,
+        "3months": 90,
+      };
+      const days = presetMap[datePreset];
+      if (days) {
+        const startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - days);
+        dateRangeFilter = {
+          createdAt: {
+            gte: startDate,
+            lte: now,
+          },
+        };
+      }
+    } else if (dateFrom || dateTo) {
+      // Rango personalizado
+      dateRangeFilter = { createdAt: {} };
+      if (dateFrom) {
+        dateRangeFilter.createdAt.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999); // Incluir todo el día
+        dateRangeFilter.createdAt.lte = endDate;
+      }
+    }
+
+    const textFilter = q
       ? {
           OR: [
             { contractNumber: { contains: q, mode: "insensitive" as const } },
@@ -2102,6 +2141,15 @@ export class ContractsService {
           ],
         }
       : {};
+
+    // Filtro de status para contratos
+    const statusFilter = status ? { status: { equals: status } } : {};
+
+    const where = {
+      ...textFilter,
+      ...statusFilter,
+      ...dateRangeFilter,
+    };
 
     const items = await (this.prisma as any).contract.findMany({
       where,
@@ -2117,7 +2165,8 @@ export class ContractsService {
       },
     });
 
-    const draftWhere = q
+    // Filtros para drafts
+    const draftTextFilter = q
       ? {
           generatedByUserId: _user.id,
           OR: [
@@ -2129,11 +2178,20 @@ export class ContractsService {
         }
       : { generatedByUserId: _user.id };
 
-    const drafts = await (this.prisma as any).contractDraft.findMany({
-      where: draftWhere,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    const draftWhere = {
+      ...draftTextFilter,
+      ...dateRangeFilter,
+    };
+
+    // Solo incluir drafts si no hay filtro de status o si el status es DRAFT
+    const drafts =
+      !status || status === CONTRACT_STATUS_DRAFT
+        ? await (this.prisma as any).contractDraft.findMany({
+            where: draftWhere,
+            orderBy: { createdAt: "desc" },
+            take: limit,
+          })
+        : [];
 
     const contractRows = items.map((item: any) => {
         const payload = this.getPayloadRecord(item.payload);
