@@ -245,7 +245,7 @@ export class BillingController {
   }
 
   @Post("receipts/:receiptId/approve-send")
-  @Roles("ADMIN", "FACTURACION_COBROS")
+  @Roles("ADMIN", "FACTURACION_COBROS", "AGENT")
   @UseGuards(RolesGuard)
   approveAndSendReceipt(
     @Req()
