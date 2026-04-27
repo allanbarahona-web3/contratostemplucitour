@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lucitouroperations.sfo3.digitaloceanspaces.com',
+        port: '',
+        pathname: '/contracts-assets/**',
+      },
+    ],
+  },
+  
   async headers() {
     return [
       {
