@@ -971,35 +971,26 @@ export class BillingService {
       },
     });
 
-    // Payment code box (prominent display)
-    page.drawRectangle({
-      x: 40,
-      y: 605,
-      width: 515,
-      height: 20,
-      color: rgb(1.0, 0.95, 0.95),
-      borderColor: rgb(0.8, 0.15, 0.15),
-      borderWidth: 1.5,
-    });
-    page.drawText("CÓDIGO DE PAGO (úsalo en tus transferencias):", {
-      x: 48,
-      y: 610,
+    // Payment code inline (no box)
+    const labelText = "CÓDIGO DE PAGO (úsalo en tus transferencias):";
+    const labelWidth = bold.widthOfTextAtSize(labelText, 9);
+    page.drawText(labelText, {
+      x: 42,
+      y: 620,
       size: 9,
       font: bold,
       color: rgb(0.6, 0.1, 0.1),
     });
-    // Place payment code with right margin (10px from box edge)
-    const paymentCode = this.toShortText(params.paymentReference, 12);
-    const paymentCodeWidth = bold.widthOfTextAtSize(paymentCode, 13);
+    const paymentCode = this.toShortText(params.paymentReference, 20);
     page.drawText(paymentCode, {
-      x: Math.max(48, 545 - paymentCodeWidth),
-      y: 610,
-      size: 13,
+      x: 42 + labelWidth + 8,
+      y: 620,
+      size: 11,
       font: bold,
       color: rgb(0.8, 0.0, 0.0),
     });
 
-    let y = 580;
+    let y = 590;
 
     page.drawText("Contratado por", {
       x: 42,
@@ -1376,65 +1367,56 @@ export class BillingService {
       color: brand,
     });
 
-    // Payment code box (prominent display)
-    page.drawRectangle({
-      x: 40,
-      y: 605,
-      width: 515,
-      height: 20,
-      color: rgb(1.0, 0.95, 0.95),
-      borderColor: rgb(0.8, 0.15, 0.15),
-      borderWidth: 1.5,
-    });
-    page.drawText("CÓDIGO DE PAGO (úsalo en tus transferencias):", {
-      x: 48,
-      y: 610,
+    // Payment code inline (no box)
+    const labelText = "CÓDIGO DE PAGO (úsalo en tus transferencias):";
+    const labelWidth = bold.widthOfTextAtSize(labelText, 9);
+    page.drawText(labelText, {
+      x: 42,
+      y: 620,
       size: 9,
       font: bold,
       color: rgb(0.6, 0.1, 0.1),
     });
-    // Place payment code with right margin (10px from box edge)
-    const paymentCode = this.toShortText(params.paymentReference, 12);
-    const paymentCodeWidth = bold.widthOfTextAtSize(paymentCode, 13);
+    const paymentCode = this.toShortText(params.paymentReference, 20);
     page.drawText(paymentCode, {
-      x: Math.max(48, 545 - paymentCodeWidth),
-      y: 610,
-      size: 13,
+      x: 42 + labelWidth + 8,
+      y: 620,
+      size: 11,
       font: bold,
       color: rgb(0.8, 0.0, 0.0),
     });
 
     page.drawText("Contratado por", {
       x: 42,
-      y: 545,
+      y: 580,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Titular: ${this.toShortText(params.client.fullName, 42)}`, {
       x: 42,
-      y: 527,
+      y: 562,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`ID: ${this.toShortText(params.client.idNumber, 36)}`, {
       x: 42,
-      y: 512,
+      y: 547,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Email: ${this.toShortText(params.client.email, 42)}`, {
       x: 42,
-      y: 497,
+      y: 532,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Telefono: ${this.toShortText(params.client.phone, 36)}`, {
       x: 42,
-      y: 482,
+      y: 517,
       size: 10,
       font,
       color: slate,
@@ -1442,35 +1424,35 @@ export class BillingService {
 
     page.drawText("Resumen", {
       x: 284,
-      y: 545,
+      y: 580,
       size: 12,
       font: bold,
       color: ink,
     });
     page.drawText(`Total contratado: ${formatMoney(params.summary.total)}`, {
       x: 284,
-      y: 527,
+      y: 562,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Total verificado: ${formatMoney(params.summary.verified)}`, {
       x: 284,
-      y: 512,
+      y: 547,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Total en revision bancaria: ${formatMoney(params.summary.pending)}`, {
       x: 284,
-      y: 497,
+      y: 532,
       size: 10,
       font,
       color: slate,
     });
     page.drawText(`Saldo por cobrar: ${formatMoney(params.summary.balance)}`, {
       x: 284,
-      y: 482,
+      y: 517,
       size: 10,
       font,
       color: slate,
