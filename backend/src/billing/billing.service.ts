@@ -1083,9 +1083,9 @@ export class BillingService {
 
     page.drawRectangle({
       x: 40,
-      y: 445,
+      y: 434,
       width: 515,
-      height: 36,
+      height: 50,
       color: rgb(1, 1, 1),
       borderColor: line,
       borderWidth: 1,
