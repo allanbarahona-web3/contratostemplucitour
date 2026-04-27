@@ -565,7 +565,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
               value={state.contractNumber} 
               readOnly 
               placeholder="Generando automaticamente..." 
-              className="font-mono text-sm !overflow-hidden text-ellipsis"
+              className="font-mono text-sm overflow-hidden text-ellipsis"
               title={state.contractNumber || "Esperando asignación..."}
             />
             {!state.contractNumber ? (
