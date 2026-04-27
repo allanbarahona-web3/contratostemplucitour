@@ -234,7 +234,7 @@ export const adminCreateUser = async (input: {
   email: string;
   fullName: string;
   password: string;
-  role: "AGENT" | "ADMIN" | "CONTADOR";
+  role: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES";
 }): Promise<AdminUserListItem> => {
   const apiBase = resolveApiBase();
   if (!apiBase) {
@@ -257,7 +257,7 @@ export const adminCreateUser = async (input: {
 
 export const adminUpdateUser = async (
   userId: string,
-  input: Partial<{ fullName: string; email: string; role: "AGENT" | "ADMIN" | "CONTADOR"; isActive: boolean }>,
+  input: Partial<{ fullName: string; email: string; role: "AGENT" | "ADMIN" | "CONTADOR" | "FACTURACION_COBROS" | "VENTAS" | "OPERACIONES"; isActive: boolean }>,
 ): Promise<AdminUserListItem> => {
   const apiBase = resolveApiBase();
   if (!apiBase) {
