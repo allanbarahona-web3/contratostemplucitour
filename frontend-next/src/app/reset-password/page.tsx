@@ -94,7 +94,7 @@ function ResetPasswordForm() {
     <main className="shell">
       <section className="login-card">
         <Image
-          src="/assets/LOGO ALMANOVA NEGRO CON DORADO.png"
+          src="https://lucitouroperations.sfo3.digitaloceanspaces.com/contracts-assets/Almanova%20azul+dorado.webp"
           alt="Viajes Alma Nova"
           width={245}
           height={120}
