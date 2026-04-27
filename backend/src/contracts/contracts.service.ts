@@ -57,6 +57,18 @@ export class ContractsService {
     private readonly billingService: BillingService,
   ) {}
 
+  /**
+   * Load company logo for email templates (returns URL or base64 data URI)
+   */
+  private async loadCompanyLogoEmailSrc(): Promise<string | null> {
+    const configuredUrl = this.configService.get<string>("COMPANY_LOGO_EMAIL_URL", "").trim();
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+    // Fallback: could load and convert to base64, but URL is preferred
+    return null;
+  }
+
   private pad(value: number, size = 2) {
     return String(value).padStart(size, "0");
   }
@@ -590,6 +602,7 @@ export class ContractsService {
     }
 
     const resend = new Resend(apiKey);
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
     if (!pdfBuffer.length) {
       throw new InternalServerErrorException("Adjunto PDF invalido o vacio.");
     }
@@ -614,6 +627,7 @@ export class ContractsService {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
@@ -759,6 +773,7 @@ export class ContractsService {
     }
 
     const resend = new Resend(apiKey);
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
     const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -776,6 +791,7 @@ export class ContractsService {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
@@ -970,6 +986,7 @@ export class ContractsService {
     }
 
     const resend = new Resend(apiKey);
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
     const pdfBase64 = signedPdfBuffer.toString("base64");
     const fileName =
       String(contract.signedPdfFileName || "").trim() || `${String(contract.contractNumber || "contrato").trim()}-signed.pdf`;
@@ -995,6 +1012,7 @@ export class ContractsService {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>

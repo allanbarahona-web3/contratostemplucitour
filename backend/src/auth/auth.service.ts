@@ -28,6 +28,18 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * Load company logo for email templates (returns URL or base64 data URI)
+   */
+  private async loadCompanyLogoEmailSrc(): Promise<string | null> {
+    const configuredUrl = this.configService.get<string>("COMPANY_LOGO_EMAIL_URL", "").trim();
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+    // Fallback: could load and convert to base64, but URL is preferred
+    return null;
+  }
+
   async login(dto: LoginDto) {
     const honeypot = (dto.website || "").trim();
     if (honeypot) {
@@ -514,6 +526,7 @@ export class AuthService {
 
     const resetLink = `${frontendUrl}/reset-password?token=${token}`;
     const resend = new Resend(apiKey);
+    const logoSrc = await this.loadCompanyLogoEmailSrc();
 
     await resend.emails.send({
       from: fromEmail,
@@ -536,6 +549,7 @@ export class AuthService {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              ${logoSrc ? `<img src="${logoSrc}" alt="Viajes Alma Nova" style="max-width: 180px; height: auto; margin-bottom: 16px;" />` : ''}
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
                 Viajes Alma Nova
               </h1>
