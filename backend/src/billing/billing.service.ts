@@ -86,22 +86,10 @@ export class BillingService {
         const response = await fetch(logoUrl);
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
-          let bytes = Buffer.from(arrayBuffer);
+          const bytes = Buffer.from(arrayBuffer);
           const lower = logoUrl.toLowerCase();
           
-          // Si el logo es WebP, convertirlo a PNG para compatibilidad con pdf-lib
-          if (lower.includes('.webp')) {
-            this.logger.log(`[loadCompanyLogo] Logo en formato WebP detectado, convirtiendo a PNG con transparencia...`);
-            bytes = Buffer.from(
-              await sharp(bytes)
-                .ensureAlpha() // Preservar canal alpha (transparencia)
-                .png({ compressionLevel: 9 })
-                .toBuffer()
-            );
-            return { bytes, format: "png" };
-          }
-          
-          // Para JPG/PNG, devolver tal cual
+          // Detectar formato basado en extensión (PNG o JPG, sin conversión)
           const format: "png" | "jpg" =
             lower.includes('.jpg') || lower.includes('.jpeg') ? "jpg" : "png";
           return { bytes, format };
@@ -124,21 +112,8 @@ export class BillingService {
 
     for (const candidate of fileCandidates) {
       try {
-        let bytes = await readFile(candidate);
+        const bytes = await readFile(candidate);
         const lower = candidate.toLowerCase();
-        
-        // Si el archivo local es WebP, convertirlo a PNG
-        if (lower.endsWith(".webp")) {
-          this.logger.log(`[loadCompanyLogo] Logo local en formato WebP, convirtiendo a PNG con transparencia...`);
-          bytes = Buffer.from(
-            await sharp(bytes)
-              .ensureAlpha() // Preservar canal alpha (transparencia)
-              .png({ compressionLevel: 9 })
-              .toBuffer()
-          );
-          return { bytes, format: "png" };
-        }
-        
         const format: "png" | "jpg" =
           lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "jpg" : "png";
         return { bytes, format };
