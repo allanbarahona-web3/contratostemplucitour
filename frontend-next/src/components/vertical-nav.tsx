@@ -104,7 +104,7 @@ export function VerticalNav() {
   const isFacturacionCobros = role === "FACTURACION_COBROS";
   const isVentas = role === "VENTAS";
   const isOperaciones = role === "OPERACIONES";
-  const isAdminOrContador = isAdmin || isContador || isFacturacionCobros;
+  const isAdminOrContador = isAdmin || isContador;
   const connectedSeconds = session.loginAt
     ? Math.max(0, Math.floor((tick - new Date(session.loginAt).getTime()) / 1000))
     : 0;
@@ -116,7 +116,7 @@ export function VerticalNav() {
   };
 
   const navItems: NavItem[] = [
-    // Dashboard para Admin/Contador
+    // Dashboard para Admin/Contador (NO Facturacion)
     ...(isAdminOrContador
       ? [
           {
@@ -129,7 +129,7 @@ export function VerticalNav() {
       : []),
     
     // Formulario solo para Agentes
-    ...(!isAdminOrContador
+    ...(!isAdminOrContador && !isFacturacionCobros
       ? [
           {
             href: "/contracts",
@@ -139,15 +139,15 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Estados de cuenta (todos)
+    // Estados de cuenta (Admin/Contador/Facturacion/Agentes)
     {
       href: "/billing",
       label: "Estados de cuenta",
       icon: "💰",
     },
     
-    // Sección de Tareas Pendientes (Admin/Contador)
-    ...(isAdminOrContador
+    // Sección de Tareas Pendientes (Admin/Contador/Facturacion)
+    ...(isAdminOrContador || isFacturacionCobros
       ? [
           {
             href: "/admin/pending-payments",
@@ -172,7 +172,7 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Sección de Administración (Admin/Contador)
+    // Sección de Administración (SOLO Admin/Contador, NO Facturacion)
     ...(isAdminOrContador
       ? [
           {
@@ -190,8 +190,8 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Configuración (solo Admin)
-    ...(isAdmin
+    // Tipo de Cambio (Admin/Facturacion)
+    ...(isAdmin || isFacturacionCobros
       ? [
           {
             href: "/admin/exchange-rate",
@@ -199,6 +199,12 @@ export function VerticalNav() {
             icon: "💱",
             adminOnly: true,
           },
+        ]
+      : []),
+    
+    // Configuración adicional (solo Admin)
+    ...(isAdmin
+      ? [
           {
             href: "/admin/bank-accounts",
             label: "Cuentas Bancarias",
@@ -214,13 +220,17 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Historial (todos) — badge de "listos para firmar" solo para agentes
-    {
-      href: "/history",
-      label: "Historial",
-      icon: "📅",
-      badge: !isAdminOrContador ? (pendingCounts.contractsPendingSignature || 0) : 0,
-    },
+    // Historial (todos EXCEPTO Facturacion) — badge de "listos para firmar" solo para agentes
+    ...(!isFacturacionCobros
+      ? [
+          {
+            href: "/history",
+            label: "Historial",
+            icon: "📅",
+            badge: !isAdminOrContador ? (pendingCounts.contractsPendingSignature || 0) : 0,
+          },
+        ]
+      : []),
   ];
 
   return (

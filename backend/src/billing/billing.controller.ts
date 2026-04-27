@@ -58,7 +58,7 @@ export class BillingController {
   }
 
   @Get("audit")
-  @Roles("ADMIN", "FACTURACION_COBROS")
+  @Roles("ADMIN")
   @UseGuards(RolesGuard)
   listAudit(
     @Req()
@@ -379,7 +379,7 @@ export class BillingController {
   }
 
   @Get("admin/dashboard-metrics")
-  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
+  @Roles("ADMIN", "CONTADOR")
   @UseGuards(RolesGuard)
   getDashboardMetrics(
     @Req()
@@ -398,7 +398,7 @@ export class BillingController {
   }
 
   @Get("admin/reports")
-  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
+  @Roles("ADMIN", "CONTADOR")
   @UseGuards(RolesGuard)
   getAdminReports(
     @Req()

@@ -15,6 +15,8 @@ import { PageLoader } from "@/components/loading-spinner";
 export default function AdminExchangeRatePage() {
   const router = useRouter();
   const session = getStoredSession();
+  const role = String(session?.user?.role || "").toUpperCase();
+  const canEdit = role === "ADMIN"; // Solo ADMIN puede editar
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,7 +36,7 @@ export default function AdminExchangeRatePage() {
     }
 
     const role = String(session.user.role || "").toUpperCase();
-    if (role !== "ADMIN") {
+    if (role !== "ADMIN" && role !== "FACTURACION_COBROS") {
       router.replace("/contracts");
       return;
     }
@@ -178,12 +180,13 @@ export default function AdminExchangeRatePage() {
         )}
       </section>
 
-      {/* Formulario - Card blanca */}
-      <section style={{ background: "white", borderRadius: 12, padding: 30, marginBottom: 30, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-        <h2 style={{ margin: "0 0 6px 0", fontSize: "1.3rem", fontWeight: 600 }}>✏️ Configurar Tipo de Cambio</h2>
-        <p style={{ color: "#6b7280", marginBottom: 24, fontSize: "0.9rem" }}>Establece o actualiza el tipo de cambio para una fecha específica</p>
+      {/* Formulario - Card blanca (solo ADMIN) */}
+      {canEdit && (
+        <section style={{ background: "white", borderRadius: 12, padding: 30, marginBottom: 30, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h2 style={{ margin: "0 0 6px 0", fontSize: "1.3rem", fontWeight: 600 }}>✏️ Configurar Tipo de Cambio</h2>
+          <p style={{ color: "#6b7280", marginBottom: 24, fontSize: "0.9rem" }}>Establece o actualiza el tipo de cambio para una fecha específica</p>
 
-        <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
             <div className="form-group">
               <label htmlFor="date" style={{ fontWeight: 500, marginBottom: 8, display: "block" }}>📅 Fecha</label>
@@ -255,6 +258,7 @@ export default function AdminExchangeRatePage() {
           </button>
         </form>
       </section>
+      )}
 
       {/* Historial - Card blanca */}
       <section style={{ background: "white", borderRadius: 12, padding: 30, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>

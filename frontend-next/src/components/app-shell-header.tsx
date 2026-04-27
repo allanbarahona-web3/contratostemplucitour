@@ -29,10 +29,6 @@ const ADMIN_LINKS: HeaderLink[] = [
 
 const FACTURACION_COBROS_LINKS: HeaderLink[] = [
   { href: "/billing", label: "Estados de cuenta" },
-  { href: "/billing/admin/reports", label: "Reportes" },
-  { href: "/billing/admin/credit-notes", label: "Aprobaciones NC" },
-  { href: "/billing/audit", label: "Auditoria" },
-  { href: "/history", label: "Historial" },
 ];
 
 // Roles sin vistas asignadas aún
