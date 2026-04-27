@@ -902,7 +902,21 @@ export default function BillingContractAccountPage() {
   return (
     <main className="app-shell">
       <section className="card contracts-card billing-dashboard">
-        <h1>Estado de cuenta del contrato</h1>
+        <div className="flex items-center gap-4 mb-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 flex items-center gap-2"
+            title="Regresar a estados de cuenta"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Regresar
+          </button>
+          <h1 style={{ margin: 0 }}>Estado de cuenta del contrato</h1>
+        </div>
 
         {loading ? <p className="m-0 text-[#4b6790] text-sm">Cargando...</p> : null}
         {error ? <p className="form-error">{error}</p> : null}
