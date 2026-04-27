@@ -906,7 +906,7 @@ export default function BillingContractAccountPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-xl px-4 py-2.5 bg-white text-blue-900 border border-blue-200 font-semibold transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 flex items-center gap-2"
+            className="rounded-xl px-4 py-2.5 bg-emerald-600 text-white border border-emerald-700 font-semibold transition-all duration-150 hover:bg-emerald-700 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 flex items-center gap-2"
             title="Regresar a estados de cuenta"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
