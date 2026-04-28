@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { SetExchangeRateDto } from "./dto/set-exchange-rate.dto";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import Resend from "resend";
+import { Resend } from "resend";
 
 @Injectable()
 export class ExchangeRateService {
