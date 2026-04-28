@@ -135,6 +135,8 @@ DELETE /travel-packages/:id          → Cancelar viaje (ADMIN) - soft delete
 - Fecha de salida (date picker)
 - Fecha de retorno (date picker)
 - Capacidad (número)
+- Precio  se debe actualiza manualmente. eb esta parte es importante discutir un poco, porque se alimena desde una tabla aparte de costos  fijos y variables. 
+- status=  Active check verde, stand by Naranja, inactive  Rojo, 
 - Al editar: validación si nueva capacidad < ocupados actuales
 
 ---
@@ -143,7 +145,7 @@ DELETE /travel-packages/:id          → Cancelar viaje (ADMIN) - soft delete
 
 ### Nueva página: `/trips` — HOME del agente tras login
 
-**Esta es la primera pantalla que ve el agente después de marcar el reloj.**
+**Esta es la primera pantalla que ve el agente después de marcar el reloj  cuando el modulo timeclock este implementado, por ahora sera la primera pantalla que veran al ingresar del login.**
 
 **Cabecera de la página:**
 ```
@@ -151,11 +153,11 @@ DELETE /travel-packages/:id          → Cancelar viaje (ADMIN) - soft delete
 │  ✈ Viajes Disponibles                                            │
 │                                                                  │
 │  [✏ Viaje Personalizado]   [📋 Solicitud de Cotización]         │
-│   → /contracts/new          → Modal "Próximamente"               │
+│   → → Modal "Próximamente"          → Modal "Próximamente"               │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-- **Botón "Viaje Personalizado":** funcional desde el inicio → va a `/contracts/new` sin parámetros
+- **Botón "Viaje Personalizado":** visible pero deshabilitado → muestra modal/tooltip "Módulo en construcción
 - **Botón "Solicitud de Cotización":** visible pero deshabilitado → muestra modal/tooltip "Módulo en construcción — Próximamente" (fase futura con rol VENTAS)
 
 **Grid de tarjetas:**

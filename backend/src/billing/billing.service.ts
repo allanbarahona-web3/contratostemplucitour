@@ -48,7 +48,7 @@ export class BillingService {
   }
 
   private formatCurrency(value: unknown): string {
-    return `CRC ${this.toNumber(value).toFixed(2)}`;
+    return `USD ${this.toNumber(value).toFixed(2)}`;
   }
 
   private formatDateTime(value: Date | string | null | undefined): string {
@@ -2467,7 +2467,7 @@ contratos@viajesalmanova.com
     const pdfUrl = await this.buildSignedObjectUrl(String(pdf.objectKeyPdf || ""), 86_400);
 
     const clientName = String(creditNote.invoice?.client?.fullName || "Cliente");
-    const amountFormatted = `CRC ${this.toNumber(creditNote.amount, 0).toFixed(2)}`;
+    const amountFormatted = `USD ${this.toNumber(creditNote.amount, 0).toFixed(2)}`;
     const reason = String(creditNote.reason || "-");
     const logoSrc = await this.loadCompanyLogoEmailSrc();
 
@@ -2667,7 +2667,7 @@ contratos@viajesalmanova.com
       FACTURA_ANULADA: "Anulada",
     };
     const statusText = statusLabels[String(invoice.status || "").trim().toUpperCase()] || "En gestión";
-    const currency = String(invoice.currency || "CRC").trim().toUpperCase();
+    const currency = String(invoice.currency || "USD").trim().toUpperCase();
     const formatAmount = (value: unknown) => `${currency} ${this.toNumber(value, 0).toFixed(2)}`;
     const totalAmount = formatAmount(invoice.totalAmount);
     const verifiedAmount = formatAmount(invoice.verifiedAmount);
@@ -4683,7 +4683,7 @@ contratos@viajesalmanova.com
     const receiptPdf = await this.ensureReceiptPdf(receipt.id);
     const receiptPdfUrl = await this.buildSignedObjectUrl(String(receiptPdf.objectKeyPdf || ""), 86_400);
     const clientName = String(receipt.invoice?.client?.fullName || "Cliente");
-    const amountFormatted = `CRC ${amount.toFixed(2)}`;
+    const amountFormatted = `USD ${amount.toFixed(2)}`;
     const paymentRef = String(receipt.invoice?.contract?.paymentReference || "N/A");
     const logoSrc = await this.loadCompanyLogoEmailSrc();
 
