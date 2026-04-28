@@ -50,7 +50,7 @@ export default function AdminExchangeRatePage() {
     }
 
     const role = String(session.user.role || "").toUpperCase();
-    if (role !== "ADMIN" && role !== "FACTURACION_COBROS") {
+    if (role !== "ADMIN" && role !== "FACTURACION_COBROS" && role !== "CONTADOR") {
       router.replace(getHomeRouteForRole(role));
       return;
     }

@@ -101,11 +101,11 @@ export class ExchangeRateController {
   }
 
   /**
-   * Send exchange rate history via email (admin only)
+   * Send exchange rate history via email (admin, contador, facturacion)
    */
   @Post("email-history")
   @UseGuards(RolesGuard)
-  @Roles("ADMIN", "FACTURACION_COBROS")
+  @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
   async emailHistory(
     @Body() body: { startDate: string; endDate: string; email: string },
     @Request() req: any,

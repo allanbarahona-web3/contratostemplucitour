@@ -191,8 +191,8 @@ export function VerticalNav() {
         ]
       : []),
     
-    // Tipo de Cambio (Admin/Facturacion)
-    ...(isAdmin || isFacturacionCobros
+    // Tipo de Cambio (Admin/Contador/Facturacion)
+    ...(isAdmin || isContador || isFacturacionCobros
       ? [
           {
             href: "/admin/exchange-rate",
