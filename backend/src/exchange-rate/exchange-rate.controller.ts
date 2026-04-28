@@ -53,8 +53,8 @@ export class ExchangeRateController {
    * Set exchange rate for a specific date (admin only)
    */
   @Post("set")
-  @UseGuards(RolesGuard)
   @Roles("ADMIN")
+  @UseGuards(RolesGuard)
   async setRate(@Body() dto: SetExchangeRateDto, @Request() req: any) {
     const user = req.user;
     const rate = await this.exchangeRateService.setExchangeRate(dto, user);
@@ -104,23 +104,36 @@ export class ExchangeRateController {
    * Send exchange rate history via email (admin, contador, facturacion)
    */
   @Post("email-history")
-  @UseGuards(RolesGuard)
   @Roles("ADMIN", "CONTADOR", "FACTURACION_COBROS")
+  @UseGuards(RolesGuard)
   async emailHistory(
     @Body() body: { startDate: string; endDate: string; email: string },
     @Request() req: any,
   ) {
+    console.log("[ExchangeRate Controller] Email history request received:", {
+      startDate: body.startDate,
+      endDate: body.endDate,
+      email: body.email,
+      user: req.user?.fullName,
+    });
+
     const { startDate, endDate, email } = body;
 
     if (!startDate || !endDate || !email) {
+      console.log("[ExchangeRate Controller] Missing required fields");
       return { success: false, error: "startDate, endDate, and email are required" };
     }
 
     const user = req.user;
     const userName = String(user?.fullName || "Usuario");
 
-    await this.exchangeRateService.sendHistoryEmail(startDate, endDate, email, userName);
-
-    return { success: true, message: "Historial enviado por correo exitosamente" };
+    try {
+      await this.exchangeRateService.sendHistoryEmail(startDate, endDate, email, userName);
+      console.log("[ExchangeRate Controller] Email sent successfully to:", email);
+      return { success: true, message: "Historial enviado por correo exitosamente" };
+    } catch (error: any) {
+      console.error("[ExchangeRate Controller] Error sending email:", error.message);
+      throw error;
+    }
   }
 }

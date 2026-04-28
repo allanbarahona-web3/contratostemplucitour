@@ -354,13 +354,18 @@ export class ExchangeRateService {
     recipientEmail: string,
     userName: string,
   ): Promise<void> {
+    console.log("[ExchangeRate Service] Preparing to send email to:", recipientEmail);
+    
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
+      console.error("[ExchangeRate Service] RESEND_API_KEY not configured");
       throw new Error("RESEND_API_KEY no configurado");
     }
 
+    console.log("[ExchangeRate Service] Generating PDF for range:", { startDate, endDate });
     const pdfBuffer = await this.generateHistoryPdf(startDate, endDate);
     const rates = await this.getExchangeRateHistoryRange(startDate, endDate);
+    console.log("[ExchangeRate Service] PDF generated. Size:", pdfBuffer.length, "bytes. Records:", rates.length);
 
     const formatDateDisplay = (dateStr: string) => {
       const date = new Date(dateStr);
@@ -370,7 +375,9 @@ export class ExchangeRateService {
       return `${day}/${month}/${year}`;
     };
 
-    const fromEmail = String(process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev");
+    const fromEmail = String(process.env.RESEND_FROM_EMAIL || process.env.CONTRACTS_FROM_EMAIL || "onboarding@resend.dev");
+    console.log("[ExchangeRate Service] Sending from:", fromEmail);
+    
     const resend = new Resend(apiKey);
 
     await resend.emails.send({
@@ -438,5 +445,7 @@ export class ExchangeRateService {
         },
       ],
     });
+
+    console.log("[ExchangeRate Service] Email sent successfully to:", recipientEmail);
   }
 }
