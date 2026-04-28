@@ -167,7 +167,10 @@ body {
 .contracts-grid input,
 .contracts-grid select,
 .contracts-grid textarea,
-.itinerary-row input {
+.itinerary-row input,
+.form-group input,
+.form-group select,
+.form-group textarea {
   border: 1px solid rgba(15, 48, 101, 0.2);
   background: rgba(255, 255, 255, 0.94);
   padding: 11px 12px;
@@ -178,7 +181,8 @@ body {
 
 /* Text overflow handling for inputs */
 .contracts-grid input:not([type="file"]),
-.itinerary-row input {
+.itinerary-row input,
+.form-group input:not([type="file"]) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -187,7 +191,10 @@ body {
 .contracts-grid input:focus,
 .contracts-grid select:focus,
 .contracts-grid textarea:focus,
-.itinerary-row input:focus {
+.itinerary-row input:focus,
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: rgba(31, 91, 197, 0.72);
   box-shadow: 0 0 0 4px rgba(31, 91, 197, 0.14);
