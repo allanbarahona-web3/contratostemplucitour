@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredSession, getHomeRouteForRole } from "@/lib/auth-api";
 import {
@@ -42,6 +42,7 @@ export default function AdminExchangeRatePage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -73,11 +74,18 @@ export default function AdminExchangeRatePage() {
 
     setFilterStartDate(oneMonthAgoStr);
     setFilterEndDate(todayStr);
-    setEmailRecipient(String(session?.user?.email || ""));
+    setEmailRecipient(""); // Campo vacío para ingreso manual
 
     loadData(oneMonthAgoStr, todayStr);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-focus email input when modal opens
+  useEffect(() => {
+    if (showEmailModal && emailInputRef.current) {
+      emailInputRef.current.focus();
+    }
+  }, [showEmailModal]);
 
   const loadData = async (startDate?: string, endDate?: string) => {
     try {
@@ -204,6 +212,11 @@ export default function AdminExchangeRatePage() {
     }
   };
 
+  const handleCloseModal = () => {
+    setShowEmailModal(false);
+    setEmailRecipient(""); // Limpiar campo al cerrar
+  };
+
   const handleSendEmail = async () => {
     if (!filterStartDate || !filterEndDate) {
       showError("Debe seleccionar ambas fechas");
@@ -220,6 +233,7 @@ export default function AdminExchangeRatePage() {
       await emailExchangeRateHistory(filterStartDate, filterEndDate, emailRecipient);
       showSuccess("Historial enviado por correo exitosamente");
       setShowEmailModal(false);
+      setEmailRecipient(""); // Limpiar campo para próximo envío
     } catch (err: any) {
       showError(err.message || "Error enviando correo");
     } finally {
@@ -523,7 +537,7 @@ export default function AdminExchangeRatePage() {
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => !sendingEmail && setShowEmailModal(false)}
+          onClick={() => !sendingEmail && handleCloseModal()}
         >
           <div
             style={{
@@ -547,6 +561,7 @@ export default function AdminExchangeRatePage() {
               </label>
               <input
                 id="emailRecipient"
+                ref={emailInputRef}
                 type="email"
                 value={emailRecipient}
                 onChange={(e) => setEmailRecipient(e.target.value)}
@@ -558,7 +573,7 @@ export default function AdminExchangeRatePage() {
 
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <button
-                onClick={() => setShowEmailModal(false)}
+                onClick={handleCloseModal}
                 disabled={sendingEmail}
                 style={{
                   padding: "10px 24px",
