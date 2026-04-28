@@ -6,7 +6,10 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
+  HttpStatus,
 } from "@nestjs/common";
+import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -56,5 +59,68 @@ export class ExchangeRateController {
     const user = req.user;
     const rate = await this.exchangeRateService.setExchangeRate(dto, user);
     return { rate };
+  }
+
+  /**
+   * Get exchange rate history for a specific date range (available to all authenticated users)
+   */
+  @Get("history-range")
+  async getHistoryRange(
+    @Query("startDate") startDate: string,
+    @Query("endDate") endDate: string,
+  ) {
+    if (!startDate || !endDate) {
+      return { error: "startDate and endDate are required", rates: [] };
+    }
+    const rates = await this.exchangeRateService.getExchangeRateHistoryRange(startDate, endDate);
+    return { rates };
+  }
+
+  /**
+   * Export exchange rate history as PDF (available to all authenticated users)
+   */
+  @Get("export-pdf")
+  async exportPdf(
+    @Query("startDate") startDate: string,
+    @Query("endDate") endDate: string,
+    @Res() res: Response,
+  ) {
+    if (!startDate || !endDate) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ error: "startDate and endDate are required" });
+    }
+
+    const pdfBuffer = await this.exchangeRateService.generateHistoryPdf(startDate, endDate);
+    
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="historial-tipo-cambio-${startDate}-${endDate}.pdf"`,
+      "Content-Length": pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
+  /**
+   * Send exchange rate history via email (admin only)
+   */
+  @Post("email-history")
+  @UseGuards(RolesGuard)
+  @Roles("ADMIN", "FACTURACION_COBROS")
+  async emailHistory(
+    @Body() body: { startDate: string; endDate: string; email: string },
+    @Request() req: any,
+  ) {
+    const { startDate, endDate, email } = body;
+
+    if (!startDate || !endDate || !email) {
+      return { success: false, error: "startDate, endDate, and email are required" };
+    }
+
+    const user = req.user;
+    const userName = String(user?.fullName || "Usuario");
+
+    await this.exchangeRateService.sendHistoryEmail(startDate, endDate, email, userName);
+
+    return { success: true, message: "Historial enviado por correo exitosamente" };
   }
 }

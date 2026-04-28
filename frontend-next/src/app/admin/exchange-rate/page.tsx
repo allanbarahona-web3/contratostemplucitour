@@ -6,6 +6,9 @@ import { getStoredSession, getHomeRouteForRole } from "@/lib/auth-api";
 import {
   getCurrentExchangeRate,
   getExchangeRateHistory,
+  getExchangeRateHistoryRange,
+  downloadExchangeRateHistoryPdf,
+  emailExchangeRateHistory,
   setExchangeRate,
   type ExchangeRate,
 } from "@/lib/exchange-rate-api";
@@ -29,6 +32,17 @@ export default function AdminExchangeRatePage() {
   const [sellRate, setSellRate] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Filter states
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filtering, setFiltering] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  // Email modal states
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   useEffect(() => {
     if (!session?.user?.id) {
       router.replace("/");
@@ -41,23 +55,40 @@ export default function AdminExchangeRatePage() {
       return;
     }
 
-    loadData();
     // Set today's date as default (Costa Rica time)
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
-    setDate(`${year}-${month}-${day}`);
+    const todayStr = `${year}-${month}-${day}`;
+    setDate(todayStr);
+
+    // Set filter dates: 1 month ago to today
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const startYear = oneMonthAgo.getFullYear();
+    const startMonth = String(oneMonthAgo.getMonth() + 1).padStart(2, '0');
+    const startDay = String(oneMonthAgo.getDate()).padStart(2, '0');
+    const oneMonthAgoStr = `${startYear}-${startMonth}-${startDay}`;
+
+    setFilterStartDate(oneMonthAgoStr);
+    setFilterEndDate(todayStr);
+    setEmailRecipient(String(session?.user?.email || ""));
+
+    loadData(oneMonthAgoStr, todayStr);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (startDate?: string, endDate?: string) => {
     try {
       setLoading(true);
 
+      const start = startDate || filterStartDate;
+      const end = endDate || filterEndDate;
+
       const [current, hist] = await Promise.all([
         getCurrentExchangeRate(),
-        getExchangeRateHistory(30),
+        start && end ? getExchangeRateHistoryRange(start, end) : getExchangeRateHistory(30),
       ]);
 
       setCurrentRate(current);
@@ -124,6 +155,75 @@ export default function AdminExchangeRatePage() {
       showError(err.message || "Error guardando tipo de cambio");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFilter = async () => {
+    if (!filterStartDate || !filterEndDate) {
+      showError("Debe seleccionar ambas fechas");
+      return;
+    }
+
+    if (filterStartDate > filterEndDate) {
+      showError("La fecha inicial debe ser menor o igual a la fecha final");
+      return;
+    }
+
+    setFiltering(true);
+    try {
+      await loadData(filterStartDate, filterEndDate);
+    } catch (err: any) {
+      showError(err.message || "Error filtrando historial");
+    } finally {
+      setFiltering(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!filterStartDate || !filterEndDate) {
+      showError("Debe seleccionar ambas fechas para exportar");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const blob = await downloadExchangeRateHistoryPdf(filterStartDate, filterEndDate);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `historial-tipo-cambio-${filterStartDate}-${filterEndDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showSuccess("PDF descargado exitosamente");
+    } catch (err: any) {
+      showError(err.message || "Error exportando PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!filterStartDate || !filterEndDate) {
+      showError("Debe seleccionar ambas fechas");
+      return;
+    }
+
+    if (!emailRecipient || !emailRecipient.includes("@")) {
+      showError("Debe ingresar un correo válido");
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      await emailExchangeRateHistory(filterStartDate, filterEndDate, emailRecipient);
+      showSuccess("Historial enviado por correo exitosamente");
+      setShowEmailModal(false);
+    } catch (err: any) {
+      showError(err.message || "Error enviando correo");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -263,12 +363,118 @@ export default function AdminExchangeRatePage() {
       {/* Historial - Card blanca */}
       <section style={{ background: "white", borderRadius: 12, padding: 30, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
         <h2 style={{ margin: "0 0 6px 0", fontSize: "1.3rem", fontWeight: 600 }}>📜 Historial de Tipos de Cambio</h2>
-        <p style={{ color: "#6b7280", marginBottom: 20, fontSize: "0.9rem" }}>Últimos 30 días configurados</p>
+        <p style={{ color: "#6b7280", marginBottom: 24, fontSize: "0.9rem" }}>Filtra por rango de fechas (default: último mes)</p>
+
+        {/* Filters */}
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "1fr 1fr auto auto auto", 
+          gap: 15, 
+          marginBottom: 25,
+          alignItems: "end"
+        }}>
+          <div className="form-group">
+            <label htmlFor="filterStartDate" style={{ fontWeight: 500, marginBottom: 8, display: "block", fontSize: "0.9rem" }}>
+              📅 Fecha Inicial
+            </label>
+            <input
+              id="filterStartDate"
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              style={{ width: "100%", padding: "10px 12px", fontSize: "1rem" }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="filterEndDate" style={{ fontWeight: 500, marginBottom: 8, display: "block", fontSize: "0.9rem" }}>
+              📅 Fecha Final
+            </label>
+            <input
+              id="filterEndDate"
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              style={{ width: "100%", padding: "10px 12px", fontSize: "1rem" }}
+            />
+          </div>
+
+          <button
+            onClick={handleFilter}
+            disabled={filtering || !filterStartDate || !filterEndDate}
+            style={{
+              padding: "10px 24px",
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              background: filtering ? "#9ca3af" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              cursor: filtering || !filterStartDate || !filterEndDate ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              opacity: filtering || !filterStartDate || !filterEndDate ? 0.6 : 1,
+            }}
+          >
+            {filtering ? "⏳ Filtrando..." : "🔍 Filtrar"}
+          </button>
+
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting || history.length === 0}
+            style={{
+              padding: "10px 24px",
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              background: exporting ? "#9ca3af" : "#10b981",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              cursor: exporting || history.length === 0 ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              opacity: exporting || history.length === 0 ? 0.6 : 1,
+            }}
+          >
+            {exporting ? "⏳ Exportando..." : "📄 Exportar PDF"}
+          </button>
+
+          <button
+            onClick={() => setShowEmailModal(true)}
+            disabled={history.length === 0}
+            style={{
+              padding: "10px 24px",
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              background: history.length === 0 ? "#9ca3af" : "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              cursor: history.length === 0 ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              opacity: history.length === 0 ? 0.6 : 1,
+            }}
+          >
+            📧 Enviar por Correo
+          </button>
+        </div>
+
+        {/* Results count */}
+        {history.length > 0 && (
+          <div style={{ 
+            marginBottom: 20, 
+            padding: "12px 16px", 
+            background: "#f3f4f6", 
+            borderRadius: 8,
+            fontSize: "0.9rem",
+            color: "#4b5563"
+          }}>
+            <strong>{history.length}</strong> registro{history.length !== 1 ? 's' : ''} encontrado{history.length !== 1 ? 's' : ''} en el período seleccionado
+          </div>
+        )}
 
         {history.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "#9ca3af" }}>
             <div style={{ fontSize: "3rem", marginBottom: 12 }}>📊</div>
-            <p style={{ margin: 0 }}>No hay historial de tipos de cambio</p>
+            <p style={{ margin: 0 }}>No hay registros en el rango seleccionado</p>
           </div>
         ) : (
           <div className="table-container">
@@ -301,6 +507,93 @@ export default function AdminExchangeRatePage() {
           </div>
         )}
       </section>
+
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => !sendingEmail && setShowEmailModal(false)}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 12,
+              padding: 30,
+              maxWidth: 500,
+              width: "90%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "1.3rem", fontWeight: 600 }}>📧 Enviar Historial por Correo</h3>
+            <p style={{ color: "#6b7280", marginBottom: 24, fontSize: "0.9rem" }}>
+              El PDF del historial será enviado al correo indicado
+            </p>
+
+            <div className="form-group" style={{ marginBottom: 24 }}>
+              <label htmlFor="emailRecipient" style={{ fontWeight: 500, marginBottom: 8, display: "block" }}>
+                Correo electrónico
+              </label>
+              <input
+                id="emailRecipient"
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                placeholder="correo@ejemplo.com"
+                disabled={sendingEmail}
+                style={{ width: "100%", padding: "10px 12px", fontSize: "1rem" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                disabled={sendingEmail}
+                style={{
+                  padding: "10px 24px",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  background: "#e5e7eb",
+                  color: "#374151",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: sendingEmail ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail || !emailRecipient}
+                style={{
+                  padding: "10px 24px",
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  background: sendingEmail || !emailRecipient ? "#9ca3af" : "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: sendingEmail || !emailRecipient ? "not-allowed" : "pointer",
+                }}
+              >
+                {sendingEmail ? "⏳ Enviando..." : "✉️ Enviar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastNotification toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
