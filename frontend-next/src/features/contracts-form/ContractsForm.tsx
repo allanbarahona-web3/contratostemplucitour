@@ -615,8 +615,8 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
           >
             <option value="Sencilla">Sencilla</option>
             <option value="Doble">Doble</option>
-            <option value="Multiple">Multiple</option>
-            <option value="Compartida">Compartida</option>
+            <option value="Triple">Triple</option>
+            <option value="Cuadruple">Cuadruple</option>
           </select>
         </label>
 
@@ -801,7 +801,7 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             onChange={(event) =>
               setState((prev) => ({
                 ...prev,
-                civilStatus: event.target.value as "Soltero" | "Casado" | "Divorciado" | "Viudo" | "Union libre",
+                civilStatus: event.target.value as "Soltero" | "Casado" | "Divorciado" | "Viudo",
               }))
             }
           >
@@ -809,7 +809,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
             <option value="Casado">Casado</option>
             <option value="Divorciado">Divorciado</option>
             <option value="Viudo">Viudo</option>
-            <option value="Union libre">Union libre</option>
           </select>
         </label>
 
@@ -1016,7 +1015,6 @@ export function ContractsForm({ agent = null, initialDraftId = null }: Contracts
                     <option value="Casado">Casado</option>
                     <option value="Divorciado">Divorciado</option>
                     <option value="Viudo">Viudo</option>
-                    <option value="Union libre">Union libre</option>
                   </select>
                 </label>
                 <label>

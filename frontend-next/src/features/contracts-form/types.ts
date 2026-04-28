@@ -2,7 +2,7 @@ export type ItineraryKind = "opening" | "custom" | "closing";
 
 export type IdType = "Cedula" | "Pasaporte" | "DIMEX";
 
-export type CivilStatus = "Soltero" | "Casado" | "Divorciado" | "Viudo" | "Union libre";
+export type CivilStatus = "Soltero" | "Casado" | "Divorciado" | "Viudo";
 
 export type PaymentFrequency = "QUINCENAL" | "MENSUAL";
 
