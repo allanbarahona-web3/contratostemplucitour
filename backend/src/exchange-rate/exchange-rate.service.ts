@@ -303,7 +303,7 @@ export class ExchangeRateService {
         color: colors.ink,
       });
 
-      currentPage.drawText(`₡${rate.buyRate.toFixed(4)}`, {
+      currentPage.drawText(`CRC ${rate.buyRate.toFixed(4)}`, {
         x: 180,
         y,
         size: 9,
@@ -311,7 +311,7 @@ export class ExchangeRateService {
         color: colors.green,
       });
 
-      currentPage.drawText(`₡${rate.sellRate.toFixed(4)}`, {
+      currentPage.drawText(`CRC ${rate.sellRate.toFixed(4)}`, {
         x: 280,
         y,
         size: 9,
